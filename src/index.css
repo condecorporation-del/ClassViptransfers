@@ -180,3 +180,12 @@
   transform: scaleX(1);
   transform-origin: bottom left;
 }
+
+/* Hide scrollbar but keep scrollability */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

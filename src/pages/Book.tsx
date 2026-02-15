@@ -295,7 +295,7 @@ const Book = () => {
           {/* Wizard */}
           <div className="lg:col-span-3">
             {/* Progress dots */}
-            <div className="flex items-center gap-1.5 mb-8 overflow-x-auto pb-2">
+            <div className="flex items-center gap-1.5 mb-8 overflow-x-auto scrollbar-hide pb-2">
               {steps.map((_, i) => {
                 const Icon = stepIcons[i];
                 return (

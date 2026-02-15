@@ -183,7 +183,7 @@ const BookActivities = () => {
         <div className="grid lg:grid-cols-5 gap-8">
           <div className="lg:col-span-3">
             {/* Progress */}
-            <div className="flex items-center gap-1.5 mb-8 overflow-x-auto pb-2">
+            <div className="flex items-center gap-1.5 mb-8 overflow-x-auto scrollbar-hide pb-2">
               {wizardSteps.map((_, i) => (
                 <button key={i} onClick={() => i <= step && setStep(i)}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${

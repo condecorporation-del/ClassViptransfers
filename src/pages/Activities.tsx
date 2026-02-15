@@ -1,71 +1,202 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Clock, ArrowRight } from 'lucide-react';
+import { Clock, ArrowRight, Check, AlertTriangle, MessageCircle, Info } from 'lucide-react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+
+const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
+const stagger = { visible: { transition: { staggerChildren: 0.08 } } };
 
 const Activities = () => {
   const { t } = useLanguage();
 
+  const includes = [
+    'activities.include.transport', 'activities.include.safety', 'activities.include.guide',
+    'activities.include.water', 'activities.include.kidsClub', 'activities.include.tequila', 'activities.include.lockers',
+  ];
+
+  const bringItems = [
+    'activities.bring.clothes', 'activities.bring.shoes', 'activities.bring.sunscreen', 'activities.bring.payment',
+  ];
+
   const activities = [
-    { name: t('Camel Ride', 'Paseo en Camello'), price: '$85', duration: '2h', desc: t('Ride through desert landscapes with stunning ocean views.', 'Recorre paisajes desérticos con impresionantes vistas al mar.') },
-    { name: t('Horseback Riding', 'Cabalgata'), price: '$80', duration: '1.5h', desc: t('Scenic horseback ride along the beach at sunset.', 'Paseo a caballo por la playa al atardecer.') },
-    { name: t('ATV Adventure', 'Aventura en ATV'), price: '$95', duration: '2h', desc: t('Adrenaline-pumping ATV ride through desert trails.', 'Paseo en ATV por senderos del desierto lleno de adrenalina.') },
-    { name: t('RZR Tour', 'Tour en RZR'), price: '$120', duration: '2.5h', desc: t('Off-road RZR experience through Baja landscapes.', 'Experiencia off-road en RZR por paisajes de Baja.') },
-    { name: t('Sky Bikes', 'Sky Bikes'), price: '$70', duration: '1h', desc: t('Pedal through the sky with panoramic views of the coast.', 'Pedalea por el cielo con vistas panorámicas de la costa.') },
-    { name: t('Sport Fishing', 'Pesca Deportiva'), price: '$250', duration: '4h', desc: t('Deep-sea fishing in the world\'s aquarium.', 'Pesca de altura en el acuario del mundo.') },
-    { name: t('Sunset Cruise', 'Crucero al Atardecer'), price: '$90', duration: '2h', desc: t('Sail past El Arco with drinks and snacks included.', 'Navega frente a El Arco con bebidas y snacks incluidos.') },
+    { key: 'camel', duration: '1h', price: '$85', combo: true },
+    { key: 'camelKids', duration: '1h', price: '$85', combo: true },
+    { key: 'horseback', duration: '1h', price: '$80', combo: true },
+    { key: 'atv', duration: '1h', price: '$95', combo: true, insurance: true },
+    { key: 'doubleMoto', duration: '1h', price: '$95', combo: true, insurance: true },
+    { key: 'rzr', duration: '1h', price: '$205+', combo: true, insurance: true, rzrPricing: true },
+    { key: 'skyBikes', duration: '1h', price: '$70', combo: true },
+    { key: 'fishing', duration: '4h', price: null, combo: false },
+    { key: 'sunset', duration: '2h', price: null, combo: false },
   ];
 
   return (
-    <div className="py-24 px-4">
-      <div className="container mx-auto max-w-6xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
-          <h1 className="font-display text-4xl md:text-6xl font-bold mb-4">{t('Activities & Adventures', 'Actividades y Aventuras')}</h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">{t('Unforgettable experiences curated by local experts.', 'Experiencias inolvidables curadas por expertos locales.')}</p>
-        </motion.div>
-
-        {/* Combo Banner */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-          className="glass-card rounded-2xl p-8 mb-12 text-center border-secondary/20">
-          <h3 className="font-display text-2xl font-bold mb-2 text-secondary">{t('Special Combo Deals', 'Combos Especiales')}</h3>
-          <p className="text-foreground/80 mb-4">
-            {t('Save big when you combine activities!', '¡Ahorra al combinar actividades!')}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <div className="glass-card rounded-xl px-6 py-4">
-              <p className="text-secondary text-2xl font-bold">$100 <span className="text-sm font-normal text-muted-foreground">USD</span></p>
-              <p className="text-foreground/70 text-sm">{t('2 Activities', '2 Actividades')}</p>
-            </div>
-            <div className="glass-card rounded-xl px-6 py-4 border-secondary/30">
-              <p className="text-secondary text-2xl font-bold">$125 <span className="text-sm font-normal text-muted-foreground">USD</span></p>
-              <p className="text-foreground/70 text-sm">{t('3 Activities', '3 Actividades')}</p>
-            </div>
-          </div>
-          <Link to="/book-activities" className="bg-secondary text-secondary-foreground px-6 py-3 rounded-full text-sm font-semibold inline-flex items-center gap-2 mt-6 hover:brightness-110 transition-all">
-            {t('Book a Combo', 'Reservar Combo')} <ArrowRight size={16} />
-          </Link>
-        </motion.div>
-
-        {/* Activities Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {activities.map((act, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}
-              className="glass-card rounded-xl p-6 hover:border-secondary/30 transition-all group">
-              <h3 className="font-display text-xl font-bold mb-2">{act.name}</h3>
-              <p className="text-muted-foreground text-sm mb-4">{act.desc}</p>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <span><Clock size={13} className="inline mr-1" />{act.duration}</span>
-                  <span className="text-secondary font-bold text-base">{act.price}</span>
-                </div>
-                <Link to="/book-activities" className="text-secondary text-xs font-semibold flex items-center gap-1 group-hover:gap-2 transition-all">
-                  {t('Book', 'Reservar')} <ArrowRight size={12} />
-                </Link>
-              </div>
-            </motion.div>
-          ))}
+    <div>
+      {/* Hero */}
+      <section className="navy-gradient pt-36 pb-20 px-4">
+        <div className="container mx-auto max-w-4xl text-center">
+          <motion.h1 initial="hidden" animate="visible" variants={fadeUp} className="font-display text-4xl md:text-6xl font-bold mb-4 text-off-white">
+            {t('activities.hero.title')}
+          </motion.h1>
+          <motion.p initial="hidden" animate="visible" variants={fadeUp} transition={{ delay: 0.1 }} className="text-off-white/60 text-lg max-w-2xl mx-auto">
+            {t('activities.hero.subtitle')}
+          </motion.p>
         </div>
-      </div>
+      </section>
+
+      {/* All Include + What to Bring */}
+      <section className="py-16 px-4 -mt-8">
+        <div className="container mx-auto max-w-4xl grid md:grid-cols-2 gap-6">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
+            className="glass-card rounded-2xl p-6 border border-border">
+            <h3 className="font-display text-lg font-bold mb-4">{t('activities.allInclude.title')}</h3>
+            <ul className="space-y-2.5">
+              {includes.map((key, i) => (
+                <li key={i} className="text-sm flex items-center gap-2">
+                  <Check size={14} className="text-gold flex-shrink-0" /> {t(key)}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.1 }}
+            className="glass-card rounded-2xl p-6 border border-border">
+            <h3 className="font-display text-lg font-bold mb-4">{t('activities.whatToBring')}</h3>
+            <ul className="space-y-2.5">
+              {bringItems.map((key, i) => (
+                <li key={i} className="text-sm flex items-center gap-2">
+                  <Check size={14} className="text-primary flex-shrink-0" /> {t(key)}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Combos */}
+      <section className="py-8 px-4">
+        <div className="container mx-auto max-w-4xl">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-8">
+            <h2 className="font-display text-3xl font-bold mb-2">{t('activities.combos.title')}</h2>
+            <p className="text-muted-foreground">{t('activities.combos.save')}</p>
+          </motion.div>
+          <div className="grid sm:grid-cols-2 gap-4 mb-6">
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
+              className="glass-card rounded-2xl p-6 text-center premium-card border border-border">
+              <p className="text-gold text-3xl font-bold mb-1">$100 <span className="text-sm text-muted-foreground font-normal">USD</span></p>
+              <p className="text-foreground/70 text-sm">{t('activities.combo.2')}</p>
+            </motion.div>
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.1 }}
+              className="glass-card rounded-2xl p-6 text-center premium-card border-2 border-gold/30 relative">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 gold-gradient text-navy text-xs font-bold px-3 py-1 rounded-full">
+                {t('home.activities.bestValue')}
+              </span>
+              <p className="text-gold text-3xl font-bold mb-1">$125 <span className="text-sm text-muted-foreground font-normal">USD</span></p>
+              <p className="text-foreground/70 text-sm">{t('activities.combo.3')}</p>
+            </motion.div>
+          </div>
+          <div className="text-center">
+            <Link to="/book-activities" className="gold-gradient text-navy px-8 py-3.5 rounded-full font-bold text-sm inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
+              {t('activities.bookCombo')} <ArrowRight size={16} />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <div className="section-divider mx-auto max-w-2xl my-8" />
+
+      {/* Activities Grid */}
+      <section className="py-12 px-4">
+        <div className="container mx-auto max-w-6xl">
+          <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true }}
+            className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {activities.map((act, i) => (
+              <motion.div key={i} variants={fadeUp}
+                className="glass-card rounded-xl p-6 premium-card border border-border">
+                <h3 className="font-display text-lg font-bold mb-1">{t(`activity.${act.key}`)}</h3>
+                <p className="text-muted-foreground text-sm mb-3">{t(`activity.${act.key}.desc`)}</p>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground mb-3">
+                  <span className="flex items-center gap-1"><Clock size={13} /> {act.duration}</span>
+                  {act.price ? (
+                    <span className="text-gold font-bold">{act.price} USD</span>
+                  ) : (
+                    <span className="text-primary font-medium italic">{t('activities.quoteOnRequest')}</span>
+                  )}
+                </div>
+
+                {/* Accordion for details */}
+                <Accordion type="single" collapsible>
+                  {act.rzrPricing && (
+                    <AccordionItem value="rzr" className="border-none">
+                      <AccordionTrigger className="text-xs text-gold py-2 hover:no-underline">RZR Pricing</AccordionTrigger>
+                      <AccordionContent className="text-xs text-muted-foreground space-y-1">
+                        <p>{t('activity.rzr.1pax')}</p>
+                        <p>{t('activity.rzr.2pax')}</p>
+                        <p>{t('activity.rzr.3pax')}</p>
+                        <p>{t('activity.rzr.4pax')}</p>
+                      </AccordionContent>
+                    </AccordionItem>
+                  )}
+                  {act.insurance && (
+                    <AccordionItem value="insurance" className="border-none">
+                      <AccordionTrigger className="text-xs text-muted-foreground py-2 hover:no-underline">
+                        <span className="flex items-center gap-1"><AlertTriangle size={12} /> {t('activities.vehicleInsurance').split(':')[0]}</span>
+                      </AccordionTrigger>
+                      <AccordionContent className="text-xs text-muted-foreground">
+                        {t('activities.vehicleInsurance')}
+                      </AccordionContent>
+                    </AccordionItem>
+                  )}
+                </Accordion>
+
+                {/* CTA */}
+                {act.price ? (
+                  <Link to="/book-activities" className="text-gold text-xs font-semibold flex items-center gap-1 mt-2 hover:gap-2 transition-all">
+                    {t('common.bookNow')} <ArrowRight size={12} />
+                  </Link>
+                ) : (
+                  <a href="https://wa.me/526241234567" target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs font-semibold text-[#25D366] mt-2">
+                    <MessageCircle size={12} /> {t('activities.contactWhatsApp')}
+                  </a>
+                )}
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Park Fee Note */}
+      <section className="py-8 px-4">
+        <div className="container mx-auto max-w-3xl">
+          <div className="flex items-start gap-3 bg-accent/60 rounded-xl p-4 border border-border">
+            <Info size={18} className="text-gold flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-muted-foreground">{t('activities.parkFee')}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="navy-gradient py-20 px-4">
+        <div className="container mx-auto max-w-2xl text-center">
+          <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl md:text-4xl font-bold mb-4 text-off-white">
+            {t('activities.cta.title')}
+          </motion.h2>
+          <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.1 }} className="text-off-white/60 mb-8">
+            {t('activities.cta.subtitle')}
+          </motion.p>
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.2 }}>
+            <Link to="/book-activities" className="gold-gradient text-navy px-8 py-3.5 rounded-full font-bold text-sm inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
+              {t('home.activities.bookActivities')} <ArrowRight size={16} />
+            </Link>
+          </motion.div>
+        </div>
+      </section>
     </div>
   );
 };

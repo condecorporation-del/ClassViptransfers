@@ -1,64 +1,64 @@
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Phone, Mail, MapPin } from 'lucide-react';
+import { Phone, Mail, MapPin, ArrowRight } from 'lucide-react';
 
 const Footer = () => {
   const { t } = useLanguage();
 
   return (
-    <footer className="border-t border-border/50 bg-card/50 backdrop-blur-sm">
+    <footer className="navy-gradient text-off-white">
       <div className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-          {/* Brand */}
-          <div className="md:col-span-1">
-            <h3 className="font-display text-xl font-bold text-gold-gradient mb-3">Class VIP Transfers</h3>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              {t(
-                'Premium transportation and experiences in Los Cabos, México. 30+ years of excellence.',
-                'Transportación premium y experiencias en Los Cabos, México. 30+ años de excelencia.'
-              )}
+          {/* Brand + Logo */}
+          <div>
+            <img src="/logo.png" alt="Class VIP Transfers" className="h-16 mb-4 drop-shadow-[0_2px_8px_rgba(212,175,55,0.3)]" />
+            <p className="text-off-white/60 text-sm leading-relaxed">
+              {t('footer.brand')}
             </p>
           </div>
 
-          {/* Links */}
+          {/* Quick Links */}
           <div>
-            <h4 className="text-secondary font-semibold text-sm mb-4 uppercase tracking-wider">{t('Services', 'Servicios')}</h4>
+            <h4 className="text-gold font-semibold text-sm mb-4 uppercase tracking-wider">{t('footer.services')}</h4>
             <div className="flex flex-col gap-2.5">
-              <Link to="/transfers" className="text-muted-foreground text-sm hover:text-foreground transition-colors">{t('Transfers', 'Transfers')}</Link>
-              <Link to="/activities" className="text-muted-foreground text-sm hover:text-foreground transition-colors">{t('Activities', 'Actividades')}</Link>
-              <Link to="/book" className="text-muted-foreground text-sm hover:text-foreground transition-colors">{t('Book Now', 'Reservar')}</Link>
+              <Link to="/transfers" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.transfers')}</Link>
+              <Link to="/activities" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.activities')}</Link>
+              <Link to="/book" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.bookNow')}</Link>
             </div>
           </div>
 
-          {/* Company */}
+          {/* Contact Info */}
           <div>
-            <h4 className="text-secondary font-semibold text-sm mb-4 uppercase tracking-wider">{t('Company', 'Empresa')}</h4>
-            <div className="flex flex-col gap-2.5">
-              <Link to="/contact" className="text-muted-foreground text-sm hover:text-foreground transition-colors">{t('Contact', 'Contacto')}</Link>
-              <Link to="/" className="text-muted-foreground text-sm hover:text-foreground transition-colors">{t('About Us', 'Nosotros')}</Link>
-              <Link to="/" className="text-muted-foreground text-sm hover:text-foreground transition-colors">{t('Privacy Policy', 'Privacidad')}</Link>
-            </div>
-          </div>
-
-          {/* Contact */}
-          <div>
-            <h4 className="text-secondary font-semibold text-sm mb-4 uppercase tracking-wider">{t('Contact', 'Contacto')}</h4>
+            <h4 className="text-gold font-semibold text-sm mb-4 uppercase tracking-wider">{t('footer.contact')}</h4>
             <div className="flex flex-col gap-3">
-              <a href="tel:+526241234567" className="flex items-center gap-2 text-muted-foreground text-sm hover:text-foreground transition-colors">
-                <Phone size={14} /> +52 624 123 4567
+              <a href="tel:+526241234567" className="flex items-center gap-2 text-off-white/60 text-sm hover:text-off-white transition-colors">
+                <Phone size={14} className="text-gold" /> +52 624 123 4567
               </a>
-              <a href="mailto:info@classviptransfers.com" className="flex items-center gap-2 text-muted-foreground text-sm hover:text-foreground transition-colors">
-                <Mail size={14} /> info@classviptransfers.com
+              <a href="mailto:info@classviptransfers.com" className="flex items-center gap-2 text-off-white/60 text-sm hover:text-off-white transition-colors">
+                <Mail size={14} className="text-gold" /> info@classviptransfers.com
               </a>
-              <span className="flex items-center gap-2 text-muted-foreground text-sm">
-                <MapPin size={14} /> Los Cabos, B.C.S., México
+              <span className="flex items-center gap-2 text-off-white/60 text-sm">
+                <MapPin size={14} className="text-gold" /> {t('contact.address')}
               </span>
             </div>
           </div>
+
+          {/* CTA */}
+          <div>
+            <h4 className="text-gold font-semibold text-sm mb-4 uppercase tracking-wider">{t('nav.bookNow')}</h4>
+            <p className="text-off-white/60 text-sm mb-4">{t('transfers.cta.subtitle')}</p>
+            <Link
+              to="/book"
+              className="gold-gradient text-navy px-6 py-3 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow"
+            >
+              {t('nav.bookNow')} <ArrowRight size={14} />
+            </Link>
+          </div>
         </div>
 
-        <div className="border-t border-border/50 mt-12 pt-6 text-center text-muted-foreground text-xs">
-          © {new Date().getFullYear()} Class VIP Transfers. {t('All rights reserved.', 'Todos los derechos reservados.')}
+        <div className="section-divider mt-12 mb-6" />
+        <div className="text-center text-off-white/40 text-xs">
+          © {new Date().getFullYear()} Class VIP Transfers. {t('footer.rights')}
         </div>
       </div>
     </footer>

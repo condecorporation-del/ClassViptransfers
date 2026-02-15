@@ -6,62 +6,86 @@
 
 @layer base {
   :root {
-    /* Navy #071A2B → hsl(210, 70%, 10%) */
-    --background: 210 70% 10%;
-    --foreground: 214 100% 97%;
+    /* Background: Off-white #F7FAFF */
+    --background: 217 100% 98%;
+    --foreground: 207 72% 10%;
 
-    /* Deep Blue #0B2A4A → hsl(210, 74%, 17%) */
-    --card: 210 74% 17%;
-    --card-foreground: 214 100% 97%;
+    /* Cards: white glass */
+    --card: 0 0% 100%;
+    --card-foreground: 207 72% 10%;
 
-    --popover: 210 74% 17%;
-    --popover-foreground: 214 100% 97%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 207 72% 10%;
 
-    /* Royal Blue #1E63E9 */
-    --primary: 220 82% 51%;
-    --primary-foreground: 214 100% 97%;
+    /* Royal Blue */
+    --primary: 220 82% 52%;
+    --primary-foreground: 0 0% 100%;
 
     /* Gold #D4AF37 */
-    --secondary: 43 65% 52%;
-    --secondary-foreground: 210 70% 10%;
+    --secondary: 46 67% 52%;
+    --secondary-foreground: 207 72% 10%;
 
-    --muted: 210 50% 15%;
-    --muted-foreground: 214 30% 65%;
+    --muted: 217 30% 93%;
+    --muted-foreground: 207 20% 46%;
 
-    --accent: 210 74% 17%;
-    --accent-foreground: 214 100% 97%;
+    --accent: 217 50% 95%;
+    --accent-foreground: 207 72% 10%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 214 100% 97%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 210 40% 22%;
-    --input: 210 40% 22%;
-    --ring: 43 65% 52%;
+    --border: 217 20% 88%;
+    --input: 217 20% 88%;
+    --ring: 46 67% 52%;
 
     --radius: 0.75rem;
 
-    /* Gold token */
-    --gold: 43 65% 52%;
-    --gold-foreground: 210 70% 10%;
-
-    /* Deep blue token */
+    /* Custom tokens */
+    --navy: 207 72% 10%;
     --deep-blue: 210 74% 17%;
+    --royal-blue: 220 82% 52%;
+    --gold: 46 67% 52%;
+    --gold-light: 42 80% 65%;
+    --gold-foreground: 207 72% 10%;
+    --off-white: 217 100% 98%;
 
-    /* Off-white */
-    --off-white: 214 100% 97%;
+    /* Glass */
+    --glass: 0 0% 100%;
+    --glass-border: 217 20% 88%;
 
-    /* Glass effect */
+    /* Sidebar (admin) */
+    --sidebar-background: 207 72% 10%;
+    --sidebar-foreground: 217 100% 98%;
+    --sidebar-primary: 220 82% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 74% 17%;
+    --sidebar-accent-foreground: 217 100% 98%;
+    --sidebar-border: 210 40% 22%;
+    --sidebar-ring: 46 67% 52%;
+  }
+
+  .dark {
+    --background: 207 72% 10%;
+    --foreground: 217 100% 98%;
+    --card: 210 74% 17%;
+    --card-foreground: 217 100% 98%;
+    --popover: 210 74% 17%;
+    --popover-foreground: 217 100% 98%;
+    --primary: 220 82% 52%;
+    --primary-foreground: 217 100% 98%;
+    --secondary: 46 67% 52%;
+    --secondary-foreground: 207 72% 10%;
+    --muted: 210 50% 15%;
+    --muted-foreground: 214 30% 65%;
+    --accent: 210 74% 17%;
+    --accent-foreground: 217 100% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 217 100% 98%;
+    --border: 210 40% 22%;
+    --input: 210 40% 22%;
+    --ring: 46 67% 52%;
     --glass: 210 74% 17%;
     --glass-border: 210 40% 30%;
-
-    --sidebar-background: 210 70% 10%;
-    --sidebar-foreground: 214 100% 97%;
-    --sidebar-primary: 220 82% 51%;
-    --sidebar-primary-foreground: 214 100% 97%;
-    --sidebar-accent: 210 74% 17%;
-    --sidebar-accent-foreground: 214 100% 97%;
-    --sidebar-border: 210 40% 22%;
-    --sidebar-ring: 43 65% 52%;
   }
 }
 
@@ -71,7 +95,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -79,17 +103,80 @@
   }
 }
 
-/* Glass card utility */
+/* === Premium Utility Classes === */
+
+/* Glass card */
 .glass-card {
   background: hsl(var(--glass) / 0.6);
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid hsl(var(--glass-border) / 0.3);
+  border-radius: var(--radius);
+}
+
+/* Gold gradient backgrounds */
+.gold-gradient {
+  background: linear-gradient(135deg, hsl(var(--gold)), hsl(var(--gold-light)));
+}
+
+/* Navy gradient */
+.navy-gradient {
+  background: linear-gradient(135deg, hsl(var(--navy)), hsl(var(--deep-blue)));
 }
 
 /* Gold gradient text */
 .text-gold-gradient {
-  background: linear-gradient(135deg, hsl(43 65% 52%), hsl(43 80% 65%));
+  background: linear-gradient(135deg, hsl(var(--gold)), hsl(var(--gold-light)));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Gold glow shadow */
+.gold-glow {
+  box-shadow: 0 4px 25px -4px hsl(var(--gold) / 0.35);
+}
+
+/* Premium card hover */
+.premium-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.premium-card:hover {
+  transform: translateY(-4px);
+  border-color: hsl(var(--gold) / 0.4);
+  box-shadow: 0 12px 40px -8px hsl(var(--gold) / 0.15);
+}
+
+/* Section divider */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, hsl(var(--gold) / 0.4), transparent);
+}
+
+/* Hero cinematographic overlay */
+.hero-overlay {
+  background: 
+    linear-gradient(to bottom, hsl(var(--navy) / 0.65) 0%, hsl(var(--navy) / 0.3) 40%, hsl(var(--navy) / 0.5) 70%, hsl(var(--navy) / 0.85) 100%),
+    radial-gradient(ellipse at center, transparent 50%, hsl(var(--navy) / 0.3) 100%);
+}
+
+/* Gold underline link animation */
+.gold-underline {
+  position: relative;
+}
+.gold-underline::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background: linear-gradient(90deg, hsl(var(--gold)), hsl(var(--gold-light)));
+  transform-origin: bottom right;
+  transition: transform 0.3s ease-out;
+}
+.gold-underline:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
 }

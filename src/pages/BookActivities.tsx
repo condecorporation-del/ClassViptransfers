@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Check, ArrowRight, ArrowLeft, Clock, Minus, Plus, Info, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Check, ArrowRight, ArrowLeft, Clock, Minus, Plus, Info, ToggleLeft, ToggleRight, MessageCircle } from 'lucide-react';
 
 const wizardSteps = ['combo', 'activities', 'date', 'info', 'review'] as const;
 
@@ -20,15 +20,15 @@ const BookActivities = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
-  const [comboType, setComboType] = useState<'combo' | 'crazy'>('combo');
+  const [comboType, setComboType] = useState<'' | 'combo' | 'crazy'>('');
   const [selected, setSelected] = useState<string[]>([]);
   const [date, setDate] = useState('');
-  const [passengers, setPassengers] = useState(2);
+  const [passengers, setPassengers] = useState(1);
   const [info, setInfo] = useState({ name: '', email: '', phone: '' });
   const [needTransfer, setNeedTransfer] = useState(false);
 
   const maxActivities = comboType === 'combo' ? 2 : 3;
-  const comboPrice = comboType === 'combo' ? 100 : 125;
+  const comboPrice = comboType === 'combo' ? 100 : comboType === 'crazy' ? 125 : 0;
 
   const toggle = (id: string) => {
     setSelected(prev => {
@@ -41,39 +41,47 @@ const BookActivities = () => {
   const next = () => setStep(s => Math.min(s + 1, wizardSteps.length - 1));
   const prev = () => setStep(s => Math.max(s - 1, 0));
 
-  const stepLabels = [
-    t('bookAct.step1.title'), t('bookAct.step2.title'), t('bookAct.step3.title'),
-    t('bookAct.step4.title'), t('bookAct.step5.title'),
-  ];
+  const total = comboType ? comboPrice * passengers : 0;
 
   const renderStep = () => {
     switch (wizardSteps[step]) {
       case 'combo':
         return (
           <div className="space-y-4">
-            <h2 className="font-display text-2xl font-bold">{t('bookAct.step1.title')}</h2>
-            {[
-              { id: 'combo' as const, label: t('bookAct.step1.combo') },
-              { id: 'crazy' as const, label: t('bookAct.step1.crazy') },
-            ].map(c => (
-              <button key={c.id} onClick={() => { setComboType(c.id); setSelected([]); next(); }}
-                className={`w-full glass-card rounded-xl p-5 text-left premium-card border transition-all flex items-center justify-between ${comboType === c.id ? 'border-gold' : 'border-border'}`}>
-                <div>
-                  <p className="font-semibold">{c.label}</p>
-                  {c.id === 'crazy' && <span className="gold-gradient text-navy text-xs font-bold px-2 py-0.5 rounded-full inline-block mt-1">{t('home.activities.bestValue')}</span>}
-                </div>
-                {comboType === c.id && <div className="w-6 h-6 rounded-full gold-gradient flex items-center justify-center flex-shrink-0"><Check size={14} className="text-navy" /></div>}
+            <div>
+              <h2 className="font-display text-2xl font-bold">{t('bookAct.step1.title')}</h2>
+              <p className="text-muted-foreground text-sm mt-1">All combo activities are 1 hour each</p>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <button onClick={() => { setComboType('combo'); setSelected([]); }}
+                className={`glass-card rounded-xl p-8 text-center premium-card border transition-all ${comboType === 'combo' ? 'border-gold' : 'border-border'}`}>
+                <p className="text-3xl mb-2">🎯</p>
+                <p className="font-display text-xl font-bold">Combo</p>
+                <p className="text-muted-foreground text-xs mt-1">2 activities (1 hr each)</p>
+                <p className="text-gold text-2xl font-bold mt-3">$100 <span className="text-sm text-muted-foreground font-normal">USD/person</span></p>
               </button>
-            ))}
+              <button onClick={() => { setComboType('crazy'); setSelected([]); }}
+                className={`glass-card rounded-xl p-8 text-center premium-card border transition-all relative ${comboType === 'crazy' ? 'border-gold' : 'border-border'}`}>
+                <span className="absolute -top-3 right-4 gold-gradient text-navy text-xs font-bold px-3 py-1 rounded-full">
+                  BEST VALUE
+                </span>
+                <p className="text-3xl mb-2">🔥</p>
+                <p className="font-display text-xl font-bold">Crazy Combo</p>
+                <p className="text-muted-foreground text-xs mt-1">3 activities (1 hr each)</p>
+                <p className="text-gold text-2xl font-bold mt-3">$125 <span className="text-sm text-muted-foreground font-normal">USD/person</span></p>
+              </button>
+            </div>
           </div>
         );
       case 'activities':
         return (
           <div className="space-y-4">
-            <h2 className="font-display text-2xl font-bold">{t('bookAct.step2.title')}</h2>
-            <p className="text-muted-foreground text-sm">
-              {selected.length}/{maxActivities} selected
-            </p>
+            <div>
+              <h2 className="font-display text-2xl font-bold">{t('bookAct.step2.title')}</h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                {selected.length}/{maxActivities} selected
+              </p>
+            </div>
             {allActivities.map(act => (
               <button key={act.id} onClick={() => toggle(act.id)}
                 className={`w-full glass-card rounded-xl p-4 text-left premium-card border transition-all flex items-center justify-between ${selected.includes(act.id) ? 'border-gold' : 'border-border'}`}>
@@ -155,14 +163,9 @@ const BookActivities = () => {
               <div className="flex justify-between"><span className="text-muted-foreground">{t('book.review.date')}</span><span className="font-medium">{date || '—'}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">{t('book.review.passengers')}</span><span className="font-medium">{passengers}</span></div>
               {info.name && <div className="flex justify-between"><span className="text-muted-foreground">{t('bookAct.step4.name')}</span><span className="font-medium">{info.name}</span></div>}
-              {selected.length >= 2 && (
-                <div className="border-t border-border pt-3 text-xs text-gold font-semibold">
-                  {t('bookAct.comboDiscount')}
-                </div>
-              )}
               <div className="border-t border-border pt-3 flex justify-between font-bold text-lg">
                 <span>{t('bookAct.total')}</span>
-                <span className="text-gold">${comboPrice * passengers} USD</span>
+                <span className="text-gold">${total} USD</span>
               </div>
               <p className="text-xs text-muted-foreground">${comboPrice} {t('bookAct.perPerson')} × {passengers}</p>
             </div>
@@ -180,26 +183,35 @@ const BookActivities = () => {
   return (
     <div className="pt-32 pb-20 px-4">
       <div className="container mx-auto max-w-5xl">
-        <div className="grid lg:grid-cols-5 gap-8">
-          <div className="lg:col-span-3">
-            {/* Progress */}
-            <div className="flex items-center gap-1.5 mb-8 overflow-x-auto scrollbar-hide pb-2">
-              {wizardSteps.map((_, i) => (
-                <button key={i} onClick={() => i <= step && setStep(i)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-                    i === step ? 'gold-gradient text-navy font-bold' : i < step ? 'text-gold' : 'text-muted-foreground'
-                  }`}>
-                  {stepLabels[i]}
-                </button>
-              ))}
-            </div>
+        {/* Title + step counter */}
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="font-display text-3xl font-bold">{t('bookAct.title')}</h1>
+          <span className="text-muted-foreground text-sm font-medium">{step + 1}/5</span>
+        </div>
 
+        {/* Progress dots */}
+        <div className="flex gap-1.5 mb-8">
+          {wizardSteps.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => i <= step && setStep(i)}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                i === step ? 'w-8 bg-gold' : i < step ? 'w-2 bg-gold/50' : 'w-2 bg-border'
+              }`}
+            />
+          ))}
+        </div>
+
+        <div className="grid lg:grid-cols-5 gap-8">
+          {/* Wizard */}
+          <div className="lg:col-span-3">
             <AnimatePresence mode="wait">
               <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
                 {renderStep()}
               </motion.div>
             </AnimatePresence>
 
+            {/* Nav buttons */}
             <div className="flex justify-between mt-8">
               <button onClick={prev} disabled={step === 0}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
@@ -207,7 +219,7 @@ const BookActivities = () => {
               </button>
               {step < wizardSteps.length - 1 && (
                 <button onClick={next}
-                  className="flex items-center gap-2 text-sm text-gold font-semibold hover:gap-3 transition-all">
+                  className="gold-gradient text-navy px-6 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
                   {t('book.next')} <ArrowRight size={16} />
                 </button>
               )}
@@ -216,30 +228,28 @@ const BookActivities = () => {
 
           {/* Sticky Summary */}
           <div className="lg:col-span-2 hidden lg:block">
-            <div className="sticky top-32 glass-card rounded-2xl p-6 border border-border">
-              <h3 className="font-display text-lg font-bold text-gold mb-4">{t('bookAct.summary')}</h3>
-              {selected.length === 0 ? (
-                <p className="text-muted-foreground text-xs italic">{t('book.summaryEmpty')}</p>
-              ) : (
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Combo</span><span className="capitalize">{comboType}</span></div>
-                  {selected.map(id => {
-                    const act = allActivities.find(a => a.id === id)!;
-                    return <div key={id} className="flex justify-between"><span>{t(act.key)}</span><span className="text-muted-foreground">{act.duration}</span></div>;
-                  })}
-                  {date && <div className="flex justify-between"><span className="text-muted-foreground">{t('book.review.date')}</span><span>{date}</span></div>}
-                  <div className="flex justify-between"><span className="text-muted-foreground">{t('book.review.passengers')}</span><span>{passengers}</span></div>
-                  {selected.length >= 2 && (
-                    <div className="border-t border-border pt-3 text-xs text-gold font-semibold">
-                      {t('bookAct.comboDiscount')}
-                    </div>
-                  )}
-                  <div className="border-t border-border pt-3 flex justify-between font-bold">
-                    <span>{t('bookAct.total')}</span>
-                    <span className="text-gold">${comboPrice * passengers} USD</span>
-                  </div>
+            <div className="sticky top-32 glass-card rounded-2xl p-6 space-y-4 border border-border">
+              <h3 className="font-display text-lg font-bold">{t('book.summary')}</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Persons</span>
+                  <span>{passengers}</span>
                 </div>
-              )}
+              </div>
+
+              <p className="text-xs text-muted-foreground">Park fee ($25/person) paid at park</p>
+
+              <div className="border-t border-border pt-3">
+                <div className="flex justify-between font-bold">
+                  <span>Total Due Now</span>
+                  <span className="text-gold">${total} USD</span>
+                </div>
+              </div>
+
+              <a href="https://wa.me/526241234567?text=Hello%2C%20I%27d%20like%20to%20book%20a%20transfer" target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors pt-2">
+                <MessageCircle size={14} className="text-[#25D366]" /> Chat on WhatsApp
+              </a>
             </div>
           </div>
         </div>

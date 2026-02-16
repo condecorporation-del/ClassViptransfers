@@ -6,48 +6,44 @@ const Footer = () => {
   const { t } = useLanguage();
 
   return (
-    <footer className="border-t border-border/30 bg-accent/30">
+    <footer className="navy-gradient text-off-white">
       <div className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-          {/* Brand */}
           <div>
             <img src="/logo.png" alt="Class VIP Transfers" className="h-14 mb-4 drop-shadow-[0_2px_8px_rgba(212,175,55,0.3)]" />
-            <p className="text-muted-foreground text-sm leading-relaxed">
+            <p className="text-off-white/60 text-sm leading-relaxed">
               {t('footer.brand')}
             </p>
           </div>
 
-          {/* Quick Links */}
           <div>
             <h4 className="text-gold font-semibold text-xs mb-4 uppercase tracking-[0.2em]">{t('footer.quickLinks')}</h4>
             <div className="flex flex-col gap-2.5">
-              <Link to="/" className="text-muted-foreground text-sm hover:text-foreground transition-colors">{t('nav.home')}</Link>
-              <Link to="/transfers" className="text-muted-foreground text-sm hover:text-foreground transition-colors">{t('nav.transfers')}</Link>
-              <Link to="/activities" className="text-muted-foreground text-sm hover:text-foreground transition-colors">{t('nav.activities')}</Link>
-              <Link to="/contact" className="text-muted-foreground text-sm hover:text-foreground transition-colors">{t('nav.contact')}</Link>
+              <Link to="/" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.home')}</Link>
+              <Link to="/transfers" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.transfers')}</Link>
+              <Link to="/activities" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.activities')}</Link>
+              <Link to="/contact" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.contact')}</Link>
             </div>
           </div>
 
-          {/* Contact Info */}
           <div>
             <h4 className="text-gold font-semibold text-xs mb-4 uppercase tracking-[0.2em]">{t('footer.contact')}</h4>
             <div className="flex flex-col gap-3">
-              <a href="tel:+526241234567" className="flex items-center gap-2 text-muted-foreground text-sm hover:text-foreground transition-colors">
+              <a href="tel:+526241234567" className="flex items-center gap-2 text-off-white/60 text-sm hover:text-off-white transition-colors">
                 <Phone size={14} className="text-gold" /> +52 624 123 4567
               </a>
-              <a href="mailto:info@classviptransfers.com" className="flex items-center gap-2 text-muted-foreground text-sm hover:text-foreground transition-colors">
+              <a href="mailto:info@classviptransfers.com" className="flex items-center gap-2 text-off-white/60 text-sm hover:text-off-white transition-colors">
                 <Mail size={14} className="text-gold" /> info@classviptransfers.com
               </a>
-              <span className="flex items-center gap-2 text-muted-foreground text-sm">
+              <span className="flex items-center gap-2 text-off-white/60 text-sm">
                 <MapPin size={14} className="text-gold" /> {t('contact.address')}
               </span>
             </div>
           </div>
 
-          {/* CTA */}
           <div>
             <h4 className="text-gold font-semibold text-xs mb-4 uppercase tracking-[0.2em]">{t('nav.bookNow')}</h4>
-            <p className="text-muted-foreground text-sm mb-4">{t('cta.subtitle')}</p>
+            <p className="text-off-white/60 text-sm mb-4">{t('cta.subtitle')}</p>
             <Link
               to="/book"
               className="gold-gradient text-secondary-foreground px-6 py-3 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow"
@@ -58,7 +54,7 @@ const Footer = () => {
         </div>
 
         <div className="section-divider mt-12 mb-6" />
-        <div className="text-center text-muted-foreground/60 text-xs">
+        <div className="text-center text-off-white/40 text-xs">
           © {new Date().getFullYear()} Class VIP Transfers. {t('footer.rights')}
         </div>
       </div>

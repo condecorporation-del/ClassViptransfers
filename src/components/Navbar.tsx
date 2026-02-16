@@ -26,16 +26,20 @@ const Navbar = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const navBg = !isHome
-    ? 'bg-background/95 backdrop-blur-2xl border-b border-border/50'
-    : scrolled
-    ? 'bg-background/95 backdrop-blur-2xl border-b border-border/50'
-    : 'bg-gradient-to-b from-background/80 to-transparent';
+  // Hero sections are dark → use light text; elsewhere use dark text on bright bg
+  const isDarkHero = isHome && !scrolled;
+
+  const navBg = isDarkHero
+    ? 'bg-gradient-to-b from-navy/70 to-transparent'
+    : 'bg-card/95 backdrop-blur-2xl border-b border-border/60 shadow-sm';
+
+  const textColor = isDarkHero ? 'text-off-white' : 'text-foreground';
+  const mutedText = isDarkHero ? 'text-off-white/70' : 'text-foreground/60';
+  const activeText = 'text-gold';
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${navBg}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${navBg}`}>
       <div className="container mx-auto px-4 h-20 md:h-24 flex items-center justify-between">
-        {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
           <img
             src="/logo.png"
@@ -44,14 +48,13 @@ const Navbar = () => {
           />
         </Link>
 
-        {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-10">
           {links.map(link => (
             <Link
               key={link.to}
               to={link.to}
               className={`text-[11px] font-semibold uppercase tracking-[0.2em] transition-colors gold-underline ${
-                isActive(link.to) ? 'text-gold' : 'text-foreground/60 hover:text-foreground'
+                isActive(link.to) ? activeText : `${mutedText} hover:${textColor}`
               }`}
             >
               {link.label}
@@ -59,16 +62,12 @@ const Navbar = () => {
           ))}
         </div>
 
-        {/* Right side */}
         <div className="flex items-center gap-3">
-          {/* Language toggle pill */}
-          <div className="flex rounded-full overflow-hidden border border-border/60">
+          <div className={`flex rounded-full overflow-hidden border ${isDarkHero ? 'border-off-white/20' : 'border-border'}`}>
             <button
               onClick={() => setLang('en')}
               className={`text-[10px] font-bold px-3 py-1.5 transition-all ${
-                lang === 'en'
-                  ? 'gold-gradient text-secondary-foreground'
-                  : 'text-foreground/50 hover:text-foreground'
+                lang === 'en' ? 'gold-gradient text-secondary-foreground' : `${mutedText}`
               }`}
             >
               EN
@@ -76,9 +75,7 @@ const Navbar = () => {
             <button
               onClick={() => setLang('es')}
               className={`text-[10px] font-bold px-3 py-1.5 transition-all ${
-                lang === 'es'
-                  ? 'gold-gradient text-secondary-foreground'
-                  : 'text-foreground/50 hover:text-foreground'
+                lang === 'es' ? 'gold-gradient text-secondary-foreground' : `${mutedText}`
               }`}
             >
               ES
@@ -92,21 +89,19 @@ const Navbar = () => {
             {t('nav.bookNow')}
           </Link>
 
-          {/* Mobile hamburger */}
-          <button onClick={() => setOpen(!open)} className="md:hidden text-foreground">
+          <button onClick={() => setOpen(!open)} className={`md:hidden ${textColor}`}>
             {open ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu */}
       <AnimatePresence>
         {open && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-t border-border/30 bg-background/98 backdrop-blur-2xl"
+            className="md:hidden border-t border-border/30 bg-card/98 backdrop-blur-2xl"
           >
             <div className="px-6 py-6 flex flex-col gap-4">
               {links.map(link => (

@@ -1,29 +1,20 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ArrowRight, Check, Shield, Users, Plane, Clock, Wifi, Droplets, User, MapPin } from 'lucide-react';
+import { ArrowRight, Check, Shield, Car, Users, MessageCircle } from 'lucide-react';
 
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 
 const Transfers = () => {
   const { t } = useLanguage();
 
-  const privateFeatures = [
-    'transfers.private.f1', 'transfers.private.f2', 'transfers.private.f3', 'transfers.private.f4',
-    'transfers.private.f5', 'transfers.private.f6', 'transfers.private.f7', 'transfers.private.f8',
-  ];
-
-  const shuttleFeatures = [
-    'transfers.shuttle.f1', 'transfers.shuttle.f2', 'transfers.shuttle.f3', 'transfers.shuttle.f4', 'transfers.shuttle.f5',
-  ];
-
   const included = [
-    { icon: <User size={20} />, key: 'transfers.included.meetGreet' },
-    { icon: <Plane size={20} />, key: 'transfers.included.flight' },
-    { icon: <Droplets size={20} />, key: 'transfers.included.water' },
-    { icon: <MapPin size={20} />, key: 'transfers.included.door' },
-    { icon: <Users size={20} />, key: 'transfers.included.bilingual' },
-    { icon: <Wifi size={20} />, key: 'transfers.included.wifi' },
+    { key: 'transfers.included.meetGreet' },
+    { key: 'transfers.included.flight' },
+    { key: 'transfers.included.water' },
+    { key: 'transfers.included.door' },
+    { key: 'transfers.included.bilingual' },
+    { key: 'transfers.included.wifi' },
   ];
 
   return (
@@ -49,34 +40,55 @@ const Transfers = () => {
             <span className="absolute -top-3 left-6 gold-gradient text-navy text-xs font-bold px-3 py-1 rounded-full">
               {t('transfers.private.badge')}
             </span>
-            <h2 className="font-display text-2xl font-bold mt-2 mb-2">{t('transfers.private.title')}</h2>
+            <div className="flex items-center gap-3 mb-4 mt-2">
+              <div className="w-10 h-10 rounded-full gold-gradient flex items-center justify-center">
+                <Car size={20} className="text-navy" />
+              </div>
+              <h2 className="font-display text-2xl font-bold">{t('transfers.private.title')}</h2>
+            </div>
             <p className="text-muted-foreground text-sm mb-6">{t('transfers.private.desc')}</p>
-            <ul className="space-y-3 mb-8">
-              {privateFeatures.map((key, i) => (
-                <li key={i} className="text-sm text-foreground/80 flex items-center gap-2.5">
-                  <Check size={14} className="text-gold flex-shrink-0" /> {t(key)}
-                </li>
-              ))}
-            </ul>
-            <Link to="/book" className="gold-gradient text-navy px-6 py-3 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
-              {t('transfers.bookPrivate')} <ArrowRight size={16} />
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center justify-between bg-accent/50 rounded-lg px-4 py-3">
+                <div>
+                  <span className="text-sm font-medium">{t('home.transfers.privateSuburban')}</span>
+                  <span className="text-muted-foreground text-xs ml-1">{t('home.transfers.privateSuburbanPax')}</span>
+                </div>
+                <span className="text-gold font-bold text-sm">{t('home.transfers.privateSuburbanPrice')}</span>
+              </div>
+              <div className="flex items-center justify-between bg-accent/50 rounded-lg px-4 py-3">
+                <div>
+                  <span className="text-sm font-medium">{t('home.transfers.privateSprinter')}</span>
+                  <span className="text-muted-foreground text-xs ml-1">{t('home.transfers.privateSprinterPax')}</span>
+                </div>
+                <span className="text-gold font-bold text-sm">{t('home.transfers.privateSprinterPrice')}</span>
+              </div>
+            </div>
+            <Link to="/book" className="gold-gradient text-navy px-6 py-3 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow w-full justify-center">
+              {t('transfers.bookThis')} <ArrowRight size={16} />
             </Link>
           </motion.div>
 
           {/* Shuttle */}
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.1 }}
             className="glass-card rounded-2xl p-8 premium-card border border-border">
-            <h2 className="font-display text-2xl font-bold mt-2 mb-2">{t('transfers.shuttle.title')}</h2>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Users size={20} className="text-primary" />
+              </div>
+              <h2 className="font-display text-2xl font-bold">{t('transfers.shuttle.title')}</h2>
+            </div>
             <p className="text-muted-foreground text-sm mb-6">{t('transfers.shuttle.desc')}</p>
-            <ul className="space-y-3 mb-8">
-              {shuttleFeatures.map((key, i) => (
-                <li key={i} className="text-sm text-foreground/80 flex items-center gap-2.5">
-                  <Check size={14} className="text-primary flex-shrink-0" /> {t(key)}
-                </li>
-              ))}
-            </ul>
-            <Link to="/book" className="border border-border text-foreground px-6 py-3 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:bg-accent transition-all">
-              {t('transfers.bookShuttle')} <ArrowRight size={16} />
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center justify-between bg-accent/50 rounded-lg px-4 py-3">
+                <div>
+                  <span className="text-sm font-medium">{t('home.transfers.shuttleSprinter')}</span>
+                  <span className="text-muted-foreground text-xs ml-1">{t('home.transfers.shuttleSprinterPax')}</span>
+                </div>
+                <span className="text-gold font-bold text-sm">{t('home.transfers.shuttlePrice')}</span>
+              </div>
+            </div>
+            <Link to="/book" className="bg-navy text-off-white px-6 py-3 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:bg-deep-blue transition-all w-full justify-center">
+              {t('transfers.bookThis')} <ArrowRight size={16} />
             </Link>
           </motion.div>
         </div>
@@ -91,8 +103,8 @@ const Transfers = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {included.map((item, i) => (
               <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: i * 0.05 }}
-                className="glass-card rounded-xl p-5 text-center premium-card border border-border">
-                <div className="text-gold mb-2 flex justify-center">{item.icon}</div>
+                className="glass-card rounded-xl p-5 premium-card border border-border flex items-center gap-3">
+                <Check size={18} className="text-gold flex-shrink-0" />
                 <p className="text-sm font-medium">{t(item.key)}</p>
               </motion.div>
             ))}
@@ -121,10 +133,14 @@ const Transfers = () => {
           <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.1 }} className="text-off-white/60 mb-8">
             {t('transfers.cta.subtitle')}
           </motion.p>
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.2 }}>
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.2 }} className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/book" className="gold-gradient text-navy px-8 py-3.5 rounded-full font-bold text-sm inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
               {t('nav.bookNow')} <ArrowRight size={16} />
             </Link>
+            <a href="https://wa.me/526241234567?text=Hello%2C%20I%27d%20like%20to%20book%20a%20transfer" target="_blank" rel="noopener noreferrer"
+              className="border border-off-white/20 text-off-white px-8 py-3.5 rounded-full font-bold text-sm inline-flex items-center gap-2 hover:bg-white/5 transition-all">
+              <MessageCircle size={16} /> {t('transfers.cta.chat')}
+            </a>
           </motion.div>
         </div>
       </section>

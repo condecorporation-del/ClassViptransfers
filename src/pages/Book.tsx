@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Car, Repeat, MapPin, Calendar, Navigation, Sparkles, Star, ClipboardList, Minus, Plus, Plane } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Car, Users, Minus, Plus, Plane, MessageCircle } from 'lucide-react';
 
 const steps = ['service', 'trip', 'route', 'date', 'locations', 'extras', 'upsell', 'review'] as const;
 
@@ -11,7 +11,7 @@ const Book = () => {
   const navigate = useNavigate();
   const [current, setCurrent] = useState(0);
   const [data, setData] = useState({
-    serviceType: '' as '' | 'suv' | 'sprinter' | 'shuttle',
+    serviceType: '' as '' | 'private' | 'shuttle',
     tripType: '' as '' | 'oneway' | 'roundtrip',
     route: '' as '' | 'airport-hotel' | 'hotel-airport',
     arrivalDate: '',
@@ -20,18 +20,12 @@ const Book = () => {
     arrivalTime: '',
     departureFlightNumber: '',
     departureTime: '',
-    passengers: 2,
+    passengers: 1,
     pickup: '',
     dropoff: '',
     extras: [] as string[],
     activities: [] as string[],
   });
-
-  const stepIcons = [Car, Repeat, MapPin, Calendar, Navigation, Sparkles, Star, ClipboardList];
-  const stepLabels = [
-    t('book.step.service'), t('book.step.trip'), t('book.step.route'), t('book.step.date'),
-    t('book.step.locations'), t('book.step.extras'), t('book.step.activities'), t('book.step.review'),
-  ];
 
   const next = () => setCurrent(c => Math.min(c + 1, steps.length - 1));
   const prev = () => setCurrent(c => Math.max(c - 1, 0));
@@ -51,8 +45,7 @@ const Book = () => {
   // Pricing
   const transferPrice = useMemo(() => {
     let base = 0;
-    if (data.serviceType === 'suv') base = 85;
-    else if (data.serviceType === 'sprinter') base = 135;
+    if (data.serviceType === 'private') base = 85;
     else if (data.serviceType === 'shuttle') base = 25 * data.passengers;
     if (data.tripType === 'roundtrip') base *= 2;
     return base;
@@ -60,12 +53,6 @@ const Book = () => {
 
   const activitiesDeposit = data.activities.length > 0 ? 125 * data.passengers : 0;
   const total = transferPrice + activitiesDeposit;
-
-  const serviceOptions = [
-    { id: 'suv' as const, label: t('book.service.privateSuv'), desc: t('book.service.privateSuvDesc') },
-    { id: 'sprinter' as const, label: t('book.service.privateSprinter'), desc: t('book.service.privateSprinterDesc') },
-    { id: 'shuttle' as const, label: t('book.service.shuttle'), desc: t('book.service.shuttleDesc') },
-  ];
 
   const extrasOptions = [
     { id: 'baby', label: t('book.extras.babySeat') },
@@ -89,32 +76,42 @@ const Book = () => {
       case 'service':
         return (
           <div className="space-y-4">
-            <h2 className="font-display text-2xl font-bold">{t('book.service.title')}</h2>
-            {serviceOptions.map(s => (
-              <button key={s.id} onClick={() => { setData({ ...data, serviceType: s.id }); next(); }}
-                className={`w-full glass-card rounded-xl p-5 text-left premium-card border transition-all flex items-center justify-between ${data.serviceType === s.id ? 'border-gold' : 'border-border'}`}>
-                <div>
-                  <p className="font-semibold">{s.label}</p>
-                  <p className="text-muted-foreground text-xs mt-0.5">{s.desc}</p>
-                </div>
-                {data.serviceType === s.id && <div className="w-6 h-6 rounded-full gold-gradient flex items-center justify-center flex-shrink-0"><Check size={14} className="text-navy" /></div>}
+            <div>
+              <h2 className="font-display text-2xl font-bold">{t('book.service.title')}</h2>
+              <p className="text-muted-foreground text-sm mt-1">{t('book.service.subtitle')}</p>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <button onClick={() => { setData({ ...data, serviceType: 'private' }); }}
+                className={`glass-card rounded-xl p-8 text-center premium-card border transition-all ${data.serviceType === 'private' ? 'border-gold' : 'border-border'}`}>
+                <Car size={28} className="mx-auto mb-3 text-foreground/60" />
+                <p className="font-semibold text-lg">{t('book.service.private')}</p>
+                <p className="text-muted-foreground text-xs mt-1">{t('book.service.privateDesc')}</p>
               </button>
-            ))}
+              <button onClick={() => { setData({ ...data, serviceType: 'shuttle' }); }}
+                className={`glass-card rounded-xl p-8 text-center premium-card border transition-all ${data.serviceType === 'shuttle' ? 'border-gold' : 'border-border'}`}>
+                <Users size={28} className="mx-auto mb-3 text-foreground/60" />
+                <p className="font-semibold text-lg">{t('book.service.shuttle')}</p>
+                <p className="text-muted-foreground text-xs mt-1">{t('book.service.shuttleDesc')}</p>
+              </button>
+            </div>
           </div>
         );
       case 'trip':
         return (
           <div className="space-y-4">
-            <h2 className="font-display text-2xl font-bold">{t('book.trip.title')}</h2>
+            <div>
+              <h2 className="font-display text-2xl font-bold">{t('book.trip.title')}</h2>
+              <p className="text-muted-foreground text-sm mt-1">{t('book.trip.subtitle')}</p>
+            </div>
             {[
-              { id: 'oneway' as const, label: t('book.trip.oneWay'), desc: '' },
+              { id: 'oneway' as const, label: t('book.trip.oneWay'), desc: t('book.trip.oneWayDesc') },
               { id: 'roundtrip' as const, label: t('book.trip.roundTrip'), desc: t('book.trip.roundTripDesc') },
             ].map(s => (
-              <button key={s.id} onClick={() => { setData({ ...data, tripType: s.id }); next(); }}
+              <button key={s.id} onClick={() => { setData({ ...data, tripType: s.id }); }}
                 className={`w-full glass-card rounded-xl p-5 text-left premium-card border transition-all flex items-center justify-between ${data.tripType === s.id ? 'border-gold' : 'border-border'}`}>
                 <div>
                   <p className="font-semibold">{s.label}</p>
-                  {s.desc && <p className="text-muted-foreground text-xs mt-0.5">{s.desc}</p>}
+                  <p className="text-muted-foreground text-xs mt-0.5">{s.desc}</p>
                 </div>
                 {data.tripType === s.id && <div className="w-6 h-6 rounded-full gold-gradient flex items-center justify-center flex-shrink-0"><Check size={14} className="text-navy" /></div>}
               </button>
@@ -124,12 +121,15 @@ const Book = () => {
       case 'route':
         return (
           <div className="space-y-4">
-            <h2 className="font-display text-2xl font-bold">{t('book.route.title')}</h2>
+            <div>
+              <h2 className="font-display text-2xl font-bold">{t('book.route.title')}</h2>
+              <p className="text-muted-foreground text-sm mt-1">{t('book.route.subtitle')}</p>
+            </div>
             {[
               { id: 'airport-hotel' as const, label: t('book.route.airportToHotel') },
               { id: 'hotel-airport' as const, label: t('book.route.hotelToAirport') },
             ].map(s => (
-              <button key={s.id} onClick={() => { setData({ ...data, route: s.id }); next(); }}
+              <button key={s.id} onClick={() => { setData({ ...data, route: s.id }); }}
                 className={`w-full glass-card rounded-xl p-5 text-left premium-card border transition-all flex items-center justify-between ${data.route === s.id ? 'border-gold' : 'border-border'}`}>
                 <p className="font-semibold">{s.label}</p>
                 {data.route === s.id && <div className="w-6 h-6 rounded-full gold-gradient flex items-center justify-center flex-shrink-0"><Check size={14} className="text-navy" /></div>}
@@ -225,8 +225,10 @@ const Book = () => {
       case 'extras':
         return (
           <div className="space-y-4">
-            <h2 className="font-display text-2xl font-bold">{t('book.extras.title')}</h2>
-            <p className="text-muted-foreground text-sm">{t('book.extras.subtitle')}</p>
+            <div>
+              <h2 className="font-display text-2xl font-bold">{t('book.extras.title')}</h2>
+              <p className="text-muted-foreground text-sm mt-1">{t('book.extras.subtitle')}</p>
+            </div>
             {extrasOptions.map(e => (
               <button key={e.id} onClick={() => toggleExtra(e.id)}
                 className={`w-full glass-card rounded-xl p-4 text-left premium-card border transition-all flex items-center justify-between ${data.extras.includes(e.id) ? 'border-gold' : 'border-border'}`}>
@@ -242,8 +244,10 @@ const Book = () => {
       case 'upsell':
         return (
           <div className="space-y-4">
-            <h2 className="font-display text-2xl font-bold">{t('book.upsell.title')}</h2>
-            <p className="text-muted-foreground text-sm">{t('book.upsell.subtitle')}</p>
+            <div>
+              <h2 className="font-display text-2xl font-bold">{t('book.upsell.title')}</h2>
+              <p className="text-muted-foreground text-sm mt-1">{t('book.upsell.subtitle')}</p>
+            </div>
             {upsellActivities.map(a => (
               <button key={a.id} onClick={() => toggleActivity(a.id)}
                 className={`w-full glass-card rounded-xl p-4 text-left premium-card border transition-all flex items-center justify-between ${data.activities.includes(a.id) ? 'border-gold' : 'border-border'}`}>
@@ -291,25 +295,28 @@ const Book = () => {
   return (
     <div className="pt-32 pb-20 px-4">
       <div className="container mx-auto max-w-5xl">
+        {/* Title + step counter */}
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="font-display text-3xl font-bold">{t('book.title')}</h1>
+          <span className="text-muted-foreground text-sm font-medium">{current + 1}/8</span>
+        </div>
+
+        {/* Progress dots */}
+        <div className="flex gap-1.5 mb-8">
+          {steps.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => i <= current && setCurrent(i)}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                i === current ? 'w-8 bg-gold' : i < current ? 'w-2 bg-gold/50' : 'w-2 bg-border'
+              }`}
+            />
+          ))}
+        </div>
+
         <div className="grid lg:grid-cols-5 gap-8">
           {/* Wizard */}
           <div className="lg:col-span-3">
-            {/* Progress dots */}
-            <div className="flex items-center gap-1.5 mb-8 overflow-x-auto scrollbar-hide pb-2">
-              {steps.map((_, i) => {
-                const Icon = stepIcons[i];
-                return (
-                  <button key={i} onClick={() => i <= current && setCurrent(i)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-                      i === current ? 'gold-gradient text-navy font-bold' :
-                      i < current ? 'text-gold' : 'text-muted-foreground'
-                    }`}>
-                    <Icon size={12} /> {stepLabels[i]}
-                  </button>
-                );
-              })}
-            </div>
-
             <AnimatePresence mode="wait">
               <motion.div key={current} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
                 {renderStep()}
@@ -324,7 +331,7 @@ const Book = () => {
               </button>
               {current < steps.length - 1 && (
                 <button onClick={next}
-                  className="flex items-center gap-2 text-sm text-gold font-semibold hover:gap-3 transition-all">
+                  className="gold-gradient text-navy px-6 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
                   {t('book.next')} <ArrowRight size={16} />
                 </button>
               )}
@@ -334,7 +341,7 @@ const Book = () => {
           {/* Sticky Summary (desktop) */}
           <div className="lg:col-span-2 hidden lg:block">
             <div className="sticky top-32 glass-card rounded-2xl p-6 space-y-4 border border-border">
-              <h3 className="font-display text-lg font-bold text-gold">{t('book.summary')}</h3>
+              <h3 className="font-display text-lg font-bold">{t('book.summary')}</h3>
               <div className="space-y-2 text-sm">
                 {data.serviceType && <Row label={t('book.review.service')} value={data.serviceType} />}
                 {data.tripType && <Row label={t('book.review.trip')} value={data.tripType} />}
@@ -356,10 +363,15 @@ const Book = () => {
                   <Row label={t('book.review.transferPrice')} value={`$${transferPrice}`} gold />
                   {activitiesDeposit > 0 && <Row label={t('book.review.activitiesDeposit')} value={`$${activitiesDeposit}`} gold />}
                   <div className="border-t border-border pt-2">
-                    <Row label={t('book.review.total')} value={`$${total} USD`} gold bold />
+                    <Row label={t('book.review.total')} value={`$${total}`} gold bold />
                   </div>
                 </div>
               )}
+
+              <a href="https://wa.me/526241234567?text=Hello%2C%20I%27d%20like%20to%20book%20a%20transfer" target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors pt-2">
+                <MessageCircle size={14} className="text-[#25D366]" /> {t('transfers.cta.chat')}
+              </a>
             </div>
           </div>
         </div>

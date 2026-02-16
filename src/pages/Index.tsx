@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Shield, MapPin, Clock, Headphones, ArrowRight, Star, ChevronDown, Trophy, Car, Users, Quote } from 'lucide-react';
+import { Shield, MapPin, Clock, Headphones, ArrowRight, Star, ChevronDown, Trophy, Car, Users, Quote, MessageCircle } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -47,12 +47,12 @@ const Index = () => {
     { key: 'activity.camel', duration: '1h' },
     { key: 'activity.camelKids', duration: '1h' },
     { key: 'activity.horseback', duration: '1h' },
-    { key: 'activity.atv', duration: '1h' },
-    { key: 'activity.doubleMoto', duration: '1h' },
-    { key: 'activity.rzr', duration: '1h' },
-    { key: 'activity.skyBikes', duration: '1h' },
-    { key: 'activity.fishing', duration: '4h' },
-    { key: 'activity.sunset', duration: '2h' },
+    { key: 'activity.atv', duration: '2h' },
+    { key: 'activity.doubleMoto', duration: '2h' },
+    { key: 'activity.rzr', duration: '2h' },
+    { key: 'activity.skyBikes', duration: '2h' },
+    { key: 'activity.fishing', duration: '—' },
+    { key: 'activity.sunset', duration: '—' },
   ];
 
   const steps = [
@@ -62,9 +62,9 @@ const Index = () => {
   ];
 
   const testimonials = [
-    { name: 'Sarah M.', key: 'testimonial.1.text', rating: 5 },
-    { name: 'James R.', key: 'testimonial.2.text', rating: 5 },
-    { name: 'María G.', key: 'testimonial.3.text', rating: 5 },
+    { name: 'Sarah M.', location: t('testimonial.1.location'), key: 'testimonial.1.text', rating: 5 },
+    { name: 'James & Lisa R.', location: t('testimonial.2.location'), key: 'testimonial.2.text', rating: 5 },
+    { name: 'Carlos G.', location: t('testimonial.3.location'), key: 'testimonial.3.text', rating: 5 },
   ];
 
   return (
@@ -82,7 +82,7 @@ const Index = () => {
           >
             <img
               src={heroImages[currentImage]}
-              alt="Los Cabos luxury"
+              alt={`Los Cabos luxury transfer ${currentImage + 1}`}
               className="w-full h-full object-cover"
             />
           </motion.div>
@@ -98,9 +98,7 @@ const Index = () => {
             transition={{ duration: 0.9, delay: 0.3 }}
             className="font-display text-4xl sm:text-5xl md:text-7xl font-bold mb-4 max-w-4xl text-white"
           >
-            {t('hero.title1')}
-            <br />
-            <span className="text-gold-gradient">{t('hero.title2')}</span>
+            {t('hero.title')}
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -122,12 +120,14 @@ const Index = () => {
             >
               {t('hero.cta1')} <ArrowRight size={18} />
             </Link>
-            <Link
-              to="/activities"
+            <a
+              href="https://wa.me/526241234567"
+              target="_blank"
+              rel="noopener noreferrer"
               className="border border-white/30 bg-white/5 backdrop-blur-sm px-8 py-3.5 rounded-full font-semibold text-base text-white hover:bg-white/10 transition-all flex items-center gap-2"
             >
-              {t('hero.cta2')}
-            </Link>
+              <MessageCircle size={18} /> {t('hero.cta2')}
+            </a>
           </motion.div>
         </div>
 
@@ -197,11 +197,17 @@ const Index = () => {
               <p className="text-muted-foreground text-sm mb-5">{t('home.transfers.privateDesc')}</p>
               <div className="space-y-3 mb-6">
                 <div className="flex items-center justify-between bg-accent/50 rounded-lg px-4 py-3">
-                  <span className="text-sm font-medium">{t('home.transfers.privateSuburban')}</span>
+                  <div>
+                    <span className="text-sm font-medium">{t('home.transfers.privateSuburban')}</span>
+                    <span className="text-muted-foreground text-xs ml-1">{t('home.transfers.privateSuburbanPax')}</span>
+                  </div>
                   <span className="text-gold font-bold text-sm">{t('home.transfers.privateSuburbanPrice')}</span>
                 </div>
                 <div className="flex items-center justify-between bg-accent/50 rounded-lg px-4 py-3">
-                  <span className="text-sm font-medium">{t('home.transfers.privateSprinter')}</span>
+                  <div>
+                    <span className="text-sm font-medium">{t('home.transfers.privateSprinter')}</span>
+                    <span className="text-muted-foreground text-xs ml-1">{t('home.transfers.privateSprinterPax')}</span>
+                  </div>
                   <span className="text-gold font-bold text-sm">{t('home.transfers.privateSprinterPrice')}</span>
                 </div>
               </div>
@@ -222,7 +228,10 @@ const Index = () => {
               <p className="text-muted-foreground text-sm mb-5">{t('home.transfers.shuttleDesc')}</p>
               <div className="space-y-3 mb-6">
                 <div className="flex items-center justify-between bg-accent/50 rounded-lg px-4 py-3">
-                  <span className="text-sm font-medium">{t('home.transfers.shuttleSprinter')}</span>
+                  <div>
+                    <span className="text-sm font-medium">{t('home.transfers.shuttleSprinter')}</span>
+                    <span className="text-muted-foreground text-xs ml-1">{t('home.transfers.shuttleSprinterPax')}</span>
+                  </div>
                   <span className="text-gold font-bold text-sm">{t('home.transfers.shuttlePrice')}</span>
                 </div>
               </div>
@@ -264,26 +273,34 @@ const Index = () => {
           </motion.div>
 
           {/* Combo cards */}
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid sm:grid-cols-2 gap-4 mb-8">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid sm:grid-cols-2 gap-4 mb-6">
             <motion.div variants={fadeUp} className="glass-card rounded-2xl p-6 premium-card border border-border text-center">
+              <p className="text-2xl mb-2">🎯</p>
               <p className="font-display text-xl font-bold mb-1">{t('home.activities.combo')}</p>
-              <p className="text-gold text-2xl font-bold mb-1">$100 <span className="text-sm text-muted-foreground font-normal">USD</span></p>
-              <p className="text-muted-foreground text-sm">{t('home.activities.comboDesc')}</p>
+              <p className="text-muted-foreground text-sm mb-2">{t('home.activities.comboActivities')}</p>
+              <p className="text-gold text-2xl font-bold mb-3">{t('home.activities.comboPrice')}</p>
+              <Link to="/book-activities" className="gold-gradient text-navy px-6 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
+                {t('home.activities.bookCombo')} <ArrowRight size={14} />
+              </Link>
             </motion.div>
             <motion.div variants={fadeUp} className="glass-card rounded-2xl p-6 premium-card border-2 border-gold/30 text-center relative">
               <span className="absolute -top-3 left-1/2 -translate-x-1/2 gold-gradient text-navy text-xs font-bold px-3 py-1 rounded-full">
                 {t('home.activities.bestValue')}
               </span>
+              <p className="text-2xl mb-2">🔥</p>
               <p className="font-display text-xl font-bold mb-1">{t('home.activities.crazyCombo')}</p>
-              <p className="text-gold text-2xl font-bold mb-1">$125 <span className="text-sm text-muted-foreground font-normal">USD</span></p>
-              <p className="text-muted-foreground text-sm">{t('home.activities.crazyComboDesc')}</p>
+              <p className="text-muted-foreground text-sm mb-2">{t('home.activities.crazyActivities')}</p>
+              <p className="text-gold text-2xl font-bold mb-3">{t('home.activities.crazyPrice')}</p>
+              <Link to="/book-activities" className="gold-gradient text-navy px-6 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
+                {t('home.activities.bookCrazyCombo')} <ArrowRight size={14} />
+              </Link>
             </motion.div>
           </motion.div>
 
-          <div className="text-center">
-            <Link to="/book-activities" className="gold-gradient text-navy px-8 py-3.5 rounded-full font-bold text-sm inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
-              {t('home.activities.bookActivities')} <ArrowRight size={16} />
-            </Link>
+          {/* Notes */}
+          <div className="text-center space-y-1 text-sm text-muted-foreground mb-4">
+            <p>{t('home.activities.includesNote')}</p>
+            <p>{t('home.activities.parkFeeNote')}</p>
           </div>
         </div>
       </section>
@@ -295,6 +312,7 @@ const Index = () => {
         <div className="container mx-auto max-w-4xl">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-14">
             <h2 className="font-display text-3xl md:text-5xl font-bold mb-4">{t('howItWorks.title')}</h2>
+            <p className="text-muted-foreground">{t('howItWorks.subtitle')}</p>
           </motion.div>
           <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true }} className="grid md:grid-cols-3 gap-10">
             {steps.map((step, i) => (
@@ -317,6 +335,7 @@ const Index = () => {
         <div className="container mx-auto max-w-4xl">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-14">
             <h2 className="font-display text-3xl md:text-5xl font-bold mb-4">{t('testimonials.title')}</h2>
+            <p className="text-muted-foreground">{t('testimonials.subtitle')}</p>
           </motion.div>
           <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true }} className="grid md:grid-cols-3 gap-6">
             {testimonials.map((test, i) => (
@@ -330,6 +349,7 @@ const Index = () => {
                 </div>
                 <p className="text-foreground/80 text-sm mb-4 italic leading-relaxed">"{t(test.key)}"</p>
                 <p className="text-gold font-semibold text-sm">{test.name}</p>
+                <p className="text-muted-foreground text-xs">{test.location}</p>
               </motion.div>
             ))}
           </motion.div>

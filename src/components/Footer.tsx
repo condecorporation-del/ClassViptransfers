@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Phone, Mail, MapPin, ArrowRight } from 'lucide-react';
+import { Phone, Mail, MapPin, ArrowRight, MessageCircle } from 'lucide-react';
 
 const Footer = () => {
   const { t } = useLanguage();
@@ -19,11 +19,12 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-gold font-semibold text-sm mb-4 uppercase tracking-wider">{t('footer.services')}</h4>
+            <h4 className="text-gold font-semibold text-sm mb-4 uppercase tracking-wider">{t('footer.quickLinks')}</h4>
             <div className="flex flex-col gap-2.5">
+              <Link to="/" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.home')}</Link>
               <Link to="/transfers" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.transfers')}</Link>
               <Link to="/activities" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.activities')}</Link>
-              <Link to="/book" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.bookNow')}</Link>
+              <Link to="/contact" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.contact')}</Link>
             </div>
           </div>
 

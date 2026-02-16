@@ -27,31 +27,31 @@ const Navbar = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const navBg = !isHome
-    ? 'bg-navy/97 backdrop-blur-3xl border-b border-gold/10'
+    ? 'bg-background/95 backdrop-blur-2xl border-b border-border/50'
     : scrolled
-    ? 'bg-navy/97 backdrop-blur-3xl border-b border-gold/10'
-    : 'bg-gradient-to-b from-navy/70 to-transparent';
+    ? 'bg-background/95 backdrop-blur-2xl border-b border-border/50'
+    : 'bg-gradient-to-b from-background/80 to-transparent';
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${navBg}`}>
-      <div className="container mx-auto px-4 h-24 md:h-28 flex items-center justify-between">
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${navBg}`}>
+      <div className="container mx-auto px-4 h-20 md:h-24 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
           <img
             src="/logo.png"
             alt="Class VIP Transfers"
-            className="h-16 md:h-24 drop-shadow-[0_2px_8px_rgba(212,175,55,0.3)] transition-transform duration-300 group-hover:scale-105"
+            className="h-14 md:h-20 drop-shadow-[0_2px_8px_rgba(212,175,55,0.3)] transition-transform duration-300 group-hover:scale-105"
           />
         </Link>
 
         {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-10">
           {links.map(link => (
             <Link
               key={link.to}
               to={link.to}
-              className={`text-xs font-semibold uppercase tracking-widest transition-colors gold-underline ${
-                isActive(link.to) ? 'text-gold' : 'text-off-white/80 hover:text-off-white'
+              className={`text-[11px] font-semibold uppercase tracking-[0.2em] transition-colors gold-underline ${
+                isActive(link.to) ? 'text-gold' : 'text-foreground/60 hover:text-foreground'
               }`}
             >
               {link.label}
@@ -62,23 +62,23 @@ const Navbar = () => {
         {/* Right side */}
         <div className="flex items-center gap-3">
           {/* Language toggle pill */}
-          <div className="flex rounded-full overflow-hidden border border-off-white/20">
+          <div className="flex rounded-full overflow-hidden border border-border/60">
             <button
               onClick={() => setLang('en')}
-              className={`text-xs font-bold px-3 py-1.5 transition-all ${
+              className={`text-[10px] font-bold px-3 py-1.5 transition-all ${
                 lang === 'en'
-                  ? 'gold-gradient text-navy'
-                  : 'text-off-white/60 hover:text-off-white'
+                  ? 'gold-gradient text-secondary-foreground'
+                  : 'text-foreground/50 hover:text-foreground'
               }`}
             >
               EN
             </button>
             <button
               onClick={() => setLang('es')}
-              className={`text-xs font-bold px-3 py-1.5 transition-all ${
+              className={`text-[10px] font-bold px-3 py-1.5 transition-all ${
                 lang === 'es'
-                  ? 'gold-gradient text-navy'
-                  : 'text-off-white/60 hover:text-off-white'
+                  ? 'gold-gradient text-secondary-foreground'
+                  : 'text-foreground/50 hover:text-foreground'
               }`}
             >
               ES
@@ -87,13 +87,13 @@ const Navbar = () => {
 
           <Link
             to="/book"
-            className="hidden md:inline-flex gold-gradient text-navy px-6 py-2.5 rounded-full text-sm font-bold hover:brightness-110 transition-all gold-glow items-center gap-2"
+            className="hidden md:inline-flex gold-gradient text-secondary-foreground px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider hover:brightness-110 transition-all gold-glow items-center gap-2"
           >
             {t('nav.bookNow')}
           </Link>
 
           {/* Mobile hamburger */}
-          <button onClick={() => setOpen(!open)} className="md:hidden text-off-white">
+          <button onClick={() => setOpen(!open)} className="md:hidden text-foreground">
             {open ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
@@ -106,7 +106,7 @@ const Navbar = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-t border-off-white/10 bg-navy/98 backdrop-blur-3xl"
+            className="md:hidden border-t border-border/30 bg-background/98 backdrop-blur-2xl"
           >
             <div className="px-6 py-6 flex flex-col gap-4">
               {links.map(link => (
@@ -115,7 +115,7 @@ const Navbar = () => {
                   to={link.to}
                   onClick={() => setOpen(false)}
                   className={`text-sm font-medium uppercase tracking-wider py-2 ${
-                    isActive(link.to) ? 'text-gold' : 'text-off-white/70'
+                    isActive(link.to) ? 'text-gold' : 'text-foreground/60'
                   }`}
                 >
                   {link.label}
@@ -124,7 +124,7 @@ const Navbar = () => {
               <Link
                 to="/book"
                 onClick={() => setOpen(false)}
-                className="gold-gradient text-navy px-6 py-3 rounded-full text-sm font-bold text-center mt-2 gold-glow"
+                className="gold-gradient text-secondary-foreground px-6 py-3 rounded-full text-sm font-bold text-center mt-2 gold-glow"
               >
                 {t('nav.bookNow')}
               </Link>

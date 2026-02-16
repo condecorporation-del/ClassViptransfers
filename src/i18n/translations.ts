@@ -7,11 +7,16 @@ export const translations: Record<string, { en: string; es: string }> = {
   'nav.bookNow': { en: 'Book Now', es: 'Reservar' },
 
   // Hero
+  'hero.eyebrow': { en: 'Los Cabos, México', es: 'Los Cabos, México' },
   'hero.title': { en: 'Luxury Airport Transfers in Los Cabos', es: 'Transfers de Lujo al Aeropuerto en Los Cabos' },
   'hero.subtitle': {
     en: 'Private & shuttle transfers. Book in under 2 minutes.',
     es: 'Transfers privados y compartidos. Reserva en menos de 2 minutos.',
   },
+  'hero.title2': { en: 'Your Private Concierge in Paradise', es: 'Tu Concierge Privado en el Paraíso' },
+  'hero.subtitle2': { en: 'Curated experiences & VIP transportation across Los Cabos', es: 'Experiencias curadas y transportación VIP en Los Cabos' },
+  'hero.title3': { en: 'Travel Like You Deserve', es: 'Viaja Como Te Mereces' },
+  'hero.subtitle3': { en: 'Premium fleet. Professional drivers. Unforgettable moments.', es: 'Flota premium. Choferes profesionales. Momentos inolvidables.' },
   'hero.cta1': { en: 'Book Now', es: 'Reservar Ahora' },
   'hero.cta2': { en: 'Chat with us', es: 'Chatea con nosotros' },
 
@@ -327,6 +332,17 @@ export const translations: Record<string, { en: string; es: string }> = {
   'footer.rights': { en: 'All rights reserved.', es: 'Todos los derechos reservados.' },
 
   // Common
+  // Stats
+  'stats.trips': { en: 'Trips Completed', es: 'Viajes Completados' },
+  'stats.rating': { en: 'Guest Rating', es: 'Calificación' },
+
+  // Activities eyebrow
+  'home.activities.eyebrow': { en: 'Adventures', es: 'Aventuras' },
+
+  // CTA
+  'cta.title': { en: 'Ready to Experience Los Cabos?', es: '¿Listo para Vivir Los Cabos?' },
+  'cta.subtitle': { en: 'Book your luxury transfer or curated adventure today.', es: 'Reserva tu transfer de lujo o aventura curada hoy.' },
+
   'common.bookNow': { en: 'Book Now', es: 'Reservar' },
   'common.learnMore': { en: 'Learn More', es: 'Saber Más' },
   'common.free': { en: 'Free', es: 'Gratis' },

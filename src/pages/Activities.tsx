@@ -25,12 +25,12 @@ const Activities = () => {
   ];
 
   const activities = [
-    { key: 'camel', emoji: '🐫', desc: 'Ride through the desert on a gentle camel with stunning mountain views.', duration: '1h', price: '$120 USD', combo: true, whatsapp: "Hi! I'd like to book the Camel Ride individually." },
-    { key: 'horseback', emoji: '🐎', desc: 'Gallop along scenic trails and enjoy the beauty of Baja California.', duration: '1h', price: '$120 USD', combo: true, whatsapp: "Hi! I'd like to book the Horseback Riding individually." },
+    { key: 'camel', emoji: '🐫', desc: 'Ride through the desert on a gentle camel with stunning mountain views.', duration: '1h', price: '$120 USD', combo: true, slug: 'camel-ride', whatsapp: "Hi! I'd like to book the Camel Ride individually." },
+    { key: 'horseback', emoji: '🐎', desc: 'Gallop along scenic trails and enjoy the beauty of Baja California.', duration: '1h', price: '$120 USD', combo: true, slug: 'horseback-riding', whatsapp: "Hi! I'd like to book the Horseback Riding individually." },
     { key: 'atv', emoji: '🏍️', desc: 'Navigate rugged terrain on an ATV for an adrenaline-filled experience.', duration: '2h', price: '$120 USD', combo: true, insurance: true, whatsapp: "Hi! I'd like to book the ATV Tour individually." },
     { key: 'doubleMoto', emoji: '🏍️', desc: 'Share the thrill — ride together on a powerful double-seat motorcycle.', duration: '2h', price: '$200 USD', combo: true, insurance: true, whatsapp: "Hi! I'd like to book the Double Motorcycle individually." },
     { key: 'rzr', emoji: '🏎️', desc: 'Off-road through canyons and desert trails in a powerful RZR.', duration: '2h', price: null, combo: true, insurance: true, rzrPricing: true, whatsapp: "Hi! I'd like to book the RZR individually." },
-    { key: 'skyBikes', emoji: '🚲', desc: 'Pedal through the sky on elevated bike trails with ocean panoramas.', duration: '2h', price: '$120 USD', combo: true, whatsapp: "Hi! I'd like to book the Sky Bikes individually." },
+    { key: 'skyBikes', emoji: '🚲', desc: 'Pedal through the sky on elevated bike trails with ocean panoramas.', duration: '2h', price: '$96 USD', combo: true, slug: 'sky-bikes', whatsapp: "Hi! I'd like to book the Sky Bikes individually." },
     { key: 'fishing', emoji: '🎣', desc: "Deep-sea fishing on a private yacht in the Sea of Cortez. Price varies by group size.", duration: '—', price: null, combo: false, whatsapp: "Hi! I'm interested in the Fishing Yacht. Can you send me a quote?" },
     { key: 'sunset', emoji: '🌅', desc: 'Sail into the sunset with drinks and breathtaking views of the Arch. Price varies by group size.', duration: '—', price: null, combo: false, whatsapp: "Hi! I'm interested in the Sunset Cruise. Can you send me a quote?" },
   ];
@@ -168,10 +168,17 @@ const Activities = () => {
                   )}
                 </div>
 
-                <a href={`https://wa.me/5216241234567?text=${encodeURIComponent(act.whatsapp)}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs font-semibold text-[#25D366] mt-3 hover:underline">
-                  <MessageCircle size={12} /> {act.price || act.rzrPricing ? 'Book This Activity' : 'Request Quote via WhatsApp'}
-                </a>
+                <div className="flex items-center gap-2 mt-3">
+                  <a href={`https://wa.me/5216241234567?text=${encodeURIComponent(act.whatsapp)}`} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs font-semibold text-[#25D366] hover:underline">
+                    <MessageCircle size={12} /> {act.price || act.rzrPricing ? 'Book This Activity' : 'Request Quote via WhatsApp'}
+                  </a>
+                  {(act as any).slug && (
+                    <Link to={`/activities/${(act as any).slug}`} className="flex items-center gap-1 text-xs font-semibold text-gold hover:underline ml-auto">
+                      View Details <ArrowRight size={12} />
+                    </Link>
+                  )}
+                </div>
               </motion.div>
             ))}
           </motion.div>

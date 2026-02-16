@@ -37,7 +37,7 @@ const Index = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentImage(prev => (prev + 1) % heroImages.length);
-    }, 6000);
+    }, 7000);
     return () => clearInterval(interval);
   }, []);
 
@@ -82,22 +82,25 @@ const Index = () => {
     <div className="overflow-hidden">
       {/* ===== HERO (dark cinematic) ===== */}
       <section className="relative h-screen min-h-[700px] overflow-hidden">
-        <AnimatePresence mode="wait">
+        {/* All images stacked — crossfade via opacity, no unmounting = no gray flash */}
+        {heroImages.map((img, i) => (
           <motion.div
-            key={currentImage}
-            initial={{ opacity: 0, scale: 1.1 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 2, ease: 'easeOut' }}
+            key={i}
+            animate={{
+              opacity: currentImage === i ? 1 : 0,
+              scale: currentImage === i ? 1.05 : 1.12,
+            }}
+            transition={{ opacity: { duration: 1.2, ease: 'easeInOut' }, scale: { duration: 8, ease: 'linear' } }}
             className="absolute inset-0"
           >
             <img
-              src={heroImages[currentImage]}
-              alt={`Los Cabos luxury transfer ${currentImage + 1}`}
+              src={img}
+              alt={`Los Cabos luxury ${i + 1}`}
               className="w-full h-full object-cover"
+              {...(i === 0 ? { fetchPriority: 'high' as const } : { loading: 'eager' as const })}
             />
           </motion.div>
-        </AnimatePresence>
+        ))}
 
         <div className="absolute inset-0 hero-overlay" />
         <div className="absolute inset-0 vignette" />

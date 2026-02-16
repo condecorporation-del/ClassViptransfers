@@ -66,6 +66,10 @@ export default {
         },
         "off-white": "hsl(var(--off-white))",
         cream: "hsl(var(--cream))",
+        sand: {
+          DEFAULT: "hsl(var(--sand))",
+          light: "hsl(var(--sand-light))",
+        },
         ocean: {
           DEFAULT: "hsl(var(--ocean))",
           light: "hsl(var(--ocean-light))",

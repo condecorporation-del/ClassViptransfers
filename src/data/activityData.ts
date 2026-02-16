@@ -2,6 +2,8 @@ import camelHero from '@/assets/activity-camel.jpg';
 import horsebackHero from '@/assets/activity-horseback.jpg';
 import skyBikesHero from '@/assets/activity-skybikes.jpg';
 import utvHero from '@/assets/activity-utv.jpg';
+import atvHero from '@/assets/activity-atv.jpg';
+import motoHero from '@/assets/activity-moto.jpg';
 
 export interface ActivityInfo {
   slug: string;
@@ -260,5 +262,122 @@ export const activityData: ActivityInfo[] = [
       { en: 'Payment method (cash or card)', es: 'Método de pago (efectivo o tarjeta)' },
     ],
     whatsappMessage: "Hi! I'd like to book the UTV Adventure experience.",
+  },
+  {
+    slug: 'atv',
+    title: { en: 'ATV Adventure', es: 'Aventura en ATV' },
+    hook: {
+      en: "Feel the rush of raw desert power — an adrenaline ride through Baja's most dramatic trails.",
+      es: 'Siente la adrenalina pura del desierto — un recorrido emocionante por los senderos más espectaculares de Baja.',
+    },
+    heroImage: atvHero,
+    duration: '2 hours',
+    price: '$120 USD',
+    experienceType: { en: 'Off-Road Adrenaline', es: 'Adrenalina Off-Road' },
+    description: {
+      en: "Navigate rugged desert terrain on a powerful ATV, guided by experts through Baja California's stunning landscapes. This high-energy experience combines raw adrenaline with breathtaking views of mountains and coastline.",
+      es: 'Recorre el terreno desértico en un potente ATV, guiado por expertos a través de los impresionantes paisajes de Baja California. Esta experiencia de alta energía combina adrenalina pura con vistas impresionantes de montañas y costa.',
+    },
+    highlights: [
+      { icon: 'Clock', label: { en: '2 Hours Duration', es: '2 Horas de Duración' } },
+      { icon: 'Car', label: { en: 'Transportation Included', es: 'Transporte Incluido' } },
+      { icon: 'Languages', label: { en: 'Bilingual Guide', es: 'Guía Bilingüe' } },
+      { icon: 'Shield', label: { en: 'Safety Equipment', es: 'Equipo de Seguridad' } },
+      { icon: 'Zap', label: { en: 'High Adrenaline', es: 'Alta Adrenalina' } },
+    ],
+    includes: [
+      { en: 'Round-trip hotel transportation', es: 'Transporte ida y vuelta al hotel' },
+      { en: 'Safety equipment, helmets & goggles', es: 'Equipo de seguridad, cascos y goggles' },
+      { en: 'Bilingual guide', es: 'Guía bilingüe' },
+      { en: 'Water', es: 'Agua' },
+      { en: 'Kids club access', es: 'Acceso al club de niños' },
+      { en: 'Tequila tasting', es: 'Degustación de tequila' },
+      { en: 'Lockers', es: 'Casilleros' },
+    ],
+    extraCosts: [
+      { en: 'Park entrance fee: $25 USD per person (mandatory, paid on-site)', es: 'Entrada al parque: $25 USD por persona (obligatorio, pago en sitio)' },
+      { en: 'Vehicle protection insurance available', es: 'Seguro de protección vehicular disponible' },
+      { en: '$500 USD credit card hold if insurance declined (released within 48 hrs)', es: 'Depósito de $500 USD en tarjeta si se declina seguro (liberado en 48 hrs)' },
+      { en: 'Photo package available for purchase', es: 'Paquete de fotos disponible para compra' },
+    ],
+    beforeBooking: [
+      { en: 'Minimum age: 6 years', es: 'Edad mínima: 6 años' },
+      { en: 'Maximum weight: 110 kg (242 lbs)', es: 'Peso máximo: 110 kg (242 lbs)' },
+      { en: "No driver's license required", es: 'No se requiere licencia de conducir' },
+    ],
+    restrictions: [
+      { en: 'No pregnant travelers', es: 'No mujeres embarazadas' },
+      { en: 'No alcohol or drugs before/during activity', es: 'Sin alcohol o drogas antes/durante la actividad' },
+      { en: 'No back or neck injuries / recent surgery', es: 'Sin lesiones de espalda o cuello / cirugías recientes' },
+      { en: 'Cameras & phones NOT allowed (public tours)', es: 'Cámaras y teléfonos NO permitidos (tours públicos)' },
+      { en: 'GoPro hands-free cameras ARE allowed', es: 'Cámaras GoPro manos libres SÍ permitidas' },
+      { en: 'Company reserves the right of admission', es: 'La empresa se reserva el derecho de admisión' },
+    ],
+    recommendations: [
+      { en: 'Sport clothing (will get dusty)', es: 'Ropa deportiva (se ensuciará)' },
+      { en: 'Closed shoes (mandatory)', es: 'Zapatos cerrados (obligatorio)' },
+      { en: 'Sunscreen', es: 'Protector solar' },
+      { en: 'Payment method (cash or card)', es: 'Método de pago (efectivo o tarjeta)' },
+    ],
+    whatsappMessage: "Hi! I'd like to book the ATV Adventure experience.",
+  },
+  {
+    slug: 'double-motorcycle',
+    title: { en: 'Double Motorcycle', es: 'Moto Doble' },
+    hook: {
+      en: "Share the adventure on a powerful double-seat motorcycle — raw Baja energy for two.",
+      es: 'Comparte la aventura en una potente moto doble — energía pura de Baja para dos.',
+    },
+    heroImage: motoHero,
+    duration: '2 hours',
+    price: '$200 USD',
+    experienceType: { en: 'Duo Adventure', es: 'Aventura en Dúo' },
+    description: {
+      en: "Ride together on a powerful double-seat motorcycle through the rugged Baja terrain. This shared adventure lets you experience the thrill of off-road riding as a pair, with expert guides leading you through desert trails with stunning coastal panoramas.",
+      es: 'Recorre juntos en una potente moto doble por el terreno de Baja. Esta aventura compartida te permite experimentar la emoción del off-road en pareja, con guías expertos por senderos desérticos con panorámicas costeras impresionantes.',
+    },
+    highlights: [
+      { icon: 'Clock', label: { en: '2 Hours Duration', es: '2 Horas de Duración' } },
+      { icon: 'Car', label: { en: 'Transportation Included', es: 'Transporte Incluido' } },
+      { icon: 'Languages', label: { en: 'Bilingual Guide', es: 'Guía Bilingüe' } },
+      { icon: 'Shield', label: { en: 'Safety Equipment', es: 'Equipo de Seguridad' } },
+      { icon: 'Heart', label: { en: 'Ride Together', es: 'Viaja en Pareja' } },
+    ],
+    includes: [
+      { en: 'Round-trip hotel transportation', es: 'Transporte ida y vuelta al hotel' },
+      { en: 'Safety equipment, helmets & goggles', es: 'Equipo de seguridad, cascos y goggles' },
+      { en: 'Bilingual guide', es: 'Guía bilingüe' },
+      { en: 'Water', es: 'Agua' },
+      { en: 'Kids club access', es: 'Acceso al club de niños' },
+      { en: 'Tequila tasting', es: 'Degustación de tequila' },
+      { en: 'Lockers', es: 'Casilleros' },
+    ],
+    extraCosts: [
+      { en: 'Park entrance fee: $25 USD per person (mandatory, paid on-site)', es: 'Entrada al parque: $25 USD por persona (obligatorio, pago en sitio)' },
+      { en: 'Vehicle protection insurance available', es: 'Seguro de protección vehicular disponible' },
+      { en: '$500 USD credit card hold if insurance declined (released within 48 hrs)', es: 'Depósito de $500 USD en tarjeta si se declina seguro (liberado en 48 hrs)' },
+      { en: 'Photo package available for purchase', es: 'Paquete de fotos disponible para compra' },
+    ],
+    beforeBooking: [
+      { en: 'Driver minimum age: 16 years', es: 'Edad mínima conductor: 16 años' },
+      { en: 'Passenger minimum age: 5 years', es: 'Edad mínima pasajero: 5 años' },
+      { en: 'Maximum weight: 110 kg (242 lbs)', es: 'Peso máximo: 110 kg (242 lbs)' },
+      { en: "Valid driver's license required", es: 'Licencia de conducir vigente requerida' },
+    ],
+    restrictions: [
+      { en: 'No pregnant travelers', es: 'No mujeres embarazadas' },
+      { en: 'No alcohol or drugs before/during activity', es: 'Sin alcohol o drogas antes/durante la actividad' },
+      { en: 'No back or neck injuries / recent surgery', es: 'Sin lesiones de espalda o cuello / cirugías recientes' },
+      { en: 'Cameras & phones NOT allowed (public tours)', es: 'Cámaras y teléfonos NO permitidos (tours públicos)' },
+      { en: 'GoPro hands-free cameras ARE allowed', es: 'Cámaras GoPro manos libres SÍ permitidas' },
+      { en: 'Company reserves the right of admission', es: 'La empresa se reserva el derecho de admisión' },
+    ],
+    recommendations: [
+      { en: 'Sport clothing (will get dusty)', es: 'Ropa deportiva (se ensuciará)' },
+      { en: 'Closed shoes (mandatory)', es: 'Zapatos cerrados (obligatorio)' },
+      { en: 'Sunscreen', es: 'Protector solar' },
+      { en: 'Payment method (cash or card)', es: 'Método de pago (efectivo o tarjeta)' },
+    ],
+    whatsappMessage: "Hi! I'd like to book the Double Motorcycle experience.",
   },
 ];

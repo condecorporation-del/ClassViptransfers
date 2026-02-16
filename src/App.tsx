@@ -8,6 +8,7 @@ import Layout from "@/components/Layout";
 import Index from "./pages/Index";
 import Transfers from "./pages/Transfers";
 import Activities from "./pages/Activities";
+import ActivityDetail from "./pages/ActivityDetail";
 import Book from "./pages/Book";
 import BookActivities from "./pages/BookActivities";
 import Contact from "./pages/Contact";
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/transfers" element={<Transfers />} />
               <Route path="/activities" element={<Activities />} />
+              <Route path="/activities/:slug" element={<ActivityDetail />} />
               <Route path="/book" element={<Book />} />
               <Route path="/book-activities" element={<BookActivities />} />
               <Route path="/contact" element={<Contact />} />

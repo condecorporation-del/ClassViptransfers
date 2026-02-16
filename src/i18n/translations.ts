@@ -120,8 +120,8 @@ export const translations: Record<string, { en: string; es: string }> = {
   'transfers.cta.chat': { en: 'Chat on WhatsApp', es: 'Chatea por WhatsApp' },
 
   // Activities page
-  'activities.hero.title': { en: 'Activities & Adventures', es: 'Actividades y Aventuras' },
-  'activities.hero.subtitle': { en: 'Unforgettable experiences curated by local experts.', es: 'Experiencias inolvidables curadas por expertos locales.' },
+  'activities.hero.title': { en: 'Activities & Experiences', es: 'Actividades y Experiencias' },
+  'activities.hero.subtitle': { en: 'Discover the best of Los Cabos — add activities during your transfer booking and save', es: 'Descubre lo mejor de Los Cabos — agrega actividades durante tu reserva de traslado y ahorra' },
   'activities.allInclude.title': { en: 'All Activities Include', es: 'Todas las Actividades Incluyen' },
   'activities.include.transport': { en: 'Round-trip transportation', es: 'Transportación ida y vuelta' },
   'activities.include.safety': { en: 'Safety equipment', es: 'Equipo de seguridad' },

@@ -25,15 +25,14 @@ const Activities = () => {
   ];
 
   const activities = [
-    { key: 'camel', duration: '1h', price: '$85', combo: true },
-    { key: 'camelKids', duration: '1h', price: '$85', combo: true },
-    { key: 'horseback', duration: '1h', price: '$80', combo: true },
-    { key: 'atv', duration: '1h', price: '$95', combo: true, insurance: true },
-    { key: 'doubleMoto', duration: '1h', price: '$95', combo: true, insurance: true },
-    { key: 'rzr', duration: '1h', price: '$205+', combo: true, insurance: true, rzrPricing: true },
-    { key: 'skyBikes', duration: '1h', price: '$70', combo: true },
-    { key: 'fishing', duration: '4h', price: null, combo: false },
-    { key: 'sunset', duration: '2h', price: null, combo: false },
+    { key: 'camel', emoji: '🐫', desc: 'Ride through the desert on a gentle camel with stunning mountain views.', duration: '1h', price: '$120 USD', combo: true, whatsapp: "Hi! I'd like to book the Camel Ride individually." },
+    { key: 'horseback', emoji: '🐎', desc: 'Gallop along scenic trails and enjoy the beauty of Baja California.', duration: '1h', price: '$120 USD', combo: true, whatsapp: "Hi! I'd like to book the Horseback Riding individually." },
+    { key: 'atv', emoji: '🏍️', desc: 'Navigate rugged terrain on an ATV for an adrenaline-filled experience.', duration: '2h', price: '$120 USD', combo: true, insurance: true, whatsapp: "Hi! I'd like to book the ATV Tour individually." },
+    { key: 'doubleMoto', emoji: '🏍️', desc: 'Share the thrill — ride together on a powerful double-seat motorcycle.', duration: '2h', price: '$200 USD', combo: true, insurance: true, whatsapp: "Hi! I'd like to book the Double Motorcycle individually." },
+    { key: 'rzr', emoji: '🏎️', desc: 'Off-road through canyons and desert trails in a powerful RZR.', duration: '2h', price: null, combo: true, insurance: true, rzrPricing: true, whatsapp: "Hi! I'd like to book the RZR individually." },
+    { key: 'skyBikes', emoji: '🚲', desc: 'Pedal through the sky on elevated bike trails with ocean panoramas.', duration: '2h', price: '$120 USD', combo: true, whatsapp: "Hi! I'd like to book the Sky Bikes individually." },
+    { key: 'fishing', emoji: '🎣', desc: 'Deep-sea fishing on a private yacht in the Sea of Cortez. Price varies by group size.', duration: '—', price: null, combo: false, whatsapp: "Hi! I'm interested in the Fishing Yacht. Can you send me a quote?" },
+    { key: 'sunset', emoji: '🌅', desc: 'Sail into the sunset with drinks and breathtaking views of the Arch. Price varies by group size.', duration: '—', price: null, combo: false, whatsapp: "Hi! I'm interested in the Sunset Cruise. Can you send me a quote?" },
   ];
 
   return (
@@ -50,121 +49,131 @@ const Activities = () => {
         </div>
       </section>
 
-      {/* All Include + What to Bring */}
-      <section className="py-16 px-4 -mt-8">
-        <div className="container mx-auto max-w-4xl grid md:grid-cols-2 gap-6">
+      {/* All Include */}
+      <section className="py-16 px-4">
+        <div className="container mx-auto max-w-4xl">
+          <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-2xl font-bold text-center mb-8">
+            All Activities Include
+          </motion.h2>
+          <div className="grid grid-cols-2 gap-x-10 gap-y-3 mb-8">
+            {includes.map((key, i) => (
+              <div key={i} className="text-sm flex items-center gap-2">
+                <Check size={14} className="text-gold flex-shrink-0" /> {t(key)}
+              </div>
+            ))}
+          </div>
+
+          {/* What to Bring */}
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
             className="glass-card rounded-2xl p-6 border border-border">
-            <h3 className="font-display text-lg font-bold mb-4">{t('activities.allInclude.title')}</h3>
-            <ul className="space-y-2.5">
-              {includes.map((key, i) => (
-                <li key={i} className="text-sm flex items-center gap-2">
-                  <Check size={14} className="text-gold flex-shrink-0" /> {t(key)}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.1 }}
-            className="glass-card rounded-2xl p-6 border border-border">
-            <h3 className="font-display text-lg font-bold mb-4">{t('activities.whatToBring')}</h3>
-            <ul className="space-y-2.5">
+            <h3 className="font-display text-sm font-bold mb-3 uppercase tracking-wider text-muted-foreground">What to Bring</h3>
+            <div className="flex flex-wrap gap-2">
               {bringItems.map((key, i) => (
-                <li key={i} className="text-sm flex items-center gap-2">
-                  <Check size={14} className="text-primary flex-shrink-0" /> {t(key)}
-                </li>
+                <span key={i} className="bg-accent/60 text-foreground/80 text-xs px-3 py-1.5 rounded-full">{t(key)}</span>
               ))}
-            </ul>
+            </div>
           </motion.div>
         </div>
       </section>
 
+      <div className="section-divider mx-auto max-w-2xl" />
+
       {/* Combos */}
-      <section className="py-8 px-4">
+      <section className="py-16 px-4">
         <div className="container mx-auto max-w-4xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-8">
-            <h2 className="font-display text-3xl font-bold mb-2">{t('activities.combos.title')}</h2>
-            <p className="text-muted-foreground">{t('activities.combos.save')}</p>
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-3">
+            <h2 className="font-display text-3xl font-bold mb-2">Save with a Combo</h2>
+            <p className="text-muted-foreground text-sm">All combo activities are 1 hour each at a preferential rate. ATV & RZR use basic models.</p>
           </motion.div>
-          <div className="grid sm:grid-cols-2 gap-4 mb-6">
+          <div className="grid sm:grid-cols-2 gap-4 mb-6 mt-8">
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
               className="glass-card rounded-2xl p-6 text-center premium-card border border-border">
-              <p className="text-gold text-3xl font-bold mb-1">$100 <span className="text-sm text-muted-foreground font-normal">USD</span></p>
-              <p className="text-foreground/70 text-sm">{t('activities.combo.2')}</p>
+              <p className="text-3xl mb-2">🎯</p>
+              <p className="font-display text-xl font-bold mb-1">Combo</p>
+              <p className="text-muted-foreground text-sm mb-3">Pick any 2 activities (1 hr each) + park fee</p>
+              <p className="text-gold text-2xl font-bold mb-4">$100 <span className="text-sm text-muted-foreground font-normal">USD/person</span></p>
+              <Link to="/book-activities" className="gold-gradient text-navy px-6 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
+                Book Combo <ArrowRight size={14} />
+              </Link>
             </motion.div>
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.1 }}
               className="glass-card rounded-2xl p-6 text-center premium-card border-2 border-gold/30 relative">
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 gold-gradient text-navy text-xs font-bold px-3 py-1 rounded-full">
-                {t('home.activities.bestValue')}
+              <span className="absolute -top-3 right-4 gold-gradient text-navy text-xs font-bold px-3 py-1 rounded-full">
+                BEST VALUE
               </span>
-              <p className="text-gold text-3xl font-bold mb-1">$125 <span className="text-sm text-muted-foreground font-normal">USD</span></p>
-              <p className="text-foreground/70 text-sm">{t('activities.combo.3')}</p>
+              <p className="text-3xl mb-2">🔥</p>
+              <p className="font-display text-xl font-bold mb-1">Crazy Combo</p>
+              <p className="text-muted-foreground text-sm mb-3">Pick any 3 activities (1 hr each) + park fee</p>
+              <p className="text-gold text-2xl font-bold mb-4">$125 <span className="text-sm text-muted-foreground font-normal">USD/person</span></p>
+              <Link to="/book-activities" className="gold-gradient text-navy px-6 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
+                Book Crazy Combo <ArrowRight size={14} />
+              </Link>
             </motion.div>
-          </div>
-          <div className="text-center">
-            <Link to="/book-activities" className="gold-gradient text-navy px-8 py-3.5 rounded-full font-bold text-sm inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
-              {t('activities.bookCombo')} <ArrowRight size={16} />
-            </Link>
           </div>
         </div>
       </section>
 
-      <div className="section-divider mx-auto max-w-2xl my-8" />
+      <div className="section-divider mx-auto max-w-2xl" />
 
-      {/* Activities Grid */}
-      <section className="py-12 px-4">
+      {/* Individual Activities */}
+      <section className="py-16 px-4">
         <div className="container mx-auto max-w-6xl">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-10">
+            <h2 className="font-display text-3xl font-bold mb-2">Or Book Individually</h2>
+            <p className="text-muted-foreground">Want just one activity? No problem — book any experience on its own</p>
+          </motion.div>
           <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true }}
             className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {activities.map((act, i) => (
               <motion.div key={i} variants={fadeUp}
                 className="glass-card rounded-xl p-6 premium-card border border-border">
+                <p className="text-2xl mb-2">{act.emoji}</p>
                 <h3 className="font-display text-lg font-bold mb-1">{t(`activity.${act.key}`)}</h3>
-                <p className="text-muted-foreground text-sm mb-3">{t(`activity.${act.key}.desc`)}</p>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground mb-3">
-                  <span className="flex items-center gap-1"><Clock size={13} /> {act.duration}</span>
+                <p className="text-muted-foreground text-sm mb-3">{act.desc}</p>
+
+                {act.insurance && (
+                  <p className="text-xs text-muted-foreground mb-3 bg-accent/50 rounded-lg p-2">
+                    Optional vehicle protection available. If declined, $500 USD credit card hold per vehicle required (released within 48 hrs).
+                  </p>
+                )}
+
+                {act.rzrPricing && (
+                  <p className="text-xs text-gold mb-3">1 pax $205 · 2 pax $290 · 3 pax $350 · 4 pax $405</p>
+                )}
+
+                {/* Restrictions accordion */}
+                <Accordion type="single" collapsible>
+                  <AccordionItem value="restrictions" className="border-none">
+                    <AccordionTrigger className="text-xs text-muted-foreground py-2 hover:no-underline">
+                      Restrictions & Safety
+                    </AccordionTrigger>
+                    <AccordionContent className="text-xs text-muted-foreground">
+                      {act.insurance
+                        ? 'Minimum age varies by activity. Closed-toe shoes required. Follow guide instructions at all times.'
+                        : act.key === 'fishing' || act.key === 'sunset'
+                        ? 'Subject to weather conditions. Cancellation policy applies.'
+                        : 'Minimum age varies by activity. Follow guide instructions at all times.'}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock size={13} /> {act.duration}
+                  </div>
                   {act.price ? (
-                    <span className="text-gold font-bold">{act.price} USD</span>
+                    <span className="text-gold font-bold text-sm">{act.price}</span>
+                  ) : act.rzrPricing ? (
+                    <span className="text-gold font-bold text-sm">See pricing</span>
                   ) : (
-                    <span className="text-primary font-medium italic">{t('activities.quoteOnRequest')}</span>
+                    <span className="text-primary font-medium text-sm italic">Quote on request</span>
                   )}
                 </div>
 
-                {/* Accordion for details */}
-                <Accordion type="single" collapsible>
-                  {act.rzrPricing && (
-                    <AccordionItem value="rzr" className="border-none">
-                      <AccordionTrigger className="text-xs text-gold py-2 hover:no-underline">RZR Pricing</AccordionTrigger>
-                      <AccordionContent className="text-xs text-muted-foreground space-y-1">
-                        <p>{t('activity.rzr.1pax')}</p>
-                        <p>{t('activity.rzr.2pax')}</p>
-                        <p>{t('activity.rzr.3pax')}</p>
-                        <p>{t('activity.rzr.4pax')}</p>
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
-                  {act.insurance && (
-                    <AccordionItem value="insurance" className="border-none">
-                      <AccordionTrigger className="text-xs text-muted-foreground py-2 hover:no-underline">
-                        <span className="flex items-center gap-1"><AlertTriangle size={12} /> {t('activities.vehicleInsurance').split(':')[0]}</span>
-                      </AccordionTrigger>
-                      <AccordionContent className="text-xs text-muted-foreground">
-                        {t('activities.vehicleInsurance')}
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
-                </Accordion>
-
-                {/* CTA */}
-                {act.price ? (
-                  <Link to="/book-activities" className="text-gold text-xs font-semibold flex items-center gap-1 mt-2 hover:gap-2 transition-all">
-                    {t('common.bookNow')} <ArrowRight size={12} />
-                  </Link>
-                ) : (
-                  <a href="https://wa.me/526241234567" target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs font-semibold text-[#25D366] mt-2">
-                    <MessageCircle size={12} /> {t('activities.contactWhatsApp')}
-                  </a>
-                )}
+                <a href={`https://wa.me/5216241234567?text=${encodeURIComponent(act.whatsapp)}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-[#25D366] mt-3">
+                  <MessageCircle size={12} /> {act.price || act.rzrPricing ? 'Book This Activity' : 'Request Quote via WhatsApp'}
+                </a>
               </motion.div>
             ))}
           </motion.div>
@@ -174,26 +183,30 @@ const Activities = () => {
       {/* Park Fee Note */}
       <section className="py-8 px-4">
         <div className="container mx-auto max-w-3xl">
-          <div className="flex items-start gap-3 bg-accent/60 rounded-xl p-4 border border-border">
-            <Info size={18} className="text-gold flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-muted-foreground">{t('activities.parkFee')}</p>
+          <div className="text-center text-sm text-muted-foreground">
+            Park fee ($25/person, paid at park)
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="navy-gradient py-20 px-4">
-        <div className="container mx-auto max-w-2xl text-center">
-          <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl md:text-4xl font-bold mb-4 text-off-white">
-            {t('activities.cta.title')}
-          </motion.h2>
-          <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.1 }} className="text-off-white/60 mb-8">
-            {t('activities.cta.subtitle')}
-          </motion.p>
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.2 }}>
-            <Link to="/book-activities" className="gold-gradient text-navy px-8 py-3.5 rounded-full font-bold text-sm inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
-              {t('home.activities.bookActivities')} <ArrowRight size={16} />
-            </Link>
+      {/* Safety Policy */}
+      <section className="py-12 px-4">
+        <div className="container mx-auto max-w-3xl">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
+            className="glass-card rounded-2xl p-8 border border-border">
+            <h3 className="font-display text-xl font-bold mb-4">Safety Policy</h3>
+            <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+              For safety reasons, cameras, phones and any electronic device with a camera are prohibited during public tour activities. HANDS-FREE CAMERAS (GoPro-type) ARE PERMITTED. We have acquired a no-camera policy because all our experiences are outdoors with levels of interaction and risk — we prioritize our clients' safety.
+            </p>
+            <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+              We also offer private tours where cameras and phones are allowed, since they don't put other participants' safety or quality time at risk.
+            </p>
+            <div className="flex flex-wrap gap-3 text-xs">
+              <span className="bg-accent/60 px-3 py-1.5 rounded-full">Photo packages available</span>
+              <span className="bg-accent/60 px-3 py-1.5 rounded-full">Private tours optional</span>
+              <span className="bg-accent/60 px-3 py-1.5 rounded-full">$25 USD park entry per person</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-4 italic">Cactus Tours reserves the right of admission for safety reasons.</p>
           </motion.div>
         </div>
       </section>

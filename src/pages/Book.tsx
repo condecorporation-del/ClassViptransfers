@@ -3,6 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, Car, Users, Minus, Plus, Plane, MessageCircle, CalendarDays, Clock, MapPin } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const steps = ['service', 'trip', 'route', 'date', 'locations', 'extras', 'upsell', 'review'] as const;
 
@@ -14,8 +18,8 @@ const Book = () => {
     serviceType: '' as '' | 'private' | 'shuttle',
     tripType: '' as '' | 'oneway' | 'roundtrip',
     route: '' as '' | 'airport-hotel' | 'hotel-airport',
-    arrivalDate: '',
-    departureDate: '',
+    arrivalDate: null as Date | null,
+    departureDate: null as Date | null,
     flightNumber: '',
     arrivalTime: '',
     departureFlightNumber: '',
@@ -146,30 +150,86 @@ const Book = () => {
           <div className="space-y-6">
             <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t('book.date.title')}</h2>
             <div className="grid sm:grid-cols-2 gap-5">
-              <InputField label={t('book.date.arrival')} icon={<CalendarDays size={18} className="text-gold" />}>
-                <input type="date" value={data.arrivalDate} onChange={e => setData({ ...data, arrivalDate: e.target.value })}
-                  className="input-luxury pl-11" />
-              </InputField>
+              {/* Arrival Date */}
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-2 block">{t('book.date.arrival')}</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className={cn("input-luxury w-full flex items-center gap-3 text-left", !data.arrivalDate && "text-muted-foreground")}>
+                      <CalendarDays size={18} className="text-gold flex-shrink-0" />
+                      {data.arrivalDate ? format(data.arrivalDate, 'PPP') : 'Select date'}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={data.arrivalDate ?? undefined}
+                      onSelect={(d) => d && setData({ ...data, arrivalDate: d })}
+                      disabled={(d) => d < new Date()}
+                      initialFocus className={cn("p-3 pointer-events-auto")} />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Flight Number */}
               <InputField label={t('book.date.flightNumber')} icon={<Plane size={18} className="text-gold" />}>
                 <input type="text" placeholder="AA 1234" value={data.flightNumber} onChange={e => setData({ ...data, flightNumber: e.target.value })}
                   className="input-luxury pl-11" />
               </InputField>
-              <InputField label={t('book.date.arrivalTime')} icon={<Clock size={18} className="text-gold" />}>
-                <input type="time" value={data.arrivalTime} onChange={e => setData({ ...data, arrivalTime: e.target.value })}
-                  className="input-luxury pl-11" />
-              </InputField>
+
+              {/* Arrival Time */}
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-2 block">{t('book.date.arrivalTime')}</label>
+                <div className="relative">
+                  <Clock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gold pointer-events-none z-10" />
+                  <select value={data.arrivalTime} onChange={e => setData({ ...data, arrivalTime: e.target.value })}
+                    className="input-luxury pl-11 w-full appearance-none cursor-pointer">
+                    <option value="">Select time</option>
+                    {Array.from({ length: 24 }, (_, h) => [0, 30].map(m => {
+                      const val = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                      const label = `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+                      return <option key={val} value={val}>{label}</option>;
+                    })).flat()}
+                  </select>
+                </div>
+              </div>
             </div>
 
             {data.tripType === 'roundtrip' && (
               <div className="grid sm:grid-cols-2 gap-5 pt-4 border-t border-border">
-                <InputField label={t('book.date.departure')} icon={<CalendarDays size={18} className="text-gold" />}>
-                  <input type="date" value={data.departureDate} onChange={e => setData({ ...data, departureDate: e.target.value })}
-                    className="input-luxury pl-11" />
-                </InputField>
-                <InputField label={t('book.date.departureTime')} icon={<Clock size={18} className="text-gold" />}>
-                  <input type="time" value={data.departureTime} onChange={e => setData({ ...data, departureTime: e.target.value })}
-                    className="input-luxury pl-11" />
-                </InputField>
+                {/* Departure Date */}
+                <div>
+                  <label className="text-sm font-semibold text-foreground mb-2 block">{t('book.date.departure')}</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className={cn("input-luxury w-full flex items-center gap-3 text-left", !data.departureDate && "text-muted-foreground")}>
+                        <CalendarDays size={18} className="text-gold flex-shrink-0" />
+                        {data.departureDate ? format(data.departureDate, 'PPP') : 'Select date'}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={data.departureDate ?? undefined}
+                        onSelect={(d) => d && setData({ ...data, departureDate: d })}
+                        disabled={(d) => d < (data.arrivalDate ?? new Date())}
+                        initialFocus className={cn("p-3 pointer-events-auto")} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Departure Time */}
+                <div>
+                  <label className="text-sm font-semibold text-foreground mb-2 block">{t('book.date.departureTime')}</label>
+                  <div className="relative">
+                    <Clock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gold pointer-events-none z-10" />
+                    <select value={data.departureTime} onChange={e => setData({ ...data, departureTime: e.target.value })}
+                      className="input-luxury pl-11 w-full appearance-none cursor-pointer">
+                      <option value="">Select time</option>
+                      {Array.from({ length: 24 }, (_, h) => [0, 30].map(m => {
+                        const val = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                        const label = `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+                        return <option key={val} value={val}>{label}</option>;
+                      })).flat()}
+                    </select>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -262,7 +322,7 @@ const Book = () => {
               <Row label={t('book.review.service')} value={data.serviceType || '—'} />
               <Row label={t('book.review.trip')} value={data.tripType || '—'} />
               <Row label={t('book.review.route')} value={data.route || '—'} />
-              <Row label={t('book.review.date')} value={data.arrivalDate || '—'} />
+              <Row label={t('book.review.date')} value={data.arrivalDate ? format(data.arrivalDate, 'PPP') : '—'} />
               <Row label={t('book.review.passengers')} value={String(data.passengers)} />
               <Row label={t('book.review.pickup')} value={data.pickup || '—'} />
               <Row label={t('book.review.dropoff')} value={data.dropoff || '—'} />
@@ -343,7 +403,7 @@ const Book = () => {
                 {data.serviceType && <Row label={t('book.review.service')} value={data.serviceType} />}
                 {data.tripType && <Row label={t('book.review.trip')} value={data.tripType} />}
                 {data.route && <Row label={t('book.review.route')} value={data.route} />}
-                {data.arrivalDate && <Row label={t('book.review.date')} value={data.arrivalDate} />}
+                {data.arrivalDate && <Row label={t('book.review.date')} value={format(data.arrivalDate, 'PPP')} />}
                 <Row label={t('book.review.passengers')} value={String(data.passengers)} />
                 {data.pickup && <Row label={t('book.review.pickup')} value={data.pickup} />}
                 {data.extras.length > 0 && (

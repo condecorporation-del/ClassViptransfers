@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "prebuild": "node -e \"const fs=require('fs'); if(!fs.existsSync('src/server.ts')) { console.error('ERROR: src/server.ts not found. Make sure backend/src/ is tracked in git.'); process.exit(1); } console.log('✅ src/server.ts found');\"",
     "build": "tsc",
     "postbuild": "node -e \"const fs=require('fs'); if(!fs.existsSync('dist/server.js')) { console.error('ERROR: Missing dist/server.js'); process.exit(1); } console.log('✅ dist/server.js exists');\"",
     "start": "node dist/server.js",

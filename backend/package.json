@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Backend API for Los Cabos Luxe Transfers booking system",
   "main": "dist/server.js",
-  "type": "module",
   "prisma": {
     "schema": "prisma/schema.prisma"
   },

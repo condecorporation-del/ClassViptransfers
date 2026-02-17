@@ -1,0 +1,387 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // Supabase requires SSL connections - add ?sslmode=require to connection string
+  // Or use: ?pgbouncer=true&connection_limit=1 for connection pooling
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String
+  country   String?
+  language  String   @default("en") // en, es
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings Booking[]
+
+  @@index([email])
+  @@index([phone])
+}
+
+enum BookingType {
+  TRANSPORTATION
+  ACTIVITY
+  COMBO
+  CRAZY_COMBO
+}
+
+enum BookingStatus {
+  DRAFT
+  PENDING_PAYMENT
+  PAID
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  OFFLINE_HOLD
+}
+
+enum BookingSource {
+  WEBSITE
+  PHONE
+  WHATSAPP
+  ADMIN
+  AI_CHAT
+}
+
+model Booking {
+  id            String        @id @default(cuid())
+  type         BookingType
+  status       BookingStatus @default(DRAFT)
+  source       BookingSource @default(WEBSITE)
+  
+  // Customer reference
+  customerId   String
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Date and time
+  bookingDate  DateTime      // Date of the service
+  bookingTime  String?       // Time of the service (HH:mm format)
+  
+  // Location details
+  pickupLocation  String?
+  dropoffLocation String?
+  
+  // Flight information
+  flightNumber    String?
+  arrivalTime     String?
+  departureFlightNumber String?
+  departureTime   String?
+  
+  // Pricing (stored in cents)
+  totalAmount     Int          // Total in cents
+  currency        String       @default("USD")
+  subtotalAmount  Int?         // Subtotal before overrides
+  discountAmount  Int?         // Discount in cents
+  taxAmount       Int?         // Tax in cents
+  
+  // Passengers
+  passengers      Int          @default(1)
+  
+  // Service details
+  serviceType     String?      // private, shuttle
+  tripType        String?      // oneway, roundtrip
+  route           String?      // airport-hotel, hotel-airport
+  
+  // Notes and metadata
+  notes           String?
+  internalNotes   String?      // Admin-only notes
+  metadata        Json?        // Flexible JSON for additional data
+  
+  // Timestamps
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  confirmedAt     DateTime?
+  cancelledAt     DateTime?
+  completedAt     DateTime?
+
+  // Relations
+  items           BookingItem[]
+  payments        Payment[]
+  pricingOverrides PricingOverride[]
+  assignments     BookingAssignment[]
+  emailLogs       EmailLog[]
+  aiConversations AIConversation[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([bookingDate])
+  @@index([createdAt])
+  @@index([type, status])
+}
+
+enum BookingItemType {
+  TRANSPORTATION
+  ACTIVITY
+  ADDON
+  PARK_ENTRANCE
+  COMBO
+  CRAZY_COMBO
+}
+
+model BookingItem {
+  id          String         @id @default(cuid())
+  bookingId   String
+  booking     Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  type        BookingItemType
+  name        String         // Activity name or service name
+  slug        String?        // Activity slug (e.g., "camel-ride")
+  quantity    Int            @default(1)
+  
+  // Pricing (in cents)
+  unitPrice   Int
+  totalPrice  Int
+  
+  // Metadata
+  metadata    Json?         // Flexible JSON (e.g., activity details, combo type)
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([bookingId])
+  @@index([type])
+}
+
+enum PaymentProvider {
+  PAYPAL
+  STRIPE
+  CASH
+  BANK_TRANSFER
+  MANUAL
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+model Payment {
+  id            String         @id @default(cuid())
+  bookingId    String
+  booking      Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  provider      PaymentProvider
+  status        PaymentStatus  @default(PENDING)
+  
+  // Payment identifiers
+  orderId       String?        // PayPal order ID, Stripe payment intent ID, etc.
+  captureId     String?        // PayPal capture ID
+  transactionId String?        // General transaction ID
+  
+  // Amount (in cents)
+  amount        Int
+  currency      String         @default("USD")
+  
+  // Raw payload from payment provider
+  rawPayload    Json?
+  
+  // Metadata
+  notes         String?
+  
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  completedAt DateTime?
+
+  @@index([bookingId])
+  @@index([provider, status])
+  @@index([orderId])
+  @@index([transactionId])
+}
+
+model PricingOverride {
+  id          String   @id @default(cuid())
+  bookingId   String
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  // Override details
+  originalAmount Int   // Original amount in cents
+  overrideAmount  Int  // New amount in cents
+  reason          String
+  
+  // Audit
+  createdBy   String?  // Admin user ID or identifier
+  createdAt   DateTime @default(now())
+
+  @@index([bookingId])
+}
+
+enum BookingAssignmentType {
+  DRIVER
+  VEHICLE
+}
+
+model BookingAssignment {
+  id          String   @id @default(cuid())
+  bookingId   String
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  type        BookingAssignmentType
+  driverId    String?  // Reference to Driver (when type is DRIVER)
+  driver      Driver?   @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  vehicleId   String?  // Reference to Vehicle (when type is VEHICLE)
+  vehicle     Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  
+  // Assignment details
+  assignedAt  DateTime @default(now())
+  assignedBy  String?  // Admin user ID
+  notes       String?
+
+  @@index([bookingId])
+  @@index([driverId])
+  @@index([vehicleId])
+}
+
+model Driver {
+  id          String   @id @default(cuid())
+  name        String
+  phone       String
+  email       String?
+  licenseNumber String?
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assignments BookingAssignment[]
+
+  @@index([isActive])
+}
+
+model Vehicle {
+  id          String   @id @default(cuid())
+  make        String
+  model       String
+  year        Int?
+  licensePlate String
+  capacity    Int      // Passenger capacity
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assignments BookingAssignment[]
+
+  @@index([isActive])
+  @@index([licensePlate])
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  CONFIRM
+  CANCEL
+  ASSIGN
+  PAYMENT
+  PRICING_OVERRIDE
+}
+
+model AdminAuditLog {
+  id          String       @id @default(cuid())
+  action      AuditAction
+  entityType  String       // "Booking", "Payment", etc.
+  entityId    String       // ID of the entity
+  
+  // Who
+  userId      String?      // Admin user ID
+  userEmail   String?      // Admin email (for reference)
+  
+  // What
+  description String
+  changes     Json?        // Before/after changes
+  
+  // When
+  createdAt   DateTime     @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([action])
+}
+
+enum EmailType {
+  CUSTOMER_CONFIRMATION
+  COMPANY_NOTIFICATION
+  ADMIN_RESEND
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model EmailLog {
+  id          String      @id @default(cuid())
+  bookingId   String
+  booking     Booking     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  type        EmailType
+  status      EmailStatus @default(PENDING)
+  
+  // Recipient
+  to          String      // Email address
+  from        String?     // From address used
+  
+  // Provider tracking
+  providerId  String?     // Resend email ID or SendGrid message ID
+  provider    String?     // "resend" or "sendgrid"
+  
+  // Content
+  subject     String
+  error       String?     // Error message if failed
+  
+  // Timestamps
+  sentAt      DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([bookingId])
+  @@index([type, status])
+  @@index([sentAt])
+}
+
+model AIConversation {
+  id            String    @id @default(cuid())
+  bookingId     String?   // Nullable - may be created before booking exists
+  booking       Booking?  @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  
+  sessionId     String    @default(cuid()) // Track conversation sessions
+  locale        String    @default("en") // en, es
+  
+  // Message content
+  userMessage   String    // User's message (text or transcribed audio)
+  assistantReply String   // AI assistant's reply
+  extractedData Json?     // Structured extracted booking data
+  rawTranscript String?   // Full conversation transcript
+  
+  // Metadata
+  messageType   String    @default("text") // "text" | "audio"
+  audioFileUrl  String?   // If audio was uploaded
+  language      String?   // Detected language from transcription
+  
+  // Status
+  nextAction    String?   // "ask_more" | "confirm_summary" | "proceed_to_payment"
+  missingFields Json?     // Array of missing required fields
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([bookingId])
+  @@index([sessionId])
+  @@index([createdAt])
+}
+

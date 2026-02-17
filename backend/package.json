@@ -4,11 +4,14 @@
   "description": "Backend API for Los Cabos Luxe Transfers booking system",
   "main": "dist/server.js",
   "type": "module",
+  "prisma": {
+    "schema": "prisma/schema.prisma"
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate --schema=./prisma/schema.prisma",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",

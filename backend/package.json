@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
+    "postbuild": "node -e \"const fs=require('fs'); if(!fs.existsSync('dist/server.js')) { console.error('ERROR: Missing dist/server.js'); process.exit(1); } console.log('✅ dist/server.js exists');\"",
     "start": "node dist/server.js",
     "postinstall": "prisma generate --schema=./prisma/schema.prisma",
     "db:generate": "prisma generate",

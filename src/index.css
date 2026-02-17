@@ -258,6 +258,9 @@
   @apply transition-all duration-200;
   @apply placeholder:text-muted-foreground/60;
 }
+.input-luxury.pl-11 {
+  padding-left: 2.75rem !important;
+}
 .input-luxury:hover {
   border-color: hsl(var(--gold) / 0.3);
 }

@@ -5,6 +5,7 @@ export const translations: Record<string, { en: string; es: string }> = {
   'nav.activities': { en: 'Activities', es: 'Actividades' },
   'nav.contact': { en: 'Contact', es: 'Contacto' },
   'nav.giftCards': { en: 'Gift Cards', es: 'Gift Cards' },
+  'nav.gallery': { en: 'Gallery', es: 'Galería' },
   'nav.bookNow': { en: 'Book Now', es: 'Reservar' },
 
   // Hero

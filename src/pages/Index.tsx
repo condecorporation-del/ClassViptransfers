@@ -49,12 +49,12 @@ const Index = () => {
   ];
 
   const activities = [
-    { key: 'activity.camel', duration: '1h', price: '$120' },
-    { key: 'activity.horseback', duration: '1h', price: '$120' },
-    { key: 'activity.atv', duration: '2h', price: '$120' },
-    { key: 'activity.rzr', duration: '2h', price: '$205+' },
-    { key: 'activity.sunset', duration: '—', price: t('activities.quoteOnRequest') },
-    { key: 'activity.fishing', duration: '—', price: t('activities.quoteOnRequest') },
+    { key: 'activity.camel', duration: '1h', price: '$120', slug: 'camel-ride' },
+    { key: 'activity.horseback', duration: '1h', price: '$120', slug: 'horseback-riding' },
+    { key: 'activity.atv', duration: '2h', price: '$120', slug: 'atv' },
+    { key: 'activity.rzr', duration: '2h', price: '$205+', slug: 'utv-adventure' },
+    { key: 'activity.sunset', duration: '—', price: t('activities.quoteOnRequest'), slug: null },
+    { key: 'activity.fishing', duration: '—', price: t('activities.quoteOnRequest'), slug: null },
   ];
 
   const steps = [
@@ -147,7 +147,7 @@ const Index = () => {
               {t('hero.cta1')} <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </Link>
             <a
-              href="https://wa.me/526241234567"
+              href="https://wa.me/5216241222174"
               target="_blank"
               rel="noopener noreferrer"
               className="border border-white/25 bg-white/10 backdrop-blur-md px-10 py-4 rounded-full font-semibold text-base text-white hover:bg-white/20 hover:border-gold/30 transition-all flex items-center gap-3"
@@ -308,16 +308,27 @@ const Index = () => {
             viewport={{ once: true }}
             className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10"
           >
-            {activities.map((act, i) => (
-              <motion.div key={i} variants={fadeUp}
-                className="glass-card rounded-xl p-6 premium-card border border-border text-center group">
-                <p className="font-display text-lg font-bold mb-2 text-foreground">{t(act.key)}</p>
-                <p className="text-muted-foreground text-xs flex items-center justify-center gap-1 mb-2">
-                  <Clock size={12} /> {act.duration}
-                </p>
-                <p className="text-gold font-bold text-sm">{act.price}</p>
-              </motion.div>
-            ))}
+            {activities.map((act, i) => {
+              const CardWrapper = act.slug ? Link : 'div';
+              const cardProps = act.slug ? { to: `/activities/${act.slug}` } : {};
+              return (
+                <motion.div key={i} variants={fadeUp}>
+                  <CardWrapper {...cardProps as any}
+                    className="glass-card rounded-xl p-6 premium-card border border-border text-center group block hover:border-gold/40 transition-all cursor-pointer">
+                    <p className="font-display text-lg font-bold mb-2 text-foreground group-hover:text-gold transition-colors">{t(act.key)}</p>
+                    <p className="text-muted-foreground text-xs flex items-center justify-center gap-1 mb-2">
+                      <Clock size={12} /> {act.duration}
+                    </p>
+                    <p className="text-gold font-bold text-sm">{act.price}</p>
+                    {act.slug && (
+                      <p className="text-xs text-gold/70 mt-2 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        View Details <ArrowRight size={10} />
+                      </p>
+                    )}
+                  </CardWrapper>
+                </motion.div>
+              );
+            })}
           </motion.div>
 
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid sm:grid-cols-2 gap-6 mb-8">

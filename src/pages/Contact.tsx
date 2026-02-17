@@ -67,7 +67,7 @@ const Contact = () => {
                 </div>
                 <div>
                   <p className="font-semibold text-sm text-foreground">{t('contact.phone')}</p>
-                  <a href="tel:+526241234567" className="text-muted-foreground text-sm hover:text-foreground transition-colors">+52 624 123 4567</a>
+                  <a href="tel:+526241222174" className="text-muted-foreground text-sm hover:text-foreground transition-colors">+52 624 122 2174</a>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -76,7 +76,7 @@ const Contact = () => {
                 </div>
                 <div>
                   <p className="font-semibold text-sm text-foreground">{t('contact.emailLabel')}</p>
-                  <a href="mailto:info@classviptransfers.com" className="text-muted-foreground text-sm hover:text-foreground transition-colors">info@classviptransfers.com</a>
+                  <a href="mailto:Armando@caboviptransfers.com" className="text-muted-foreground text-sm hover:text-foreground transition-colors">Armando@caboviptransfers.com</a>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -99,7 +99,7 @@ const Contact = () => {
               </div>
             </div>
 
-            <a href="https://wa.me/526241234567" target="_blank" rel="noopener noreferrer"
+            <a href="https://wa.me/5216241222174" target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full py-4 rounded-full bg-[#25D366] text-white font-bold text-sm hover:bg-[#20bd5a] transition-colors">
               <MessageCircle size={20} /> {t('contact.whatsapp')}
             </a>

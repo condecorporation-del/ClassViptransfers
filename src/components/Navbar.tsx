@@ -21,6 +21,7 @@ const Navbar = () => {
     { to: '/', label: t('nav.home') },
     { to: '/transfers', label: t('nav.transfers') },
     { to: '/activities', label: t('nav.activities') },
+    { to: '/gift-cards', label: t('nav.giftCards') },
     { to: '/contact', label: t('nav.contact') },
   ];
 

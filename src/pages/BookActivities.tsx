@@ -2,27 +2,32 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Check, ArrowRight, ArrowLeft, Clock, Minus, Plus, Info, ToggleLeft, ToggleRight, MessageCircle, CalendarDays, User, Mail, Phone } from 'lucide-react';
+import { Check, ArrowRight, ArrowLeft, Clock, Minus, Plus, Info, ToggleLeft, ToggleRight, MessageCircle, CalendarDays, User, Mail, Phone, Sparkles, Shield, Star, Car, ChevronUp, Zap } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const wizardSteps = ['combo', 'activities', 'date', 'info', 'review'] as const;
 
 const allActivities = [
-  { id: 'camel', key: 'activity.camel', duration: '1h' },
-  { id: 'camelKids', key: 'activity.camelKids', duration: '1h' },
-  { id: 'horseback', key: 'activity.horseback', duration: '1h' },
-  { id: 'atv', key: 'activity.atv', duration: '1h' },
-  { id: 'doubleMoto', key: 'activity.doubleMoto', duration: '1h' },
-  { id: 'rzr', key: 'activity.rzr', duration: '1h' },
-  { id: 'skyBikes', key: 'activity.skyBikes', duration: '1h' },
+  { id: 'camel', key: 'activity.camel', emoji: '🐫', duration: '1h', price: 120 },
+  { id: 'camelKids', key: 'activity.camelKids', emoji: '🐫', duration: '1h', price: 120 },
+  { id: 'horseback', key: 'activity.horseback', emoji: '🐎', duration: '1h', price: 120 },
+  { id: 'atv', key: 'activity.atv', emoji: '🏍️', duration: '1h', price: 120 },
+  { id: 'doubleMoto', key: 'activity.doubleMoto', emoji: '🏍️', duration: '1h', price: 200 },
+  { id: 'rzr', key: 'activity.rzr', emoji: '🏎️', duration: '1h', price: 205 },
+  { id: 'skyBikes', key: 'activity.skyBikes', emoji: '🚲', duration: '1h', price: 96 },
 ];
 
 const BookActivities = () => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [comboType, setComboType] = useState<'' | 'combo' | 'crazy'>('');
   const [selected, setSelected] = useState<string[]>([]);
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState<Date | undefined>(undefined);
   const [passengers, setPassengers] = useState(1);
   const [info, setInfo] = useState({ name: '', email: '', phone: '' });
   const [needTransfer, setNeedTransfer] = useState(false);
@@ -50,27 +55,64 @@ const BookActivities = () => {
           <div className="space-y-5">
             <div>
               <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t('bookAct.step1.title')}</h2>
-              <p className="text-muted-foreground text-sm md:text-base mt-2 leading-relaxed">All combo activities are 1 hour each</p>
+              <p className="text-muted-foreground text-sm md:text-base mt-2 leading-relaxed">
+                {lang === 'es' ? 'Todas las actividades del combo son de 1 hora cada una' : 'All combo activities are 1 hour each'}
+              </p>
             </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <button onClick={() => { setComboType('combo'); setSelected([]); }}
-                className={`booking-card rounded-xl p-8 text-center ${comboType === 'combo' ? 'selected border-gold' : ''}`}>
-                <p className="text-3xl mb-3">🎯</p>
-                <p className="font-display text-xl font-bold text-foreground">Combo</p>
-                <p className="text-muted-foreground text-sm mt-2 leading-relaxed">2 activities (1 hr each)</p>
-                <p className="text-gold text-2xl font-bold mt-4">$100 <span className="text-sm text-muted-foreground font-normal">USD/person</span></p>
-              </button>
-              <button onClick={() => { setComboType('crazy'); setSelected([]); }}
-                className={`booking-card rounded-xl p-8 text-center relative ${comboType === 'crazy' ? 'selected border-gold' : ''}`}>
-                <span className="absolute -top-3 right-4 gold-gradient text-navy text-xs font-bold px-3 py-1 rounded-full">
-                  BEST VALUE
-                </span>
-                <p className="text-3xl mb-3">🔥</p>
-                <p className="font-display text-xl font-bold text-foreground">Crazy Combo</p>
-                <p className="text-muted-foreground text-sm mt-2 leading-relaxed">3 activities (1 hr each)</p>
-                <p className="text-gold text-2xl font-bold mt-4">$125 <span className="text-sm text-muted-foreground font-normal">USD/person</span></p>
-              </button>
-            </div>
+
+            {/* Crazy Combo — primary CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={cn(
+                "relative rounded-2xl p-6 border-2 overflow-hidden cursor-pointer transition-all",
+                comboType === 'crazy'
+                  ? "border-gold bg-gold/5"
+                  : "border-gold/30 hover:border-gold/60 bg-gradient-to-br from-gold/5 to-transparent"
+              )}
+              onClick={() => { setComboType('crazy'); setSelected(s => s.slice(0, 3)); }}
+            >
+              <div className="absolute inset-0 shimmer pointer-events-none" />
+              <div className="absolute top-0 right-0 gold-gradient text-secondary-foreground text-[10px] font-bold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider">
+                {lang === 'es' ? 'MEJOR VALOR' : 'BEST VALUE'}
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="text-3xl">🔥</div>
+                <div className="flex-1">
+                  <p className="font-display text-xl font-bold text-foreground">Crazy Combo</p>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    {lang === 'es' ? '3 actividades (1 hr cada una) · Transporte incluido' : '3 activities (1 hr each) · Transport included'}
+                  </p>
+                  <div className="flex items-baseline gap-2 mt-2">
+                    <span className="text-gold text-2xl font-bold">$125</span>
+                    <span className="text-muted-foreground text-sm">USD/{lang === 'es' ? 'persona' : 'person'}</span>
+                    <span className="text-xs line-through text-muted-foreground/60 ml-2">$360</span>
+                    <span className="text-xs text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full">
+                      {lang === 'es' ? 'AHORRA 65%' : 'SAVE 65%'}
+                    </span>
+                  </div>
+                </div>
+                {comboType === 'crazy' && (
+                  <div className="w-7 h-7 rounded-full gold-gradient flex items-center justify-center flex-shrink-0">
+                    <Check size={15} className="text-navy" />
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Regular Combo */}
+            <button onClick={() => { setComboType('combo'); setSelected(s => s.slice(0, 2)); }}
+              className={cn(
+                "w-full rounded-xl p-6 text-center border transition-all",
+                comboType === 'combo' ? "border-gold bg-gold/5" : "border-border hover:border-gold/30 glass-card"
+              )}>
+              <p className="text-2xl mb-2">🎯</p>
+              <p className="font-display text-xl font-bold text-foreground">Combo</p>
+              <p className="text-muted-foreground text-sm mt-1">
+                {lang === 'es' ? '2 actividades (1 hr cada una)' : '2 activities (1 hr each)'}
+              </p>
+              <p className="text-gold text-2xl font-bold mt-3">$100 <span className="text-sm text-muted-foreground font-normal">USD/{lang === 'es' ? 'persona' : 'person'}</span></p>
+            </button>
           </div>
         );
       case 'activities':
@@ -79,37 +121,85 @@ const BookActivities = () => {
             <div>
               <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t('bookAct.step2.title')}</h2>
               <p className="text-muted-foreground text-sm md:text-base mt-2">
-                <span className="font-semibold text-gold">{selected.length}/{maxActivities}</span> selected
+                <span className="font-semibold text-gold">{selected.length}/{maxActivities}</span> {lang === 'es' ? 'seleccionadas' : 'selected'}
               </p>
             </div>
-            {allActivities.map(act => (
-              <button key={act.id} onClick={() => toggle(act.id)}
-                className={`w-full booking-card rounded-xl p-5 text-left flex items-center justify-between ${selected.includes(act.id) ? 'selected border-gold' : ''}`}>
-                <div>
-                  <p className="font-semibold text-sm text-foreground">{t(act.key)}</p>
-                  <p className="text-muted-foreground text-xs flex items-center gap-1.5 mt-1"><Clock size={12} /> {act.duration}</p>
+
+            <div className="grid grid-cols-2 gap-3">
+              {allActivities.map(act => {
+                const isSelected = selected.includes(act.id);
+                const maxReached = selected.length >= maxActivities;
+                const disabled = !isSelected && maxReached;
+                return (
+                  <button key={act.id} onClick={() => !disabled && toggle(act.id)}
+                    disabled={disabled}
+                    className={cn(
+                      "rounded-xl p-4 text-center border transition-all",
+                      isSelected ? "border-gold bg-gold/5" : disabled ? "border-border/50 opacity-40 cursor-not-allowed" : "border-border hover:border-gold/30 glass-card"
+                    )}>
+                    <span className="text-2xl block mb-1">{act.emoji}</span>
+                    <p className="font-display text-xs font-bold text-foreground leading-tight">{t(act.key)}</p>
+                    <p className="text-muted-foreground text-[10px] mt-1 flex items-center justify-center gap-1">
+                      <Clock size={9} /> {act.duration}
+                    </p>
+                    {isSelected && (
+                      <div className="w-5 h-5 rounded-full gold-gradient flex items-center justify-center mx-auto mt-2">
+                        <Check size={11} className="text-navy" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Upgrade prompt if in combo mode */}
+            {comboType === 'combo' && selected.length === 2 && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl p-4 border border-gold/30 bg-gold/5 cursor-pointer hover:bg-gold/10 transition-all"
+                onClick={() => { setComboType('crazy'); }}>
+                <div className="flex items-center gap-3">
+                  <Zap size={18} className="text-gold" />
+                  <div>
+                    <p className="text-sm font-bold text-foreground">
+                      {lang === 'es' ? '🔥 ¡Upgrade a Crazy Combo!' : '🔥 Upgrade to Crazy Combo!'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {lang === 'es' ? 'Agrega 1 actividad más por solo $25 más' : 'Add 1 more activity for just $25 more'}
+                    </p>
+                  </div>
                 </div>
-                {selected.includes(act.id) && <div className="w-7 h-7 rounded-full gold-gradient flex items-center justify-center flex-shrink-0"><Check size={15} className="text-navy" /></div>}
-              </button>
-            ))}
-            <div className="flex items-start gap-3 text-sm text-muted-foreground bg-accent rounded-xl p-4 border border-border">
-              <Info size={16} className="text-gold flex-shrink-0 mt-0.5" />
+              </motion.div>
+            )}
+
+            <div className="flex items-start gap-2 text-xs text-muted-foreground bg-accent rounded-xl p-3 border border-border">
+              <Info size={14} className="text-gold flex-shrink-0 mt-0.5" />
               <div className="leading-relaxed">
                 <p>{t('bookAct.step2.parkFee')}</p>
                 <p className="mt-1">{t('bookAct.step2.insurance')}</p>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">{t('bookAct.includes')}</p>
           </div>
         );
       case 'date':
         return (
           <div className="space-y-6">
             <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t('bookAct.step3.title')}</h2>
-            <InputField label={t('bookAct.step3.date')} icon={<CalendarDays size={18} className="text-gold" />}>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)}
-                className="input-luxury pl-11" />
-            </InputField>
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-2 block">{t('bookAct.step3.date')}</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className={cn("input-luxury w-full flex items-center gap-3 text-left", !date && "text-muted-foreground")}>
+                    <CalendarDays size={18} className="text-gold flex-shrink-0" />
+                    {date ? format(date, 'PPP') : (lang === 'es' ? 'Selecciona fecha' : 'Select date')}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={date} onSelect={setDate}
+                    disabled={(d) => d < new Date()}
+                    initialFocus className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+            </div>
             <div>
               <label className="text-sm font-semibold text-foreground mb-3 block">{t('bookAct.step3.passengers')}</label>
               <div className="flex items-center gap-5">
@@ -142,11 +232,34 @@ const BookActivities = () => {
               <input type="tel" value={info.phone} onChange={e => setInfo({ ...info, phone: e.target.value })}
                 placeholder="+1 (555) 000-0000" className="input-luxury pl-11" />
             </InputField>
-            <button onClick={() => setNeedTransfer(!needTransfer)}
-              className={`w-full booking-card rounded-xl p-5 text-left flex items-center justify-between ${needTransfer ? 'selected border-gold' : ''}`}>
-              <span className="font-medium text-sm text-foreground">{t('bookAct.step4.needTransfer')}</span>
-              {needTransfer ? <ToggleRight size={26} className="text-gold" /> : <ToggleLeft size={26} className="text-muted-foreground" />}
-            </button>
+
+            {/* Transportation upsell */}
+            <div className="border-t border-border pt-6">
+              <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                <Car size={16} className="text-gold" />
+                {lang === 'es' ? '¿Necesitas transporte al aeropuerto?' : 'Need airport transportation?'}
+              </p>
+              <button onClick={() => setNeedTransfer(!needTransfer)}
+                className={cn(
+                  "w-full rounded-xl p-5 text-left flex items-center justify-between border transition-all",
+                  needTransfer ? "border-gold bg-gold/5" : "border-border hover:border-gold/30 glass-card"
+                )}>
+                <div>
+                  <p className="font-bold text-sm text-foreground">
+                    {lang === 'es' ? 'Agregar Transfer Privado' : 'Add Private Transfer'}
+                  </p>
+                  <p className="text-muted-foreground text-xs mt-1">
+                    {lang === 'es' ? 'SUV de lujo · Desde $85 USD' : 'Luxury SUV · From $85 USD'}
+                  </p>
+                </div>
+                {needTransfer ? <ToggleRight size={28} className="text-gold" /> : <ToggleLeft size={28} className="text-muted-foreground" />}
+              </button>
+              {needTransfer && (
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-gold mt-2 flex items-center gap-1.5">
+                  <Check size={12} /> {lang === 'es' ? 'Te contactaremos para coordinar tu transfer' : "We'll contact you to coordinate your transfer"}
+                </motion.p>
+              )}
+            </div>
           </div>
         );
       case 'review':
@@ -154,16 +267,36 @@ const BookActivities = () => {
           <div className="space-y-6">
             <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t('bookAct.step5.title')}</h2>
             <div className="booking-card rounded-2xl p-6 md:p-8 space-y-4 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Combo</span><span className="font-semibold text-foreground capitalize">{comboType}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">{t('book.step.activities')}</span><span className="font-semibold text-foreground">{selected.join(', ')}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">{t('book.review.date')}</span><span className="font-semibold text-foreground">{date || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Combo</span><span className="font-semibold text-foreground capitalize">{comboType === 'crazy' ? 'Crazy Combo 🔥' : 'Combo 🎯'}</span></div>
+              <div className="flex justify-between items-start">
+                <span className="text-muted-foreground">{t('book.step.activities')}</span>
+                <div className="text-right">
+                  {selected.map(id => {
+                    const act = allActivities.find(a => a.id === id);
+                    return <span key={id} className="inline-block bg-gold/10 text-gold text-xs font-semibold px-2.5 py-1 rounded-full ml-1 mb-1">{act ? t(act.key) : id}</span>;
+                  })}
+                </div>
+              </div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{t('book.review.date')}</span><span className="font-semibold text-foreground">{date ? format(date, 'PPP') : '—'}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">{t('book.review.passengers')}</span><span className="font-semibold text-foreground">{passengers}</span></div>
               {info.name && <div className="flex justify-between"><span className="text-muted-foreground">{t('bookAct.step4.name')}</span><span className="font-semibold text-foreground">{info.name}</span></div>}
-              <div className="border-t border-border pt-4 flex justify-between font-bold text-lg">
-                <span>{t('bookAct.total')}</span>
-                <span className="text-gold">${total} USD</span>
+              {needTransfer && <div className="flex justify-between"><span className="text-muted-foreground">{lang === 'es' ? 'Transfer' : 'Transfer'}</span><span className="font-semibold text-gold">✓ {lang === 'es' ? 'Solicitado' : 'Requested'}</span></div>}
+              <div className="border-t border-border pt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{comboType === 'crazy' ? 'Crazy Combo' : 'Combo'}</span>
+                  <span className="text-gold font-semibold">${comboPrice} × {passengers}</span>
+                </div>
+                <div className="flex justify-between font-bold text-lg border-t border-border pt-3">
+                  <span>{t('bookAct.total')}</span>
+                  <span className="text-gold">${total} USD</span>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground">${comboPrice} {t('bookAct.perPerson')} × {passengers}</p>
+            </div>
+
+            {/* Trust elements */}
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5"><Shield size={14} className="text-gold" /> {lang === 'es' ? 'Pago seguro' : 'Secure checkout'}</div>
+              <div className="flex items-center gap-1.5"><Star size={14} className="text-gold" /> {lang === 'es' ? '4.9/5 calificación' : '4.9/5 rating'}</div>
             </div>
 
             {/* PayPal placeholder */}
@@ -177,15 +310,13 @@ const BookActivities = () => {
   };
 
   return (
-    <div className="pt-32 pb-20 px-4">
+    <div className="pt-32 pb-28 lg:pb-20 px-4">
       <div className="container mx-auto max-w-5xl">
-        {/* Title + step counter */}
         <div className="flex items-center justify-between mb-3">
           <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">{t('bookAct.title')}</h1>
           <span className="text-muted-foreground text-sm font-semibold bg-accent px-3 py-1 rounded-full">{step + 1}/5</span>
         </div>
 
-        {/* Progress dots */}
         <div className="flex gap-1.5 mb-10">
           {wizardSteps.map((_, i) => (
             <button
@@ -199,7 +330,6 @@ const BookActivities = () => {
         </div>
 
         <div className="grid lg:grid-cols-5 gap-8">
-          {/* Wizard */}
           <div className="lg:col-span-3">
             <AnimatePresence mode="wait">
               <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
@@ -207,7 +337,6 @@ const BookActivities = () => {
               </motion.div>
             </AnimatePresence>
 
-            {/* Nav buttons */}
             <div className="flex justify-between mt-10">
               <button onClick={prev} disabled={step === 0}
                 className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors py-2">
@@ -222,39 +351,134 @@ const BookActivities = () => {
             </div>
           </div>
 
-          {/* Sticky Summary */}
+          {/* Sticky Summary (desktop) */}
           <div className="lg:col-span-2 hidden lg:block">
             <div className="sticky top-32 booking-card rounded-2xl p-6 space-y-4">
               <h3 className="font-display text-lg font-bold text-foreground">{t('book.summary')}</h3>
               <div className="space-y-2.5 text-sm">
+                {comboType && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Combo</span>
+                    <span className="font-semibold text-foreground capitalize">{comboType === 'crazy' ? 'Crazy Combo 🔥' : 'Combo 🎯'}</span>
+                  </div>
+                )}
+                {selected.length > 0 && (
+                  <div>
+                    <span className="text-muted-foreground block mb-1">{lang === 'es' ? 'Actividades' : 'Activities'}</span>
+                    {selected.map(id => {
+                      const act = allActivities.find(a => a.id === id);
+                      return <span key={id} className="inline-block bg-gold/10 text-gold text-xs font-semibold px-2.5 py-1 rounded-full mr-1 mb-1">{act ? t(act.key) : id}</span>;
+                    })}
+                  </div>
+                )}
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Persons</span>
+                  <span className="text-muted-foreground">{lang === 'es' ? 'Personas' : 'Persons'}</span>
                   <span className="font-semibold text-foreground">{passengers}</span>
                 </div>
+                {date && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{lang === 'es' ? 'Fecha' : 'Date'}</span>
+                    <span className="font-semibold text-foreground">{format(date, 'PPP')}</span>
+                  </div>
+                )}
+                {needTransfer && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Transfer</span>
+                    <span className="text-gold font-semibold">✓</span>
+                  </div>
+                )}
               </div>
 
-              <p className="text-sm text-muted-foreground leading-relaxed">Park fee ($25/person) paid at park</p>
+              <p className="text-xs text-muted-foreground">{lang === 'es' ? 'Entrada al parque ($25/persona) pagada en el parque' : 'Park fee ($25/person) paid at park'}</p>
 
               <div className="border-t border-border pt-4">
                 <div className="flex justify-between font-bold text-lg">
-                  <span className="text-foreground">Total Due Now</span>
+                  <span className="text-foreground">{lang === 'es' ? 'Total' : 'Total Due Now'}</span>
                   <span className="text-gold">${total} USD</span>
                 </div>
+                {comboType && <p className="text-xs text-muted-foreground mt-1">${comboPrice} × {passengers} {lang === 'es' ? 'personas' : 'persons'}</p>}
               </div>
 
-              <a href="https://wa.me/526241234567?text=Hello%2C%20I%27d%20like%20to%20book%20a%20transfer" target="_blank" rel="noopener noreferrer"
+              {/* Upgrade prompt */}
+              {comboType === 'combo' && (
+                <div className="border-t border-border pt-4">
+                  <button onClick={() => { setComboType('crazy'); setStep(1); }}
+                    className="w-full text-left rounded-xl p-3 border border-gold/20 bg-gold/5 hover:bg-gold/10 transition-all">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={14} className="text-gold" />
+                      <span className="text-xs font-bold text-gold">🔥 {lang === 'es' ? '¡Upgrade a Crazy Combo!' : 'Upgrade to Crazy Combo!'}</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {lang === 'es' ? '+1 actividad por solo $25 más' : '+1 activity for just $25 more'}
+                    </p>
+                  </button>
+                </div>
+              )}
+
+              <a href="https://wa.me/5216241222174?text=Hello%2C%20I%27d%20like%20to%20book%20activities" target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors pt-2">
-                <MessageCircle size={16} className="text-[#25D366]" /> Chat on WhatsApp
+                <MessageCircle size={16} className="text-[#25D366]" /> {lang === 'es' ? 'Chatea por WhatsApp' : 'Chat on WhatsApp'}
               </a>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Mobile bottom summary bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/98 backdrop-blur-xl border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        <button onClick={() => setMobileOpen(!mobileOpen)} className="w-full px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <ChevronUp size={16} className={cn("text-muted-foreground transition-transform", mobileOpen && "rotate-180")} />
+            <span className="text-sm font-semibold text-foreground">{t('book.summary')}</span>
+          </div>
+          <span className="text-gold font-bold text-lg">${total} USD</span>
+        </button>
+
+        <AnimatePresence>
+          {mobileOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden border-t border-border"
+            >
+              <div className="px-4 py-4 space-y-2.5 text-sm max-h-60 overflow-y-auto">
+                {comboType && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Combo</span>
+                    <span className="font-semibold text-foreground">{comboType === 'crazy' ? 'Crazy 🔥' : 'Combo 🎯'}</span>
+                  </div>
+                )}
+                {selected.length > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{lang === 'es' ? 'Actividades' : 'Activities'}</span>
+                    <span className="text-foreground font-semibold">{selected.length}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{lang === 'es' ? 'Personas' : 'Persons'}</span>
+                  <span className="text-foreground font-semibold">{passengers}</span>
+                </div>
+
+                {/* Mobile upgrade prompt */}
+                {comboType === 'combo' && (
+                  <button onClick={() => { setComboType('crazy'); setStep(1); setMobileOpen(false); }}
+                    className="w-full text-left rounded-lg p-2.5 border border-gold/20 bg-gold/5 mt-2">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={12} className="text-gold" />
+                      <span className="text-[11px] font-bold text-gold">🔥 {lang === 'es' ? '¡Upgrade por solo $25 más!' : 'Upgrade for just $25 more!'}</span>
+                    </div>
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };
 
-/* Reusable input field wrapper with icon */
 const InputField = ({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) => (
   <div>
     <label className="text-sm font-semibold text-foreground mb-2 block">{label}</label>

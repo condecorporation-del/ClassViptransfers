@@ -22,6 +22,7 @@ const Footer = () => {
               <Link to="/" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.home')}</Link>
               <Link to="/transfers" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.transfers')}</Link>
               <Link to="/activities" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.activities')}</Link>
+              <Link to="/gift-cards" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.giftCards')}</Link>
               <Link to="/contact" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.contact')}</Link>
             </div>
           </div>
@@ -29,11 +30,11 @@ const Footer = () => {
           <div>
             <h4 className="text-gold font-semibold text-xs mb-4 uppercase tracking-[0.2em]">{t('footer.contact')}</h4>
             <div className="flex flex-col gap-3">
-              <a href="tel:+526241234567" className="flex items-center gap-2 text-off-white/60 text-sm hover:text-off-white transition-colors">
-                <Phone size={14} className="text-gold" /> +52 624 123 4567
+              <a href="tel:+526241222174" className="flex items-center gap-2 text-off-white/60 text-sm hover:text-off-white transition-colors">
+                <Phone size={14} className="text-gold" /> +52 624 122 2174
               </a>
-              <a href="mailto:info@classviptransfers.com" className="flex items-center gap-2 text-off-white/60 text-sm hover:text-off-white transition-colors">
-                <Mail size={14} className="text-gold" /> info@classviptransfers.com
+              <a href="mailto:Armando@caboviptransfers.com" className="flex items-center gap-2 text-off-white/60 text-sm hover:text-off-white transition-colors">
+                <Mail size={14} className="text-gold" /> Armando@caboviptransfers.com
               </a>
               <span className="flex items-center gap-2 text-off-white/60 text-sm">
                 <MapPin size={14} className="text-gold" /> {t('contact.address')}

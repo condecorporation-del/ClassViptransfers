@@ -169,7 +169,7 @@ const Activities = () => {
                 </div>
 
                 <div className="flex items-center gap-2 mt-3">
-                  <a href={`https://wa.me/5216241234567?text=${encodeURIComponent(act.whatsapp)}`} target="_blank" rel="noopener noreferrer"
+                  <a href={`https://wa.me/5216241222174?text=${encodeURIComponent(act.whatsapp)}`} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1.5 text-xs font-semibold text-[#25D366] hover:underline">
                     <MessageCircle size={12} /> {act.price || act.rzrPricing ? 'Book This Activity' : 'Request Quote via WhatsApp'}
                   </a>

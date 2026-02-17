@@ -3,6 +3,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Phone, Mail, MapPin, Clock, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 
+
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 
 const Contact = () => {

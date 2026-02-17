@@ -18,11 +18,10 @@ const Navbar = () => {
   }, []);
 
   const links = [
-    { to: '/', label: t('nav.home') },
     { to: '/transfers', label: t('nav.transfers') },
     { to: '/activities', label: t('nav.activities') },
     { to: '/gift-cards', label: t('nav.giftCards') },
-    { to: '/contact', label: t('nav.contact') },
+    { to: '/gallery', label: t('nav.gallery') },
   ];
 
   const isActive = (path: string) => location.pathname === path;

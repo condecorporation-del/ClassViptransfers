@@ -22,19 +22,38 @@ const allowedOrigins = [
   'http://localhost:8081',
   'http://localhost:8899', // Netlify Dev
   'https://classvip.netlify.app',
+  'https://*.netlify.app', // Allow all Netlify previews
 ];
+
+// Log allowed origins in production
+if (process.env.NODE_ENV === 'production') {
+  console.log('[Server] Allowed CORS origins:', allowedOrigins);
+}
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
+    // Check exact match
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
-    } else {
-      console.warn(`CORS blocked origin: ${origin}`);
-      callback(null, true); // Allow anyway for development
+      return;
     }
+    
+    // Check Netlify preview pattern
+    if (origin.includes('.netlify.app')) {
+      callback(null, true);
+      return;
+    }
+    
+    // Log blocked origins in production
+    if (process.env.NODE_ENV === 'production') {
+      console.warn(`[CORS] Blocked origin: ${origin}`);
+    }
+    
+    // Allow anyway for development, but log
+    callback(null, true);
   },
   credentials: true,
 }));

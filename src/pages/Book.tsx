@@ -10,6 +10,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
+// Debug: Log API URL in production
+if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+  console.log('[Book] API_BASE_URL:', API_BASE_URL);
+  console.log('[Book] import.meta.env.VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
+}
+
 const steps = ['service', 'trip', 'route', 'date', 'locations', 'extras', 'upsell', 'review'] as const;
 
 const upsellActivities = [
@@ -93,6 +99,10 @@ const Book = () => {
       return;
     }
 
+    // Log API URL for debugging
+    console.log('[Book] Creating booking with API_BASE_URL:', API_BASE_URL);
+    console.log('[Book] import.meta.env.VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
+    
     // Check if API URL is configured
     if (!API_BASE_URL || API_BASE_URL === 'http://localhost:3001') {
       // In production, this should be set
@@ -101,6 +111,7 @@ const Book = () => {
           ? 'Error de configuración: Backend no configurado. Por favor contacta soporte.' 
           : 'Configuration error: Backend not configured. Please contact support.');
         console.error('[Book] API_BASE_URL not configured for production:', API_BASE_URL);
+        console.error('[Book] Current hostname:', window.location.hostname);
         return;
       }
     }

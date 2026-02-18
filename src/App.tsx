@@ -18,6 +18,8 @@ import AdminLogin from "./pages/AdminLogin";
 import Confirmation from "./pages/Confirmation";
 import GiftCards from "./pages/GiftCards";
 import Checkout from "./pages/Checkout";
+import CheckoutSuccess from "./pages/CheckoutSuccess";
+import CheckoutCancel from "./pages/CheckoutCancel";
 import NotFound from "./pages/NotFound";
 import { AdminRoute } from "./components/AdminRoute";
 
@@ -52,6 +54,8 @@ const App = () => (
               <Route path="/gift-cards" element={<GiftCards />} />
               <Route path="/confirmation" element={<Confirmation />} />
               <Route path="/checkout" element={<Checkout />} />
+              <Route path="/checkout/success" element={<CheckoutSuccess />} />
+              <Route path="/checkout/cancel" element={<CheckoutCancel />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

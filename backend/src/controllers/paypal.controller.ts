@@ -2,7 +2,15 @@ import { Request, Response } from 'express';
 import { PayPalService } from '../services/paypal.service';
 import { z } from 'zod';
 
-const paypalService = new PayPalService();
+// Initialize PayPal service - won't crash if creds are missing in dev
+let paypalService: PayPalService;
+try {
+  paypalService = new PayPalService();
+} catch (error: any) {
+  console.warn('⚠️ PayPalService initialization warning:', error.message);
+  // Create a dummy service that will return errors gracefully
+  paypalService = null as any;
+}
 
 const createOrderSchema = z.object({
   bookingId: z.string().cuid(),
@@ -20,6 +28,13 @@ export class PayPalController {
    */
   async createOrder(req: Request, res: Response) {
     try {
+      if (!paypalService) {
+        return res.status(400).json({
+          success: false,
+          error: 'PAYPAL creds missing - PayPal service is not configured',
+        });
+      }
+
       const { bookingId } = createOrderSchema.parse(req.body);
 
       const result = await paypalService.createOrder(bookingId);
@@ -33,7 +48,8 @@ export class PayPalController {
       });
     } catch (error: any) {
       console.error('Create order error:', error);
-      res.status(400).json({
+      const statusCode = error.message?.includes('PAYPAL creds') ? 400 : 500;
+      res.status(statusCode).json({
         success: false,
         error: error.message || 'Failed to create PayPal order',
       });

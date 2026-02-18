@@ -57,8 +57,13 @@ export class PayPalService {
     this.clientId = process.env.PAYPAL_CLIENT_ID || '';
     this.clientSecret = process.env.PAYPAL_CLIENT_SECRET || '';
 
+    // Don't crash in dev - let methods handle missing creds gracefully
     if (!this.clientId || !this.clientSecret) {
-      throw new Error('PayPal credentials not configured. Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('⚠️ PayPal credentials not configured. PayPal features will be disabled.');
+      } else {
+        throw new Error('PayPal credentials not configured. Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET');
+      }
     }
 
     this.apiClient = axios.create({
@@ -70,10 +75,26 @@ export class PayPalService {
     });
   }
 
+  private checkCredentials(): void {
+    if (!this.clientId || !this.clientSecret) {
+      throw new Error('PAYPAL creds missing - PayPal service is not configured');
+    }
+  }
+
+  private getFrontendUrl(): string {
+    // In development, use localhost:8899 (Netlify Dev) or fallback to 8080
+    if (process.env.NODE_ENV === 'development') {
+      return process.env.FRONTEND_URL || 'http://localhost:8899';
+    }
+    // In production, use FRONTEND_URL or fallback
+    return process.env.FRONTEND_URL || 'http://localhost:8080';
+  }
+
   /**
    * Get or refresh PayPal access token
    */
   private async getAccessToken(): Promise<string> {
+    this.checkCredentials();
     // Return cached token if still valid (with 5 minute buffer)
     if (this.accessToken && Date.now() < this.tokenExpiresAt - 300000) {
       return this.accessToken;
@@ -108,6 +129,7 @@ export class PayPalService {
    * Create PayPal order for a booking
    */
   async createOrder(bookingId: string): Promise<{ orderId: string; approvalUrl: string }> {
+    this.checkCredentials();
     // Load booking and verify
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
@@ -132,6 +154,18 @@ export class PayPalService {
     // Get access token
     const accessToken = await this.getAccessToken();
 
+    // Get frontend URL (dev-aware)
+    const frontendUrl = this.getFrontendUrl();
+    const returnUrl = `${frontendUrl}/checkout/success?bookingId=${bookingId}`;
+    const cancelUrl = `${frontendUrl}/checkout/cancel?bookingId=${bookingId}`;
+
+    // Log URLs in dev mode
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[PayPal] Frontend URL:', frontendUrl);
+      console.log('[PayPal] Return URL:', returnUrl);
+      console.log('[PayPal] Cancel URL:', cancelUrl);
+    }
+
     // Create PayPal order
     const orderData = {
       intent: 'CAPTURE',
@@ -149,8 +183,8 @@ export class PayPalService {
         brand_name: 'Los Cabos Luxe Transfers',
         landing_page: 'NO_PREFERENCE',
         user_action: 'PAY_NOW',
-        return_url: `${process.env.FRONTEND_URL || 'http://localhost:8080'}/booking/confirmation?bookingId=${bookingId}`,
-        cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:8080'}/booking?bookingId=${bookingId}`,
+        return_url: returnUrl,
+        cancel_url: cancelUrl,
       },
     };
 
@@ -216,6 +250,7 @@ export class PayPalService {
    * Capture PayPal order payment
    */
   async captureOrder(bookingId: string, orderId: string): Promise<{ captureId: string; status: string }> {
+    this.checkCredentials();
     // Verify booking exists
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },

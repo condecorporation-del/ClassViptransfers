@@ -74,8 +74,19 @@ export default function Checkout() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create PayPal order');
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { error: await response.text() || 'Unknown error' };
+        }
+        const errorMsg = errorData.error || errorData.message || `HTTP ${response.status}: Failed to create PayPal order`;
+        console.error('[Checkout] PayPal create-order error:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorData,
+        });
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();

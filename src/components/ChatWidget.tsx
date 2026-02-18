@@ -1,0 +1,529 @@
+import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MessageCircle, X, Send, Mic, MicOff, Loader2 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useNavigate } from 'react-router-dom';
+
+// Get API base URL from env, with fallback
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  const apiUrl = envUrl && envUrl.trim() !== '' ? envUrl.trim() : 'http://localhost:3001';
+  
+  // Log in dev mode only
+  if (import.meta.env.DEV) {
+    console.log('[ChatWidget] API Base URL:', apiUrl);
+  }
+  
+  return apiUrl;
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  isAudio?: boolean;
+}
+
+interface ChatResponse {
+  success: boolean;
+  data: {
+    reply: string;
+    bookingDraftId: string | null;
+    extracted: any;
+    missingFields: string[];
+    nextAction: 'ask_more' | 'confirm_summary' | 'proceed_to_payment';
+    sessionId: string;
+  };
+}
+
+export const ChatWidget = () => {
+  const { lang } = useLanguage();
+  const navigate = useNavigate();
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [bookingDraftId, setBookingDraftId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [summaryData, setSummaryData] = useState<any>(null);
+  const [showSummary, setShowSummary] = useState(false);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  // Load chat state from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('chat-widget-state');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setMessages(parsed.messages || []);
+        setBookingDraftId(parsed.bookingDraftId || null);
+        setSessionId(parsed.sessionId || null);
+      } catch (e) {
+        console.error('Failed to load chat state:', e);
+      }
+    }
+  }, []);
+
+  // Save chat state to localStorage
+  useEffect(() => {
+    if (messages.length > 0 || bookingDraftId || sessionId) {
+      localStorage.setItem('chat-widget-state', JSON.stringify({
+        messages,
+        bookingDraftId,
+        sessionId,
+      }));
+    }
+  }, [messages, bookingDraftId, sessionId]);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Start audio recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus',
+      });
+
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        await handleAudioSubmit();
+      };
+
+      mediaRecorder.start();
+      mediaRecorderRef.current = mediaRecorder;
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      alert(lang === 'es' ? 'Error al acceder al micrófono' : 'Error accessing microphone');
+    }
+  };
+
+  // Stop audio recording
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  // Handle audio submission
+  const handleAudioSubmit = async () => {
+    if (audioChunksRef.current.length === 0) return;
+
+    const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+    audioChunksRef.current = [];
+
+    // Add user message
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: lang === 'es' ? '🎤 Mensaje de voz' : '🎤 Voice message',
+      timestamp: new Date(),
+      isAudio: true,
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+
+    try {
+      // Transcribe audio
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'audio.webm');
+
+      const transcribeEndpoint = `${API_BASE_URL}/api/ai/transcribe`;
+      if (import.meta.env.DEV) {
+        console.log('[ChatWidget] Calling transcribe endpoint:', transcribeEndpoint);
+      }
+
+      const transcribeRes = await fetch(transcribeEndpoint, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!transcribeRes.ok) {
+        const errorText = await transcribeRes.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText || 'Unknown error' };
+        }
+        throw new Error(`HTTP ${transcribeRes.status}: ${errorData.error || errorData.message || 'Transcription failed'}`);
+      }
+
+      const transcribeData = await transcribeRes.json();
+      const transcribedText = transcribeData.data.text;
+
+      // Send transcribed text to chat
+      await sendMessage(transcribedText);
+    } catch (error: any) {
+      console.error('Audio processing error:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: lang === 'es' 
+          ? 'Lo siento, hubo un error procesando tu mensaje de voz. Por favor intenta de nuevo.'
+          : 'Sorry, there was an error processing your voice message. Please try again.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      setIsLoading(false);
+    }
+  };
+
+  // Send text message
+  const sendMessage = async (text?: string) => {
+    const messageText = text || input.trim();
+    if (!messageText && !text) return;
+
+    // Add user message
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: messageText,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const endpoint = `${API_BASE_URL}/api/ai/chat`;
+      if (import.meta.env.DEV) {
+        console.log('[ChatWidget] Calling endpoint:', endpoint);
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: messageText,
+          bookingDraftId,
+          locale: lang,
+          sessionId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText || 'Unknown error' };
+        }
+        throw new Error(`HTTP ${response.status}: ${errorData.error || errorData.message || 'Chat request failed'}`);
+      }
+
+      const data: ChatResponse = await response.json();
+
+      if (data.success) {
+        // Update session and booking IDs
+        if (data.data.sessionId) setSessionId(data.data.sessionId);
+        if (data.data.bookingDraftId) setBookingDraftId(data.data.bookingDraftId);
+
+        // Add assistant reply
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: data.data.reply,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+
+        // Handle next action
+        if (data.data.nextAction === 'confirm_summary') {
+          setSummaryData(data.data.extracted);
+          setShowSummary(true);
+        } else if (data.data.nextAction === 'proceed_to_payment') {
+          // Navigate to checkout
+          if (data.data.bookingDraftId) {
+            navigate(`/checkout?bookingId=${data.data.bookingDraftId}`);
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('[ChatWidget] Chat error:', error);
+      const errorMsg = error?.message || 'Unknown error';
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: lang === 'es'
+          ? `Error: ${errorMsg}. Por favor intenta de nuevo o contacta a +52 624 122 2174`
+          : `Error: ${errorMsg}. Please try again or contact +52 624 122 2174`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle confirmation
+  const handleConfirm = () => {
+    setShowSummary(false);
+    sendMessage('CONFIRM');
+  };
+
+  // Handle edit
+  const handleEdit = () => {
+    setShowSummary(false);
+    sendMessage('EDIT');
+  };
+
+  // Handle form submit
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isLoading && input.trim()) {
+      sendMessage();
+    }
+  };
+
+  return (
+    <>
+      {/* Floating Button */}
+      <motion.button
+        onClick={() => setIsOpen(!isOpen)}
+        className="fixed bottom-6 right-6 md:bottom-24 md:right-6 z-50 bg-gold hover:bg-gold-dark text-navy p-4 rounded-full shadow-2xl transition-colors flex items-center justify-center"
+        aria-label={lang === 'es' ? 'Abrir chat' : 'Open chat'}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 1.5, type: 'spring', stiffness: 200 }}
+      >
+        {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
+      </motion.button>
+
+      {/* Chat Panel */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-24 right-6 z-40 w-full max-w-md h-[600px] md:h-[700px] bg-card border border-gold/20 rounded-xl shadow-2xl backdrop-blur-xl flex flex-col overflow-hidden"
+          >
+            {/* Header */}
+            <div className="bg-navy-gradient text-off-white p-4 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gold">
+                  {lang === 'es' ? 'Asistente de Reservas' : 'Booking Assistant'}
+                </h3>
+                <p className="text-xs text-off-white/60">
+                  {lang === 'es' ? 'Chatea o graba un mensaje' : 'Chat or record a message'}
+                </p>
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-1 hover:bg-white/10 rounded"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Messages */}
+            <div
+              ref={chatContainerRef}
+              className="flex-1 overflow-y-auto p-4 space-y-4"
+            >
+              {messages.length === 0 && (
+                <div className="text-center text-muted-foreground py-8">
+                  <MessageCircle size={48} className="mx-auto mb-4 opacity-50" />
+                  <p className="text-sm">
+                    {lang === 'es'
+                      ? '¡Hola! ¿En qué puedo ayudarte hoy?'
+                      : 'Hello! How can I help you today?'}
+                  </p>
+                  <p className="text-xs mt-2 opacity-75">
+                    {lang === 'es'
+                      ? 'Puedes escribir o grabar un mensaje de voz'
+                      : 'You can type or record a voice message'}
+                  </p>
+                </div>
+              )}
+
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-lg p-3 ${
+                      message.role === 'user'
+                        ? 'bg-gold text-navy'
+                        : 'bg-muted text-foreground'
+                    }`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    <p className="text-xs mt-1 opacity-60">
+                      {message.timestamp.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-muted rounded-lg p-3 flex items-center gap-2">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span className="text-sm text-muted-foreground">
+                      {lang === 'es' ? 'Pensando...' : 'Thinking...'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Summary Card */}
+            {showSummary && summaryData && (
+              <div className="p-4 border-t border-gold/20 bg-gold/5">
+                <div className="bg-card border border-gold/30 rounded-lg p-4 space-y-3">
+                  <h4 className="font-semibold text-gold">
+                    {lang === 'es' ? 'Resumen de Reserva' : 'Booking Summary'}
+                  </h4>
+                  
+                  <div className="space-y-2 text-sm">
+                    {summaryData.intent && (
+                      <p>
+                        <span className="font-medium">
+                          {lang === 'es' ? 'Tipo:' : 'Type:'}
+                        </span>{' '}
+                        {summaryData.intent}
+                      </p>
+                    )}
+                    {summaryData.when?.date && (
+                      <p>
+                        <span className="font-medium">
+                          {lang === 'es' ? 'Fecha:' : 'Date:'}
+                        </span>{' '}
+                        {new Date(summaryData.when.date).toLocaleDateString()}
+                      </p>
+                    )}
+                    {summaryData.passengers && (
+                      <p>
+                        <span className="font-medium">
+                          {lang === 'es' ? 'Pasajeros:' : 'Passengers:'}
+                        </span>{' '}
+                        {summaryData.passengers}
+                      </p>
+                    )}
+                    {summaryData.transportation?.pickup && (
+                      <p>
+                        <span className="font-medium">
+                          {lang === 'es' ? 'Recogida:' : 'Pickup:'}
+                        </span>{' '}
+                        {summaryData.transportation.pickup}
+                      </p>
+                    )}
+                    {summaryData.transportation?.dropoff && (
+                      <p>
+                        <span className="font-medium">
+                          {lang === 'es' ? 'Destino:' : 'Dropoff:'}
+                        </span>{' '}
+                        {summaryData.transportation.dropoff}
+                      </p>
+                    )}
+                    {summaryData.activities?.selected && summaryData.activities.selected.length > 0 && (
+                      <p>
+                        <span className="font-medium">
+                          {lang === 'es' ? 'Actividades:' : 'Activities:'}
+                        </span>{' '}
+                        {summaryData.activities.selected.join(', ')}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={handleConfirm}
+                      className="flex-1 bg-gold text-navy px-4 py-2 rounded-lg font-semibold hover:bg-gold-dark transition-colors"
+                    >
+                      {lang === 'es' ? 'Confirmar ✅' : 'Confirm ✅'}
+                    </button>
+                    <button
+                      onClick={handleEdit}
+                      className="flex-1 bg-muted text-foreground px-4 py-2 rounded-lg font-semibold hover:bg-muted/80 transition-colors"
+                    >
+                      {lang === 'es' ? 'Editar ❌' : 'Edit ❌'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Input Area */}
+            <div className="border-t border-gold/20 p-4 bg-card">
+              <form onSubmit={handleSubmit} className="flex gap-2">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={lang === 'es' ? 'Escribe un mensaje...' : 'Type a message...'}
+                  className="flex-1 px-4 py-2 bg-background border border-gold/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
+                  disabled={isLoading || isRecording}
+                />
+                <button
+                  type="button"
+                  onMouseDown={startRecording}
+                  onMouseUp={stopRecording}
+                  onTouchStart={startRecording}
+                  onTouchEnd={stopRecording}
+                  className={`p-2 rounded-lg transition-colors ${
+                    isRecording
+                      ? 'bg-red-500 text-white'
+                      : 'bg-muted hover:bg-muted/80 text-foreground'
+                  }`}
+                  disabled={isLoading}
+                  aria-label={lang === 'es' ? 'Grabar audio' : 'Record audio'}
+                >
+                  {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading || !input.trim() || isRecording}
+                  className="p-2 bg-gold text-navy rounded-lg hover:bg-gold-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label={lang === 'es' ? 'Enviar' : 'Send'}
+                >
+                  <Send size={20} />
+                </button>
+              </form>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                {lang === 'es'
+                  ? 'También puedes contactarnos: WhatsApp +52 624 122 2174'
+                  : 'You can also reach us: WhatsApp +52 624 122 2174'}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+};
+

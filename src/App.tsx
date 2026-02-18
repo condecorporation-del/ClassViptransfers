@@ -14,9 +14,12 @@ import BookActivities from "./pages/BookActivities";
 import Contact from "./pages/Contact";
 import Gallery from "./pages/Gallery";
 import Admin from "./pages/Admin";
+import AdminLogin from "./pages/AdminLogin";
 import Confirmation from "./pages/Confirmation";
 import GiftCards from "./pages/GiftCards";
+import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
+import { AdminRoute } from "./components/AdminRoute";
 
 const queryClient = new QueryClient();
 
@@ -37,9 +40,18 @@ const App = () => (
               <Route path="/book-activities" element={<BookActivities />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/gallery" element={<Gallery />} />
-              <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route
+                path="/admin"
+                element={
+                  <AdminRoute>
+                    <Admin />
+                  </AdminRoute>
+                }
+              />
               <Route path="/gift-cards" element={<GiftCards />} />
               <Route path="/confirmation" element={<Confirmation />} />
+              <Route path="/checkout" element={<Checkout />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

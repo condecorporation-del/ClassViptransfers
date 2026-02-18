@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Shield, MapPin, Clock, Headphones, ArrowRight, Star, ChevronDown, Trophy, Car, Users, Quote, MessageCircle, Plane, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Shield, MapPin, Clock, Headphones, ArrowRight, Star, ChevronDown, Trophy, Car, Users, Quote, Plane, Sparkles, CheckCircle2 } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -138,22 +138,14 @@ const Index = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.8 }}
-            className="flex flex-col sm:flex-row gap-4"
+            className="flex justify-center"
           >
             <Link
               to="/book"
-              className="gold-gradient text-secondary-foreground px-10 py-4 rounded-full font-bold text-base hover:brightness-110 transition-all gold-glow flex items-center gap-3 group"
+              className="gold-gradient text-secondary-foreground px-12 py-5 rounded-full font-bold text-lg md:text-xl hover:brightness-110 transition-all gold-glow flex items-center gap-3 group shadow-2xl"
             >
-              {t('hero.cta1')} <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              {t('hero.cta1')} <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </Link>
-            <a
-              href="https://wa.me/5216241222174"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="border border-white/25 bg-white/10 backdrop-blur-md px-10 py-4 rounded-full font-semibold text-base text-white hover:bg-white/20 hover:border-gold/30 transition-all flex items-center gap-3"
-            >
-              <MessageCircle size={18} /> {t('hero.cta2')}
-            </a>
           </motion.div>
         </div>
 
@@ -466,21 +458,13 @@ const Index = () => {
             <div className="absolute inset-0 shimmer pointer-events-none" />
             <h2 className="font-display text-3xl md:text-5xl font-bold mb-4 text-off-white">{t('cta.title')}</h2>
             <p className="text-off-white/60 text-lg font-light max-w-lg mx-auto mb-8">{t('cta.subtitle')}</p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex justify-center">
               <Link
                 to="/book"
-                className="gold-gradient text-secondary-foreground px-10 py-4 rounded-full font-bold text-base hover:brightness-110 transition-all gold-glow flex items-center gap-3 group"
+                className="gold-gradient text-secondary-foreground px-12 py-5 rounded-full font-bold text-lg md:text-xl hover:brightness-110 transition-all gold-glow flex items-center gap-3 group shadow-2xl"
               >
-                {t('hero.cta1')} <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                {t('hero.cta1')} <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </Link>
-              <a
-                href="https://wa.me/526241234567"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="border border-off-white/25 text-off-white px-10 py-4 rounded-full font-semibold text-base hover:bg-off-white/10 transition-all flex items-center gap-3"
-              >
-                <MessageCircle size={18} /> {t('hero.cta2')}
-              </a>
             </div>
           </motion.div>
         </div>

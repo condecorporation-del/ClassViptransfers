@@ -40,19 +40,29 @@ export class AIService {
 
   constructor() {
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY is not set');
+    // Don't throw - let methods handle missing key gracefully
+    if (apiKey) {
+      this.openai = new OpenAI({ apiKey });
+    } else {
+      console.warn('⚠️ OPENAI_API_KEY is not set - AI features will be disabled');
+      // Create a dummy client to prevent crashes
+      this.openai = null as any;
     }
-
-    this.openai = new OpenAI({ apiKey });
     this.model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
     this.whisperModel = process.env.OPENAI_WHISPER_MODEL || 'whisper-1';
+  }
+
+  private checkApiKey(): void {
+    if (!process.env.OPENAI_API_KEY || !this.openai) {
+      throw new Error('OPENAI_API_KEY missing - AI service is not configured');
+    }
   }
 
   /**
    * Transcribe audio to text
    */
   async transcribeAudio(audioBuffer: Buffer, filename: string): Promise<{ text: string; language: string }> {
+    this.checkApiKey();
     try {
       // Create File-like object for OpenAI (Node.js compatible)
       // OpenAI SDK accepts File, Blob, or Buffer with proper metadata
@@ -165,6 +175,7 @@ Respond ONLY with valid JSON. Do not add any additional text.
     missingFields: string[];
     nextAction: 'ask_more' | 'confirm_summary' | 'proceed_to_payment';
   }> {
+    this.checkApiKey();
     // Get conversation history
     const history = await prisma.aIConversation.findMany({
       where: { sessionId },

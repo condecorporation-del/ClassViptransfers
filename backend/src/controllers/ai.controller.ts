@@ -3,7 +3,15 @@ import { AIService } from '../services/ai.service';
 import { aiChatSchema } from '../lib/validation';
 import { randomUUID } from 'crypto';
 
-const aiService = new AIService();
+// Initialize AI service - won't crash if key is missing
+let aiService: AIService;
+try {
+  aiService = new AIService();
+} catch (error: any) {
+  console.warn('⚠️ AIService initialization warning:', error.message);
+  // Create a dummy service that will return errors gracefully
+  aiService = null as any;
+}
 
 export class AIController {
   /**
@@ -12,6 +20,13 @@ export class AIController {
    */
   async transcribe(req: Request, res: Response) {
     try {
+      if (!aiService) {
+        return res.status(400).json({
+          success: false,
+          error: 'OPENAI_API_KEY missing - AI service is not configured',
+        });
+      }
+
       if (!req.file) {
         return res.status(400).json({
           success: false,
@@ -33,7 +48,8 @@ export class AIController {
       });
     } catch (error: any) {
       console.error('Transcribe error:', error);
-      res.status(500).json({
+      const statusCode = error.message?.includes('OPENAI_API_KEY') ? 400 : 500;
+      res.status(statusCode).json({
         success: false,
         error: error.message || 'Failed to transcribe audio',
       });
@@ -46,6 +62,13 @@ export class AIController {
    */
   async chat(req: Request, res: Response) {
     try {
+      if (!aiService) {
+        return res.status(400).json({
+          success: false,
+          error: 'OPENAI_API_KEY missing - AI service is not configured',
+        });
+      }
+
       const input = aiChatSchema.parse(req.body);
       
       // Generate or use session ID
@@ -71,7 +94,8 @@ export class AIController {
       });
     } catch (error: any) {
       console.error('Chat error:', error);
-      res.status(500).json({
+      const statusCode = error.message?.includes('OPENAI_API_KEY') ? 400 : 500;
+      res.status(statusCode).json({
         success: false,
         error: error.message || 'Failed to process chat',
       });

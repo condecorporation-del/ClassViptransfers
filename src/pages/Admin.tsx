@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Lock, LayoutDashboard, Map, DollarSign, MapPin, Package, CalendarCheck } from 'lucide-react';
+import { LayoutDashboard, Map, DollarSign, MapPin, Package, CalendarCheck, LogOut } from 'lucide-react';
 import { useState } from 'react';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 const Admin = () => {
   const { t } = useLanguage();
-  const [loggedIn, setLoggedIn] = useState(false);
+  const { email, logout } = useAdminAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const sidebarItems = [
@@ -17,34 +18,24 @@ const Admin = () => {
     { key: 'admin.sidebar.bookings', id: 'bookings', icon: <CalendarCheck size={18} /> },
   ];
 
-  if (!loggedIn) {
-    return (
-      <div className="min-h-[80vh] flex items-center justify-center px-4 py-32">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="glass-card rounded-2xl p-8 w-full max-w-sm text-center border border-border">
-          <div className="w-14 h-14 rounded-full gold-gradient flex items-center justify-center mx-auto mb-4">
-            <Lock size={24} className="text-navy" />
-          </div>
-          <h1 className="font-display text-2xl font-bold mb-2">{t('admin.login')}</h1>
-          <p className="text-muted-foreground text-sm mb-6">{t('admin.credentials')}</p>
-          <form onSubmit={(e) => { e.preventDefault(); setLoggedIn(true); }} className="space-y-4">
-            <input type="email" placeholder={t('admin.email')} defaultValue="admin@classvip.com" required
-              className="w-full bg-accent/50 border border-border rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold/50" />
-            <input type="password" placeholder={t('admin.password')} defaultValue="demo1234" required
-              className="w-full bg-accent/50 border border-border rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold/50" />
-            <button type="submit" className="gold-gradient text-navy px-6 py-3 rounded-full font-bold text-sm w-full hover:brightness-110 transition-all gold-glow">
-              {t('admin.logIn')}
-            </button>
-          </form>
-        </motion.div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen pt-28 flex">
       {/* Sidebar */}
       <aside className="w-60 navy-gradient text-off-white p-4 hidden md:block flex-shrink-0">
+        {/* User Info */}
+        {email && (
+          <div className="mb-6 pb-4 border-b border-white/10">
+            <p className="text-xs text-off-white/60 mb-1">Logged in as</p>
+            <p className="text-sm font-semibold text-gold">{email}</p>
+            <button
+              onClick={logout}
+              className="mt-2 text-xs text-off-white/60 hover:text-off-white flex items-center gap-1 transition-colors"
+            >
+              <LogOut size={12} />
+              Logout
+            </button>
+          </div>
+        )}
         <div className="space-y-1">
           {sidebarItems.map(item => (
             <button

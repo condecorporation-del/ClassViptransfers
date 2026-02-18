@@ -1,7 +1,8 @@
 import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
-import WhatsAppButton from './WhatsAppButton';
+import { InstallBanner } from './InstallBanner';
+import { ChatWidget } from './ChatWidget';
 
 const Layout = () => {
   return (
@@ -11,7 +12,8 @@ const Layout = () => {
         <Outlet />
       </main>
       <Footer />
-      <WhatsAppButton />
+      <InstallBanner />
+      <ChatWidget />
     </div>
   );
 };

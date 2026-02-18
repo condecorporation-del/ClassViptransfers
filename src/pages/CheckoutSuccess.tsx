@@ -9,38 +9,45 @@ export default function CheckoutSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { lang } = useLanguage();
-  
-  const bookingId = searchParams.get('bookingId');
-  const token = searchParams.get('token'); // PayPal orderId
-  const PayerID = searchParams.get('PayerID'); // PayPal payer ID
 
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [error, setError] = useState<string | null>(null);
   const [booking, setBooking] = useState<any>(null);
+  const [bookingId, setBookingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!bookingId || !token) {
+    // Extract token and bookingId from URL query params
+    const urlToken = searchParams.get('token');
+    const urlBookingId = searchParams.get('bookingId');
+    
+    if (!urlToken || !urlBookingId) {
+      const missing = [];
+      if (!urlToken) missing.push('token');
+      if (!urlBookingId) missing.push('bookingId');
       setError(lang === 'es' 
-        ? 'Faltan parámetros de PayPal. Por favor, contacta soporte.' 
-        : 'Missing PayPal parameters. Please contact support.');
+        ? `Faltan parámetros de PayPal: ${missing.join(', ')}. Por favor, contacta soporte.` 
+        : `Missing PayPal parameters: ${missing.join(', ')}. Please contact support.`);
       setStatus('error');
       return;
     }
 
-    capturePayment();
-  }, [bookingId, token]);
+    setBookingId(urlBookingId);
+    // Use token as orderId (PayPal returns token=ORDER_ID in return URL)
+    capturePayment(urlToken, urlBookingId);
+  }, [searchParams, lang]);
 
-  const capturePayment = async () => {
+  const capturePayment = async (orderIdToken: string, bookingIdParam: string) => {
     try {
       // Call capture-order endpoint
+      // Use token from URL as orderId (PayPal returns token=ORDER_ID)
       const response = await fetch(`${API_BASE_URL}/api/paypal/capture-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          bookingId,
-          orderId: token,
+          bookingId: bookingIdParam,
+          orderId: orderIdToken, // token from URL is the orderId
         }),
       });
 
@@ -64,7 +71,7 @@ export default function CheckoutSuccess() {
       
       if (data.success) {
         // Fetch updated booking to show confirmation
-        const bookingResponse = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}`);
+        const bookingResponse = await fetch(`${API_BASE_URL}/api/bookings/${bookingIdParam}`);
         if (bookingResponse.ok) {
           const bookingData = await bookingResponse.json();
           setBooking(bookingData.data);
@@ -116,12 +123,14 @@ export default function CheckoutSuccess() {
             </p>
           </div>
           <div className="flex gap-4 justify-center">
-            <button
-              onClick={() => navigate(`/checkout?bookingId=${bookingId}`)}
-              className="bg-gold text-navy px-6 py-2 rounded-lg font-semibold hover:brightness-110 transition-all"
-            >
-              {lang === 'es' ? 'Intentar de Nuevo' : 'Try Again'}
-            </button>
+            {bookingId && (
+              <button
+                onClick={() => navigate(`/checkout?bookingId=${bookingId}`)}
+                className="bg-gold text-navy px-6 py-2 rounded-lg font-semibold hover:brightness-110 transition-all"
+              >
+                {lang === 'es' ? 'Intentar de Nuevo' : 'Try Again'}
+              </button>
+            )}
             <button
               onClick={() => navigate('/contact')}
               className="bg-muted text-foreground px-6 py-2 rounded-lg font-semibold hover:bg-muted/80 transition-all"

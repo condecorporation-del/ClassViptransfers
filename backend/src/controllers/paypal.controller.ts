@@ -62,7 +62,20 @@ export class PayPalController {
    */
   async captureOrder(req: Request, res: Response) {
     try {
+      if (!paypalService) {
+        return res.status(400).json({
+          success: false,
+          error: 'PAYPAL creds missing - PayPal service is not configured',
+        });
+      }
+
       const { bookingId, orderId } = captureOrderSchema.parse(req.body);
+
+      // Dev-only logging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[PayPal Capture] orderId:', orderId);
+        console.log('[PayPal Capture] bookingId:', bookingId);
+      }
 
       const result = await paypalService.captureOrder(bookingId, orderId);
 
@@ -75,9 +88,24 @@ export class PayPalController {
       });
     } catch (error: any) {
       console.error('Capture order error:', error);
-      res.status(400).json({
+      
+      // Extract PayPal error details if available
+      let paypalError = null;
+      if (error.response?.data) {
+        paypalError = {
+          name: error.response.data.name,
+          message: error.response.data.message,
+          details: error.response.data.details,
+          debug_id: error.response.data.debug_id,
+        };
+        console.error('[PayPal Error Details]', paypalError);
+      }
+
+      const statusCode = error.message?.includes('PAYPAL creds') ? 400 : 500;
+      res.status(statusCode).json({
         success: false,
         error: error.message || 'Failed to capture PayPal payment',
+        ...(paypalError && { paypal: paypalError }),
       });
     }
   }

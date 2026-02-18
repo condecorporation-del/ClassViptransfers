@@ -262,21 +262,27 @@ export class PayPalService {
     }
 
     // Check if already paid/confirmed (idempotency)
-    if (booking.status === 'PAID' || booking.status === 'CONFIRMED') {
-      const existingPayment = await prisma.payment.findFirst({
-        where: {
-          bookingId,
-          orderId,
-          status: PaymentStatus.COMPLETED,
-        },
-      });
+    // First check if Payment already exists and is COMPLETED for this orderId
+    const existingPayment = await prisma.payment.findFirst({
+      where: {
+        bookingId,
+        orderId,
+        status: PaymentStatus.COMPLETED,
+      },
+    });
 
-      if (existingPayment) {
-        return {
-          captureId: existingPayment.captureId || orderId,
-          status: 'COMPLETED',
-        };
-      }
+    if (existingPayment) {
+      // Already captured - return success (idempotent)
+      return {
+        captureId: existingPayment.captureId || orderId,
+        status: 'COMPLETED',
+      };
+    }
+
+    // Also check booking status for idempotency
+    if (booking.status === 'PAID' || booking.status === 'CONFIRMED') {
+      // Booking already paid, but payment record might not exist
+      // Still try to capture (PayPal will handle idempotency)
     }
 
     // Get access token

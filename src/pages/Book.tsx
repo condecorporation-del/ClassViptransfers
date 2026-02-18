@@ -2,11 +2,13 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Car, Users, Minus, Plus, Plane, MessageCircle, CalendarDays, Clock, MapPin, Sparkles, Zap, Shield, Star, ChevronUp } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Car, Users, Minus, Plus, Plane, MessageCircle, CalendarDays, Clock, MapPin, Sparkles, Zap, Shield, Star, ChevronUp, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 const steps = ['service', 'trip', 'route', 'date', 'locations', 'extras', 'upsell', 'review'] as const;
 
@@ -25,6 +27,8 @@ const Book = () => {
   const navigate = useNavigate();
   const [current, setCurrent] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [creatingBooking, setCreatingBooking] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
   const [data, setData] = useState({
     serviceType: '' as '' | 'private' | 'shuttle',
     tripType: '' as '' | 'oneway' | 'roundtrip',
@@ -80,6 +84,117 @@ const Book = () => {
   }, [data.activities, data.comboMode, data.passengers]);
 
   const total = transferPrice + activitiesPrice;
+
+  // Create booking and redirect to checkout
+  const handlePayPalCheckout = async () => {
+    // Validate required fields
+    if (!data.serviceType || !data.tripType || !data.route || !data.arrivalDate || !data.pickup || !data.dropoff) {
+      setBookingError(lang === 'es' ? 'Por favor completa todos los campos requeridos' : 'Please complete all required fields');
+      return;
+    }
+
+    setCreatingBooking(true);
+    setBookingError(null);
+
+    try {
+      // Determine booking type
+      let bookingType: 'TRANSPORTATION' | 'ACTIVITY' | 'COMBO' | 'CRAZY_COMBO' = 'TRANSPORTATION';
+      if (data.activities.length > 0) {
+        if (data.comboMode === 'crazy') bookingType = 'CRAZY_COMBO';
+        else if (data.comboMode === 'combo') bookingType = 'COMBO';
+        else bookingType = 'ACTIVITY';
+      }
+
+      // Build items array
+      const items: any[] = [];
+      
+      // Add transportation item
+      items.push({
+        type: 'TRANSPORTATION',
+        name: `${data.serviceType} ${data.tripType} transfer`,
+        quantity: 1,
+        unitPrice: transferPrice,
+      });
+
+      // Add activity items
+      if (data.activities.length > 0) {
+        if (data.comboMode === 'combo' || data.comboMode === 'crazy') {
+          items.push({
+            type: data.comboMode === 'crazy' ? 'CRAZY_COMBO' : 'COMBO',
+            name: data.comboMode === 'crazy' ? 'Crazy Combo' : 'Combo',
+            quantity: data.passengers,
+            unitPrice: data.comboMode === 'crazy' ? 125 : 100,
+          });
+        } else {
+          data.activities.forEach(activityId => {
+            const act = upsellActivities.find(a => a.id === activityId);
+            if (act) {
+              items.push({
+                type: 'ACTIVITY',
+                name: act.key,
+                quantity: data.passengers,
+                unitPrice: act.price,
+              });
+            }
+          });
+        }
+      }
+
+      // Create booking payload
+      const bookingPayload = {
+        type: bookingType,
+        customer: {
+          name: 'Guest', // Will be updated in checkout
+          email: 'guest@example.com', // Will be updated in checkout
+          phone: '+1234567890', // Will be updated in checkout
+          country: 'US',
+          language: lang,
+        },
+        bookingDate: data.arrivalDate.toISOString(),
+        bookingTime: data.arrivalTime || '10:00',
+        pickupLocation: data.pickup,
+        dropoffLocation: data.dropoff,
+        flightNumber: data.flightNumber || undefined,
+        arrivalTime: data.arrivalTime || undefined,
+        departureFlightNumber: data.departureFlightNumber || undefined,
+        departureTime: data.departureTime || undefined,
+        passengers: data.passengers,
+        serviceType: data.serviceType,
+        tripType: data.tripType,
+        route: data.route,
+        items,
+        notes: data.extras.length > 0 ? `Extras: ${data.extras.join(', ')}` : undefined,
+      };
+
+      // Create booking
+      const response = await fetch(`${API_BASE_URL}/api/bookings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingPayload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to create booking' }));
+        throw new Error(errorData.error || 'Failed to create booking');
+      }
+
+      const result = await response.json();
+      const bookingId = result.data?.id;
+
+      if (!bookingId) {
+        throw new Error('No booking ID returned');
+      }
+
+      // Redirect to checkout
+      navigate(`/checkout?bookingId=${bookingId}`);
+    } catch (err: any) {
+      console.error('Error creating booking:', err);
+      setBookingError(err.message || (lang === 'es' ? 'Error al crear la reserva' : 'Error creating booking'));
+      setCreatingBooking(false);
+    }
+  };
 
   const extrasOptions = [
     { id: 'baby', label: t('book.extras.babySeat') },
@@ -517,11 +632,32 @@ const Book = () => {
               <div className="flex items-center gap-1.5"><Star size={14} className="text-gold" /> {lang === 'es' ? '4.9/5 calificación' : '4.9/5 rating'}</div>
             </div>
 
-            {/* PayPal placeholder */}
-            <button disabled className="w-full py-4 rounded-xl bg-[#0070ba] text-white font-bold text-base opacity-50 cursor-not-allowed">
-              {t('book.review.paypal')}
+            {/* PayPal Checkout Button */}
+            <button
+              onClick={handlePayPalCheckout}
+              disabled={creatingBooking}
+              className="w-full py-4 rounded-xl bg-[#0070ba] hover:bg-[#005ea6] text-white font-bold text-base transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {creatingBooking ? (
+                <>
+                  <Loader2 size={20} className="animate-spin" />
+                  {lang === 'es' ? 'Creando reserva...' : 'Creating booking...'}
+                </>
+              ) : (
+                <>
+                  <Shield size={20} />
+                  {t('book.review.paypal')}
+                </>
+              )}
             </button>
-            <p className="text-center text-sm text-muted-foreground">{t('book.review.paypalDisabled')}</p>
+            {bookingError && (
+              <p className="text-center text-sm text-destructive mt-2">{bookingError}</p>
+            )}
+            {!bookingError && !creatingBooking && (
+              <p className="text-center text-sm text-muted-foreground mt-2">
+                {lang === 'es' ? 'Serás redirigido a PayPal para completar el pago' : 'You will be redirected to PayPal to complete payment'}
+              </p>
+            )}
           </div>
         );
     }

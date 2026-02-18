@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Loader2, CreditCard, CheckCircle } from 'lucide-react';
+import { Loader2, CreditCard, CheckCircle, Mail, User, Phone } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
@@ -32,6 +32,14 @@ export default function Checkout() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paypalUrl, setPaypalUrl] = useState<string | null>(null);
+  
+  // Customer info form
+  const [customerInfo, setCustomerInfo] = useState({
+    name: '',
+    email: '',
+    phone: '',
+  });
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
 
   useEffect(() => {
     if (!bookingId) {
@@ -51,6 +59,20 @@ export default function Checkout() {
       }
       const data = await response.json();
       setBooking(data.data);
+      
+      // Pre-fill customer form if email is guest@example.com
+      if (data.data?.customer) {
+        const customer = data.data.customer;
+        if (customer.email === 'guest@example.com' || !customer.email) {
+          setShowCustomerForm(true);
+        } else {
+          setCustomerInfo({
+            name: customer.name || '',
+            email: customer.email || '',
+            phone: customer.phone || '',
+          });
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load booking');
     } finally {
@@ -58,8 +80,75 @@ export default function Checkout() {
     }
   };
 
+  const updateCustomerInfo = async () => {
+    if (!bookingId) return;
+
+    // Validate required fields
+    if (!customerInfo.email || !customerInfo.name || !customerInfo.phone) {
+      setError(lang === 'es' 
+        ? 'Por favor completa todos los campos requeridos' 
+        : 'Please complete all required fields');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}/customer`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(customerInfo),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to update customer info' }));
+        throw new Error(errorData.error || 'Failed to update customer info');
+      }
+
+      const data = await response.json();
+      setBooking(data.data);
+      setShowCustomerForm(false);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update customer information');
+    }
+  };
+
   const handlePayPalCheckout = async () => {
     if (!bookingId) return;
+
+    // If customer form is shown and not filled, show error
+    if (showCustomerForm && (!customerInfo.email || !customerInfo.name || !customerInfo.phone)) {
+      setError(lang === 'es' 
+        ? 'Por favor completa tu información de contacto antes de pagar' 
+        : 'Please complete your contact information before paying');
+      return;
+    }
+
+    // If customer info needs to be updated, update it first
+    if (showCustomerForm) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}/customer`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(customerInfo),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Failed to update customer info' }));
+          throw new Error(errorData.error || 'Failed to update customer info');
+        }
+
+        const data = await response.json();
+        setBooking(data.data);
+        setShowCustomerForm(false);
+      } catch (err: any) {
+        setError(err.message || 'Failed to update customer information');
+        return;
+      }
+    }
 
     setProcessing(true);
     setError(null);
@@ -142,6 +231,61 @@ export default function Checkout() {
                 : 'Review details and proceed with payment'}
             </p>
           </div>
+
+          {/* Customer Information Form */}
+          {showCustomerForm && (
+            <div className="border border-gold/20 rounded-lg p-6 space-y-4 bg-muted/30">
+              <h2 className="font-semibold text-lg text-gold flex items-center gap-2">
+                <User size={20} />
+                {lang === 'es' ? 'Información de Contacto' : 'Contact Information'}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {lang === 'es' 
+                  ? 'Por favor ingresa tu información para recibir la confirmación por email'
+                  : 'Please enter your information to receive email confirmation'}
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    {lang === 'es' ? 'Nombre completo' : 'Full Name'} *
+                  </label>
+                  <input
+                    type="text"
+                    value={customerInfo.name}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+                    className="w-full px-4 py-2 border border-gold/20 rounded-lg bg-background"
+                    placeholder={lang === 'es' ? 'Tu nombre' : 'Your name'}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 flex items-center gap-2">
+                    <Mail size={14} />
+                    {lang === 'es' ? 'Email' : 'Email'} *
+                  </label>
+                  <input
+                    type="email"
+                    value={customerInfo.email}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+                    className="w-full px-4 py-2 border border-gold/20 rounded-lg bg-background"
+                    placeholder="tu@email.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 flex items-center gap-2">
+                    <Phone size={14} />
+                    {lang === 'es' ? 'Teléfono' : 'Phone'} *
+                  </label>
+                  <input
+                    type="tel"
+                    value={customerInfo.phone}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
+                    className="w-full px-4 py-2 border border-gold/20 rounded-lg bg-background"
+                    placeholder="+1234567890"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Booking Summary */}
           <div className="border border-gold/20 rounded-lg p-6 space-y-4">

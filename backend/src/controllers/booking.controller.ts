@@ -5,6 +5,7 @@ import {
   confirmBookingSchema,
   cancelBookingSchema,
   assignBookingSchema,
+  updateCustomerSchema,
   listBookingsSchema,
   exportBookingsSchema,
 } from '../lib/validation';
@@ -120,6 +121,26 @@ export class BookingController {
     res.json({
       success: true,
       data: result,
+    });
+  }
+
+  /**
+   * PATCH /api/bookings/:id/customer
+   * Update customer information
+   */
+  async updateCustomer(req: Request, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    if (!id || typeof id !== 'string' || !id.match(/^c[a-z0-9]{24}$/)) {
+      return res.status(400).json({ error: 'Invalid booking ID' });
+    }
+
+    const customerData = updateCustomerSchema.parse(req.body);
+    
+    const booking = await bookingService.updateCustomer(id, customerData);
+    
+    res.json({
+      success: true,
+      data: booking,
     });
   }
 }

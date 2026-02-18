@@ -6,6 +6,7 @@ import {
   confirmBookingSchema,
   cancelBookingSchema,
   assignBookingSchema,
+  updateCustomerSchema,
 } from '../lib/validation';
 
 const router = Router();
@@ -43,6 +44,13 @@ router.post(
   '/:id/assign',
   validate(assignBookingSchema, 'body'),
   asyncHandler((req, res) => bookingController.assignBooking(req, res))
+);
+
+// PATCH /api/bookings/:id/customer - Update customer information
+router.patch(
+  '/:id/customer',
+  validate(updateCustomerSchema, 'body'),
+  asyncHandler((req, res) => bookingController.updateCustomer(req, res))
 );
 
 export default router;

@@ -801,5 +801,36 @@ export class BookingService {
 
     return booking;
   }
+
+  /**
+   * Update customer information for a booking
+   */
+  async updateCustomer(
+    bookingId: string,
+    customerData: { name?: string; email?: string; phone?: string; country?: string }
+  ) {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { customer: true },
+    });
+
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+
+    // Update customer
+    const updatedCustomer = await prisma.customer.update({
+      where: { id: booking.customerId },
+      data: {
+        ...(customerData.name && { name: customerData.name }),
+        ...(customerData.email && { email: customerData.email }),
+        ...(customerData.phone && { phone: customerData.phone }),
+        ...(customerData.country && { country: customerData.country }),
+      },
+    });
+
+    // Return updated booking
+    return await this.getBookingById(bookingId);
+  }
 }
 

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Phone, Mail, MapPin, ArrowRight, MessageCircle } from 'lucide-react';
+import { Phone, Mail, MapPin, ArrowRight } from 'lucide-react';
 
 const Footer = () => {
   const { t } = useLanguage();
@@ -55,8 +55,23 @@ const Footer = () => {
         </div>
 
         <div className="section-divider mt-12 mb-6" />
-        <div className="text-center text-off-white/40 text-xs">
-          © {new Date().getFullYear()} Class VIP Transfers. {t('footer.rights')}
+        <div className="text-center text-off-white/40 text-xs flex flex-col items-center justify-center gap-2">
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            <span>© {new Date().getFullYear()} Class VIP Transfers. {t('footer.rights')}</span>
+            <span className="text-off-white/20">•</span>
+            <Link
+              to="/admin/login"
+              className="text-off-white/40 hover:text-off-white/60 transition-colors"
+            >
+              Admin
+            </Link>
+          </div>
+          {/* Build Badge */}
+          <div className="mt-2 text-off-white/30 text-[10px] font-mono">
+            Build: {import.meta.env.VITE_COMMIT_REF || import.meta.env.COMMIT_REF || 'local'} | 
+            Context: {import.meta.env.VITE_CONTEXT || import.meta.env.CONTEXT || 'local'} | 
+            {import.meta.env.VITE_BUILD_TIME || new Date().toISOString()}
+          </div>
         </div>
       </div>
     </footer>

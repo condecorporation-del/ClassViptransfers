@@ -93,6 +93,18 @@ const Book = () => {
       return;
     }
 
+    // Check if API URL is configured
+    if (!API_BASE_URL || API_BASE_URL === 'http://localhost:3001') {
+      // In production, this should be set
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        setBookingError(lang === 'es' 
+          ? 'Error de configuración: Backend no configurado. Por favor contacta soporte.' 
+          : 'Configuration error: Backend not configured. Please contact support.');
+        console.error('[Book] API_BASE_URL not configured for production:', API_BASE_URL);
+        return;
+      }
+    }
+
     setCreatingBooking(true);
     setBookingError(null);
 
@@ -167,7 +179,10 @@ const Book = () => {
       };
 
       // Create booking
-      const response = await fetch(`${API_BASE_URL}/api/bookings`, {
+      const apiUrl = `${API_BASE_URL}/api/bookings`;
+      console.log('[Book] Creating booking at:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -176,8 +191,21 @@ const Book = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to create booking' }));
-        throw new Error(errorData.error || 'Failed to create booking');
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { error: await response.text() || 'Failed to create booking' };
+        }
+        
+        // Better error messages
+        if (response.status === 0 || response.status === 500) {
+          throw new Error(lang === 'es' 
+            ? 'No se pudo conectar con el servidor. Verifica tu conexión o contacta soporte.' 
+            : 'Could not connect to server. Check your connection or contact support.');
+        }
+        
+        throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: Failed to create booking`);
       }
 
       const result = await response.json();
@@ -191,7 +219,16 @@ const Book = () => {
       navigate(`/checkout?bookingId=${bookingId}`);
     } catch (err: any) {
       console.error('Error creating booking:', err);
-      setBookingError(err.message || (lang === 'es' ? 'Error al crear la reserva' : 'Error creating booking'));
+      
+      // Network errors
+      if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
+        setBookingError(lang === 'es' 
+          ? 'Error de conexión. Verifica que el backend esté corriendo o contacta soporte.' 
+          : 'Connection error. Verify the backend is running or contact support.');
+      } else {
+        setBookingError(err.message || (lang === 'es' ? 'Error al crear la reserva' : 'Error creating booking'));
+      }
+      
       setCreatingBooking(false);
     }
   };

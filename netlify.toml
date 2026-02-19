@@ -26,7 +26,7 @@
 
 # Netlify Dev configuration
 [dev]
-  command = "npm run dev -- --port 5173 --strictPort"
-  targetPort = 5173
+  command = "npm run dev -- --port 8899 --host"
+  targetPort = 8899
   port = 8899
 

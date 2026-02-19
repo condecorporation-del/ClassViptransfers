@@ -13,8 +13,8 @@ export default defineConfig(({ mode }) => {
 
   return {
   server: {
-    host: "::",
-    port: 8080,
+    host: true, // Allow external connections
+    port: 8899, // Match Netlify Dev port
     hmr: {
       overlay: false,
     },

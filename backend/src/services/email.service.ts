@@ -26,8 +26,10 @@ export class EmailService {
       console.warn('RESEND_API_KEY not set - emails will not be sent');
     }
 
-    this.fromEmail = process.env.EMAIL_FROM || 'Class VIP Transfers <no-reply@classviptransfers.com>';
-    this.companyEmail = process.env.EMAIL_COMPANY_TO || 'Armando@caboviptransfers.com';
+    // Use Resend's default domain for testing, or configured domain
+    // For production, you must verify your domain at https://resend.com/domains
+    this.fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+    this.companyEmail = process.env.EMAIL_COMPANY_TO || 'condecorporation@gmail.com';
     this.frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
   }
 

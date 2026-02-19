@@ -19,12 +19,7 @@ router.post(
   asyncHandler((req, res) => bookingController.createBooking(req, res))
 );
 
-// GET /api/bookings/:id - Get booking details
-router.get(
-  '/:id',
-  asyncHandler((req, res) => bookingController.getBooking(req, res))
-);
-
+// Routes with specific paths must come before /:id
 // POST /api/bookings/:id/confirm - Admin confirm booking
 router.post(
   '/:id/confirm',
@@ -51,6 +46,12 @@ router.patch(
   '/:id/customer',
   validate(updateCustomerSchema, 'body'),
   asyncHandler((req, res) => bookingController.updateCustomer(req, res))
+);
+
+// GET /api/bookings/:id - Get booking details (must be last)
+router.get(
+  '/:id',
+  asyncHandler((req, res) => bookingController.getBooking(req, res))
 );
 
 export default router;

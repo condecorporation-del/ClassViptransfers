@@ -66,16 +66,21 @@ model Booking {
   // Date and time
   bookingDate  DateTime      // Date of the service
   bookingTime  String?       // Time of the service (HH:mm format)
+  pickupTime   String?       // Exact pickup time (HH:mm format)
   
   // Location details
   pickupLocation  String?
   dropoffLocation String?
   
-  // Flight information
-  flightNumber    String?
-  arrivalTime     String?
+  // Flight information - Arrival
+  flightNumber    String?    // Arrival flight number
+  arrivalTime     String?    // Arrival time (HH:mm format)
+  arrivalAirline  String?    // Arrival airline name
+  
+  // Flight information - Departure
   departureFlightNumber String?
-  departureTime   String?
+  departureTime   String?    // Departure time (HH:mm format)
+  departureAirline String?   // Departure airline name
   
   // Pricing (stored in cents)
   totalAmount     Int          // Total in cents

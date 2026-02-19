@@ -3,281 +3,390 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>New Booking Confirmed</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background-color: #f5f5f5;
-    }
-    .container {
-      max-width: 700px;
-      margin: 0 auto;
-      background-color: #ffffff;
-    }
-    .header {
-      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-      padding: 30px;
-      color: white;
-    }
-    .header h1 {
-      font-size: 24px;
-      margin-bottom: 5px;
-    }
-    .header .badge {
-      display: inline-block;
-      background-color: #10b981;
-      padding: 5px 12px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: 600;
-      margin-top: 10px;
-    }
-    .content {
-      padding: 30px;
-    }
-    .section {
-      margin-bottom: 25px;
-      padding: 20px;
-      background-color: #f9fafb;
-      border-radius: 8px;
-      border-left: 4px solid #d4af37;
-    }
-    .section-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: #1a1a1a;
-      margin-bottom: 15px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      margin-top: 15px;
-    }
-    .info-item {
-      padding: 10px;
-      background-color: white;
-      border-radius: 4px;
-    }
-    .info-label {
-      font-size: 12px;
-      color: #666;
-      text-transform: uppercase;
-      margin-bottom: 5px;
-    }
-    .info-value {
-      font-size: 16px;
-      font-weight: 600;
-      color: #1a1a1a;
-    }
-    .items-list {
-      list-style: none;
-      margin: 15px 0;
-    }
-    .items-list li {
-      padding: 12px;
-      background-color: white;
-      margin-bottom: 8px;
-      border-radius: 4px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .total-box {
-      background-color: #1a1a1a;
-      color: white;
-      padding: 20px;
-      border-radius: 8px;
-      text-align: right;
-      margin-top: 20px;
-    }
-    .total-amount {
-      font-size: 28px;
-      font-weight: 700;
-      color: #d4af37;
-    }
-    .flags {
-      background-color: #fef3c7;
-      border-left: 4px solid #f59e0b;
-      padding: 15px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .flag-item {
-      padding: 8px 0;
-      font-weight: 600;
-      color: #92400e;
-    }
-    .action-needed {
-      background-color: #fee2e2;
-      border-left: 4px solid #ef4444;
-      padding: 15px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .action-needed h3 {
-      color: #991b1b;
-      margin-bottom: 10px;
-    }
-    .footer {
-      background-color: #1a1a1a;
-      color: white;
-      padding: 20px 30px;
-      text-align: center;
-      font-size: 12px;
-    }
-    @media only screen and (max-width: 600px) {
-      .info-grid { grid-template-columns: 1fr; }
-      .content { padding: 20px; }
-    }
+  <!--[if mso]>
+  <style type="text/css">
+    body, table, td {font-family: Arial, sans-serif !important;}
   </style>
+  <![endif]-->
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>New Booking Confirmed</h1>
-      <div class="badge">{{bookingType}}</div>
-    </div>
-    
-    <div class="content">
-      <div class="section">
-        <div class="section-title">Customer Information</div>
-        <div class="info-grid">
-          <div class="info-item">
-            <div class="info-label">Name</div>
-            <div class="info-value">{{customerName}}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Email</div>
-            <div class="info-value">{{customerEmail}}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Phone</div>
-            <div class="info-value">{{customerPhone}}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Booking ID</div>
-            <div class="info-value">{{bookingId}}</div>
-          </div>
-        </div>
-      </div>
+<body style="margin: 0; padding: 0; background-color: {{bgColor}}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <!-- Wrapper Table -->
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: {{bgColor}};">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <!-- Main Container -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="640" style="max-width: 640px; background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="padding: 24px; background-color: #FFFFFF; border-bottom: 2px solid {{accentColor}};">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td>
+                    <h1 style="margin: 0; color: {{primaryColor}}; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">New Booking Confirmed</h1>
+                    <p style="margin: 8px 0 0; color: {{accentColor}}; font-size: 13px; letter-spacing: 1px; text-transform: uppercase;">{{bookingType}}</p>
+                  </td>
+                  <td align="right">
+                    <span style="display: inline-block; background-color: #10B981; color: #FFFFFF; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">CONFIRMED</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-      <div class="section">
-        <div class="section-title">Service Details</div>
-        <div class="info-grid">
-          <div class="info-item">
-            <div class="info-label">Date</div>
-            <div class="info-value">{{formattedDate}}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Time</div>
-            <div class="info-value">{{bookingTime}}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Passengers</div>
-            <div class="info-value">{{passengers}}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Type</div>
-            <div class="info-value">{{bookingType}}</div>
-          </div>
-        </div>
-      </div>
+          <!-- Priority Info: Pickup Time & Location (VERY VISIBLE) -->
+          <tr>
+            <td style="padding: 24px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 12px;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="font-size: 13px; font-weight: 700; color: #92400E; text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 16px;">Priority Information</td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                              <td width="50%" style="padding-bottom: 16px;">
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                                  <tr>
+                                    <td style="font-size: 11px; color: #78350F; text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 6px;">Pickup Date & Time</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="font-size: 20px; font-weight: 700; color: #92400E;">{{formattedDate}}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="font-size: 18px; font-weight: 700; color: #92400E;">{{pickupTime}}</td>
+                                  </tr>
+                                </table>
+                              </td>
+                              <td width="50%" style="padding-bottom: 16px;">
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                                  <tr>
+                                    <td style="font-size: 11px; color: #78350F; text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 6px;">Passengers</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="font-size: 28px; font-weight: 700; color: #92400E;">{{passengers}}</td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                            {{#if pickupLocation}}
+                            <tr>
+                              <td colspan="2" style="padding-top: 16px; border-top: 1px solid #FCD34D;">
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                  <tr>
+                                    <td style="font-size: 11px; color: #78350F; text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 6px;">Pickup Location</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="font-size: 18px; font-weight: 700; color: #92400E;">{{pickupLocation}}</td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                            {{/if}}
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-      {{#if pickupLocation}}
-      <div class="section">
-        <div class="section-title">Location & Flight Info</div>
-        <div class="info-grid">
-          <div class="info-item">
-            <div class="info-label">Pickup</div>
-            <div class="info-value">{{pickupLocation}}</div>
-          </div>
-          {{#if dropoffLocation}}
-          <div class="info-item">
-            <div class="info-label">Dropoff</div>
-            <div class="info-value">{{dropoffLocation}}</div>
-          </div>
+          <!-- Customer Information -->
+          <tr>
+            <td style="padding: 0 24px 24px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #FFFFFF; border: 1px solid #E8EEF7; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+                <tr>
+                  <td style="padding: 24px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="font-size: 18px; font-weight: 700; color: {{primaryColor}}; padding-bottom: 20px; letter-spacing: 0.3px; text-transform: uppercase;">Customer Information</td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                              <td width="50%" style="padding-bottom: 12px;">
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                                  <tr>
+                                    <td style="font-size: 11px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 4px;">Name</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="font-size: 15px; font-weight: 600; color: {{primaryColor}};">{{customerName}}</td>
+                                  </tr>
+                                </table>
+                              </td>
+                              <td width="50%" style="padding-bottom: 12px;">
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                                  <tr>
+                                    <td style="font-size: 11px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 4px;">Booking ID</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="font-size: 15px; font-weight: 600; color: {{primaryColor}}; font-family: monospace;">{{bookingIdShort}}</td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td width="50%" style="padding-bottom: 12px;">
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                                  <tr>
+                                    <td style="font-size: 11px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 4px;">Email</td>
+                                  </tr>
+                                  <tr>
+                                    <td><a href="mailto:{{customerEmail}}" style="font-size: 14px; color: #2563EB; text-decoration: none; font-weight: 500;">{{customerEmail}}</a></td>
+                                  </tr>
+                                </table>
+                              </td>
+                              <td width="50%">
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                                  <tr>
+                                    <td style="font-size: 11px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 4px;">Phone</td>
+                                  </tr>
+                                  <tr>
+                                    <td><a href="tel:{{customerPhone}}" style="font-size: 14px; color: #2563EB; text-decoration: none; font-weight: 500;">{{customerPhone}}</a></td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Flight Details -->
+          {{#if flightDetails}}
+          <tr>
+            <td style="padding: 0 24px 24px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #FFFFFF; border: 1px solid #E8EEF7; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+                <tr>
+                  <td style="padding: 24px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="font-size: 18px; font-weight: 700; color: {{primaryColor}}; padding-bottom: 20px; letter-spacing: 0.3px;">Flight Details</td>
+                      </tr>
+                      {{#if flightDetails.arrival}}
+                      <tr>
+                        <td style="padding-bottom: 16px;">
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                              <td style="font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 6px;">Arrival Flight</td>
+                            </tr>
+                            <tr>
+                              <td style="font-size: 15px; font-weight: 600; color: {{primaryColor}};">{{flightDetails.arrival.displayText}}</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      {{/if}}
+                      {{#if flightDetails.departure}}
+                      <tr>
+                        <td>
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                              <td style="font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 6px;">Departure Flight</td>
+                            </tr>
+                            <tr>
+                              <td style="font-size: 15px; font-weight: 600; color: {{primaryColor}};">{{flightDetails.departure.displayText}}</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      {{/if}}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
           {{/if}}
-          {{#if flightNumber}}
-          <div class="info-item">
-            <div class="info-label">Flight #</div>
-            <div class="info-value">{{flightNumber}}</div>
-          </div>
+
+          <!-- Service Details -->
+          {{#if items}}
+          <tr>
+            <td style="padding: 0 24px 24px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #FFFFFF; border: 1px solid #E8EEF7; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+                <tr>
+                  <td style="padding: 24px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="font-size: 18px; font-weight: 700; color: {{primaryColor}}; padding-bottom: 20px; letter-spacing: 0.3px;">Service Details</td>
+                      </tr>
+                      {{#each items}}
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #F9FAFB; border: 1px solid #E8EEF7; border-radius: 8px;">
+                            <tr>
+                              <td style="padding: 12px;">
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                  <tr>
+                                    <td style="font-size: 14px; font-weight: 600; color: {{../primaryColor}};">{{name}}</td>
+                                    <td align="right" style="font-size: 13px; color: #6B7280;">{{metaText}}</td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      {{/each}}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
           {{/if}}
-          {{#if arrivalTime}}
-          <div class="info-item">
-            <div class="info-label">Arrival</div>
-            <div class="info-value">{{arrivalTime}}</div>
-          </div>
+
+          <!-- Fees (if activities) -->
+          {{#if hasActivities}}
+          <tr>
+            <td style="padding: 0 24px 24px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #EFF6FF; border-left: 4px solid #2563EB; border-radius: 12px;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="font-size: 16px; font-weight: 700; color: #1E40AF; padding-bottom: 12px;">Activity Fees & Requirements</td>
+                      </tr>
+                      {{#if parkFeeText}}
+                      <tr>
+                        <td style="padding-bottom: 8px;">
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                              <td style="font-size: 13px; color: #1E40AF; line-height: 1.6; font-weight: 600;">{{parkFeeText}}</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      {{/if}}
+                      {{#if vehicleProtectionText}}
+                      <tr>
+                        <td>
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                              <td style="font-size: 13px; color: #1E40AF; line-height: 1.6;">{{vehicleProtectionText}}</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      {{/if}}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
           {{/if}}
-        </div>
-      </div>
-      {{/if}}
 
-      {{#if activities}}
-      <div class="section">
-        <div class="section-title">Activities</div>
-        <ul class="items-list">
-          {{activitiesList}}
-        </ul>
-      </div>
-      {{/if}}
+          <!-- Total Amount -->
+          <tr>
+            <td style="padding: 0 24px 24px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: {{primaryColor}}; border-radius: 12px;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="font-size: 12px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 4px;">Total Amount</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size: 32px; font-weight: 700; color: {{accentColor}}; padding-bottom: 8px;">{{totalPaidText}}</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size: 13px; color: #9CA3AF;">Payment Status: <span style="color: #10B981; font-weight: 600;">✓ Confirmed</span></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-      {{#if parkFees}}
-      <div class="section">
-        <div class="section-title">Park Fees</div>
-        <ul class="items-list">
-          {{parkFeesList}}
-        </ul>
-      </div>
-      {{/if}}
+          <!-- Internal Notes -->
+          {{#if internalNotes}}
+          <tr>
+            <td style="padding: 0 24px 24px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #FEE2E2; border-left: 4px solid #EF4444; border-radius: 12px;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="font-size: 14px; font-weight: 700; color: #991B1B; padding-bottom: 12px; text-transform: uppercase;">Internal Notes</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size: 14px; color: #7F1D1D; line-height: 1.6;">{{internalNotes}}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          {{/if}}
 
-      {{#if transportation}}
-      <div class="section">
-        <div class="section-title">Transportation</div>
-        <ul class="items-list">
-          {{transportationList}}
-        </ul>
-      </div>
-      {{/if}}
+          <!-- Customer Notes -->
+          {{#if notes}}
+          <tr>
+            <td style="padding: 0 24px 24px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #FFFFFF; border: 1px solid #E8EEF7; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+                <tr>
+                  <td style="padding: 24px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="font-size: 14px; font-weight: 700; color: {{primaryColor}}; padding-bottom: 12px;">Customer Notes</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size: 14px; color: #374151; line-height: 1.6;">{{notes}}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          {{/if}}
 
-      <div class="total-box">
-        <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Total Amount</div>
-        <div class="total-amount">${{totalDollars}} USD</div>
-        <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">Payment Status: Confirmed</div>
-      </div>
+          <!-- CTA Button -->
+          <tr>
+            <td style="padding: 0 24px 24px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <a href="{{frontendUrl}}/admin" style="display: inline-block; background-color: {{primaryColor}}; color: #FFFFFF; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; letter-spacing: 0.3px;">Open Admin Dashboard</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-      {{#if notes}}
-      <div class="section">
-        <div class="section-title">Customer Notes</div>
-        <p>{{notes}}</p>
-      </div>
-      {{/if}}
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 24px; background-color: #F9FAFB; border-radius: 0 0 12px 12px; border-top: 1px solid #E8EEF7;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td align="center" style="font-size: 12px; color: #6B7280;">
+                    <p style="margin: 0;">Booking Management System | {{brandName}}</p>
+                    <p style="margin: 8px 0 0;"><a href="{{frontendUrl}}/admin" style="color: #2563EB; text-decoration: none;">View in Dashboard</a></p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-      <div class="flags">
-        <div class="flag-item">✓ Payment Confirmed</div>
-        <div class="flag-item">✓ Booking Auto-Confirmed</div>
-      </div>
-
-      <div class="action-needed">
-        <h3>Action Items</h3>
-        <ul style="margin-left: 20px; color: #991b1b;">
-          <li>Review booking details</li>
-          <li>Assign driver/vehicle if needed</li>
-          <li>Confirm availability for selected activities</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="footer">
-      <p>Booking Management System | <a href="{{frontendUrl}}/admin/bookings/{{bookingId}}" style="color: #d4af37;">View in Dashboard</a></p>
-    </div>
-  </div>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
-

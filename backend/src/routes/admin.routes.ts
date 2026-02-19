@@ -44,6 +44,12 @@ router.post(
   asyncHandler((req, res) => adminController.testEmail(req, res))
 );
 
+// GET /api/admin/preview-email - Preview email template (dev only)
+router.get(
+  '/preview-email',
+  asyncHandler((req, res) => adminController.previewEmail(req, res))
+);
+
 // POST /api/admin/bookings/:id/price-override - Apply price override
 router.post(
   '/bookings/:id/price-override',

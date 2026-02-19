@@ -112,35 +112,108 @@ export class AdminController {
 
   /**
    * POST /api/admin/test-email (dev only)
-   * Send test email
+   * Send test emails (both customer and company templates)
+   * Body: { customerEmail: string, companyEmail?: string }
    */
   async testEmail(req: Request, res: Response) {
     if (process.env.NODE_ENV === 'production') {
       return res.status(403).json({ error: 'Test emails disabled in production' });
     }
 
-    const { to, type } = req.body;
+    const { customerEmail, companyEmail } = req.body;
 
-    if (!to || !type) {
+    if (!customerEmail) {
       return res.status(400).json({
-        error: 'Missing required fields: to, type (customer|company)',
+        error: 'Missing required field: customerEmail',
       });
     }
 
     try {
-      const sent = await emailService.sendTestEmail(to, type);
+      const result = await emailService.sendTestEmail(customerEmail, companyEmail);
 
       res.json({
         success: true,
         data: {
-          sent,
-          message: `Test ${type} email ${sent ? 'sent' : 'failed'} to ${to}`,
+          customerSent: result.customerSent,
+          companySent: result.companySent,
+          details: result.details,
+          message: `Test emails sent - Customer: ${result.customerSent ? '✅' : '❌'}, Company: ${result.companySent ? '✅' : '❌'}`,
         },
       });
     } catch (error: any) {
       res.status(400).json({
         success: false,
-        error: error.message || 'Failed to send test email',
+        error: error.message || 'Failed to send test emails',
+      });
+    }
+  }
+
+  /**
+   * GET /api/admin/preview-email (dev only)
+   * Preview email templates with mock data
+   * Query: ?type=customer|company
+   */
+  async previewEmail(req: Request, res: Response) {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'Email preview disabled in production' });
+    }
+
+    const { type } = req.query;
+    const templateType = type === 'company' ? 'company' : 'customer';
+
+    try {
+      // Create mock booking data
+      const mockBooking: any = {
+        id: 'test-booking-' + Date.now(),
+        type: 'ACTIVITY',
+        status: 'CONFIRMED',
+        customer: {
+          name: 'John Doe',
+          email: 'customer@example.com',
+          phone: '+1 (555) 123-4567',
+        },
+        bookingDate: new Date(),
+        bookingTime: '10:00 AM',
+        pickupLocation: 'Los Cabos International Airport',
+        dropoffLocation: 'Hotel Zone, Cabo San Lucas',
+        flightNumber: 'AA1234',
+        arrivalTime: '10:30 AM',
+        passengers: 2,
+        totalAmount: 12500, // $125.00 in cents
+        notes: 'Please arrive 15 minutes early. Special dietary requirements noted.',
+        internalNotes: 'VIP customer - assign experienced driver',
+        items: [
+          {
+            type: 'ACTIVITY',
+            name: 'ATV Adventure Tour',
+            quantity: 2,
+            totalPrice: 10000,
+          },
+          {
+            type: 'PARK_ENTRANCE',
+            name: 'Park Entrance Fee',
+            quantity: 2,
+            totalPrice: 2500,
+          },
+        ],
+      };
+
+      // Format data using email service
+      const emailService = new EmailService();
+      const data = (emailService as any).formatBookingData(mockBooking);
+      
+      // Load and render template
+      const templateName = templateType === 'company' ? 'company-confirmed' : 'customer-confirmed';
+      let html = (emailService as any).loadTemplate(templateName);
+      html = (emailService as any).replaceTemplateVariables(html, data);
+
+      // Return HTML
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        error: error.message || 'Failed to preview email',
       });
     }
   }

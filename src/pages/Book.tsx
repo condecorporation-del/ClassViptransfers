@@ -1,20 +1,16 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Car, Users, Minus, Plus, Plane, MessageCircle, CalendarDays, Clock, MapPin, Sparkles, Zap, Shield, Star, ChevronUp, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Car, Users, Minus, Plus, Plane, MessageCircle, CalendarDays, Clock, MapPin, Sparkles, Shield, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
-
-// Debug: Log API URL in production
-if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-  console.log('[Book] API_BASE_URL:', API_BASE_URL);
-  console.log('[Book] import.meta.env.VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
-}
+import { usePricing, type PricingExtraPublic, type AreaPublic } from '@/hooks/usePricing';
+import { LuxurySpinner } from '@/components/ui/luxury-spinner';
+import { TrustBadges } from '@/components/trust/TrustBadges';
+import { getApiBaseUrl } from '@/lib/api';
 
 const steps = ['service', 'trip', 'route', 'date', 'locations', 'extras', 'upsell', 'review'] as const;
 
@@ -38,7 +34,12 @@ const Book = () => {
   const [data, setData] = useState({
     serviceType: '' as '' | 'private' | 'shuttle',
     tripType: '' as '' | 'oneway' | 'roundtrip',
+    areaId: '' as string,
     route: '' as '' | 'airport-hotel' | 'hotel-airport',
+    zoneFrom: '',
+    zoneTo: '',
+    selectedHotel: null as { id: string; name: string; zone: string } | null,
+    vehicleClass: 'SUV' as 'SUV' | 'SPRINTER',
     arrivalDate: null as Date | null,
     departureDate: null as Date | null,
     flightNumber: '',
@@ -53,11 +54,104 @@ const Book = () => {
     comboMode: '' as '' | 'combo' | 'crazy' | 'individual',
   });
 
+  const { getExtras, getAreas, loading: quoteLoading } = usePricing();
+  const [pricingExtras, setPricingExtras] = useState<PricingExtraPublic[]>([]);
+  const [areas, setAreas] = useState<AreaPublic[]>([]);
+  const [hotels, setHotels] = useState<Array<{ id: string; name: string; zone: string }>>([]);
+  const [hotelSearch, setHotelSearch] = useState('');
+
+  useEffect(() => {
+    getExtras().then(setPricingExtras);
+  }, [getExtras]);
+  useEffect(() => {
+    getAreas().then(setAreas);
+  }, [getAreas]);
+
+  // Fetch hotels from BD
+  const [hotelsLoading, setHotelsLoading] = useState(true);
+  const [hotelsError, setHotelsError] = useState(false);
+  useEffect(() => {
+    setHotelsLoading(true);
+    setHotelsError(false);
+    fetch(getApiBaseUrl() + '/api/pricing/hotels')
+      .then((r) => {
+        if (!r.ok) throw new Error('Failed to load hotels');
+        return r.json();
+      })
+      .then((j) => {
+        setHotels(j.data || []);
+        setHotelsError(false);
+      })
+      .catch(() => {
+        setHotels([]);
+        setHotelsError(true);
+      })
+      .finally(() => setHotelsLoading(false));
+  }, []);
+
+  // Set airport zone when route changes (SJD = airport)
+  useEffect(() => {
+    if (data.route === 'airport-hotel') {
+      setData((d) => ({ ...d, zoneFrom: 'SJD', zoneTo: d.selectedHotel?.zone || '' }));
+    } else if (data.route === 'hotel-airport') {
+      setData((d) => ({ ...d, zoneTo: 'SJD', zoneFrom: d.selectedHotel?.zone || '' }));
+    }
+  }, [data.route]);
+
+  // When hotel selected: set zone, pickup/dropoff, and areaId for pricing (area name matches zone)
+  const selectHotel = (hotel: { id: string; name: string; zone: string }) => {
+    setData((d) => {
+      const next = { ...d, selectedHotel: hotel };
+      if (d.route === 'airport-hotel') {
+        next.zoneTo = hotel.zone;
+        next.dropoff = hotel.name;
+      } else if (d.route === 'hotel-airport') {
+        next.zoneFrom = hotel.zone;
+        next.pickup = hotel.name;
+      }
+      const zoneForPricing = hotel.zone;
+      const area = areas.find((a) => a.name === zoneForPricing || a.name.toLowerCase() === zoneForPricing.toLowerCase());
+      if (area) next.areaId = area.id;
+      return next;
+    });
+  };
+
+  // Default first hotel when route set and none selected (one-time); set areaId from zone
+  useEffect(() => {
+    if (!data.route || data.selectedHotel || hotels.length === 0) return;
+    const needZone = data.route === 'airport-hotel' ? !data.zoneTo : !data.zoneFrom;
+    if (!needZone) return;
+    const first = hotels[0];
+    setData((d) => {
+      const next = { ...d, selectedHotel: first };
+      if (d.route === 'airport-hotel') {
+        next.zoneTo = first.zone;
+        next.dropoff = first.name;
+      } else {
+        next.zoneFrom = first.zone;
+        next.pickup = first.name;
+      }
+      const area = areas.find((a) => a.name === first.zone || a.name.toLowerCase() === first.zone.toLowerCase());
+      if (area) next.areaId = area.id;
+      return next;
+    });
+  }, [data.route, hotels.length, areas]);
+
+  // When areas load and we already have a selected hotel/zone, set areaId if missing
+  useEffect(() => {
+    if (areas.length === 0 || data.areaId) return;
+    const zone = data.route === 'airport-hotel' ? data.zoneTo : data.route === 'hotel-airport' ? data.zoneFrom : '';
+    if (!zone) return;
+    const area = areas.find((a) => a.name === zone || a.name.toLowerCase() === zone.toLowerCase());
+    if (area) setData((d) => ({ ...d, areaId: area.id }));
+  }, [areas, data.route, data.zoneFrom, data.zoneTo, data.areaId]);
+
+  const selectedArea = areas.find((a) => a.id === data.areaId);
   const next = () => setCurrent(c => Math.min(c + 1, steps.length - 1));
   const prev = () => setCurrent(c => Math.max(c - 1, 0));
 
-  const toggleExtra = (val: string) => {
-    setData(d => ({ ...d, extras: d.extras.includes(val) ? d.extras.filter(v => v !== val) : [...d.extras, val] }));
+  const toggleExtra = (code: string) => {
+    setData(d => ({ ...d, extras: d.extras.includes(code) ? d.extras.filter((v) => v !== code) : [...d.extras, code] }));
   };
   const toggleActivity = (val: string) => {
     setData(d => {
@@ -69,14 +163,12 @@ const Book = () => {
     });
   };
 
-  // Pricing logic
+  // Transport price from selected area + trip type (no hardcoded prices)
   const transferPrice = useMemo(() => {
-    let base = 0;
-    if (data.serviceType === 'private') base = 85;
-    else if (data.serviceType === 'shuttle') base = 25 * data.passengers;
-    if (data.tripType === 'roundtrip') base *= 2;
-    return base;
-  }, [data.serviceType, data.tripType, data.passengers]);
+    if (!data.serviceType || !data.areaId || !data.tripType || !selectedArea) return 0;
+    const cents = data.tripType === 'roundtrip' ? selectedArea.roundTripPriceCents : selectedArea.oneWayPriceCents;
+    return cents / 100;
+  }, [data.serviceType, data.areaId, data.tripType, selectedArea]);
 
   const activitiesPrice = useMemo(() => {
     if (data.activities.length === 0) return 0;
@@ -94,26 +186,22 @@ const Book = () => {
   // Create booking and redirect to checkout
   const handlePayPalCheckout = async () => {
     // Validate required fields
+    const msg = lang === 'es' ? 'Por favor completa todos los campos requeridos' : 'Please complete all required fields';
     if (!data.serviceType || !data.tripType || !data.route || !data.arrivalDate || !data.pickup || !data.dropoff) {
-      setBookingError(lang === 'es' ? 'Por favor completa todos los campos requeridos' : 'Please complete all required fields');
+      setBookingError(msg);
+      return;
+    }
+    if (data.serviceType && !data.areaId) {
+      setBookingError(t('book.area.required'));
       return;
     }
 
-    // Log API URL for debugging
-    console.log('[Book] Creating booking with API_BASE_URL:', API_BASE_URL);
-    console.log('[Book] import.meta.env.VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
-    
-    // Check if API URL is configured
-    if (!API_BASE_URL || API_BASE_URL === 'http://localhost:3001') {
-      // In production, this should be set
-      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        setBookingError(lang === 'es' 
-          ? 'Error de configuración: Backend no configurado. Por favor contacta soporte.' 
-          : 'Configuration error: Backend not configured. Please contact support.');
-        console.error('[Book] API_BASE_URL not configured for production:', API_BASE_URL);
-        console.error('[Book] Current hostname:', window.location.hostname);
-        return;
-      }
+    const apiBase = getApiBaseUrl();
+    if (!apiBase && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      setBookingError(lang === 'es' 
+        ? 'Error de configuración: Backend no configurado. Por favor contacta soporte.' 
+        : 'Configuration error: Backend not configured. Please contact support.');
+      return;
     }
 
     setCreatingBooking(true);
@@ -128,13 +216,15 @@ const Book = () => {
         else bookingType = 'ACTIVITY';
       }
 
-      // Build items array
+      // Build items: backend calculates transport from areaId + tripType when provided
       const items: any[] = [];
-      
-      // Add transportation item
+      const useAreaPricing = data.serviceType && data.areaId && data.tripType && selectedArea;
+
       items.push({
         type: 'TRANSPORTATION',
-        name: `${data.serviceType} ${data.tripType} transfer`,
+        name: useAreaPricing
+          ? `Transfer: ${selectedArea.name} (${data.tripType === 'roundtrip' ? 'Round trip' : 'One way'})`
+          : `${data.serviceType} ${data.tripType} transfer`,
         quantity: 1,
         unitPrice: transferPrice,
       });
@@ -163,35 +253,39 @@ const Book = () => {
         }
       }
 
-      // Create booking payload
-      const bookingPayload = {
+      // Create booking payload (strip undefined to avoid validation issues)
+      // Draft customer placeholder; real name/email/phone collected at Checkout
+      const bookingPayload: Record<string, unknown> = {
         type: bookingType,
         customer: {
-          name: 'Guest', // Will be updated in checkout
-          email: 'guest@example.com', // Will be updated in checkout
-          phone: '+1234567890', // Will be updated in checkout
+          name: 'Guest',
+          email: 'guest@example.com',
+          phone: '+1234567890',
           country: 'US',
           language: lang,
         },
-        bookingDate: data.arrivalDate.toISOString(),
+        bookingDate: (data.arrivalDate || new Date()).toISOString(),
         bookingTime: data.arrivalTime || '10:00',
-        pickupLocation: data.pickup,
-        dropoffLocation: data.dropoff,
-        flightNumber: data.flightNumber || undefined,
-        arrivalTime: data.arrivalTime || undefined,
-        departureFlightNumber: data.departureFlightNumber || undefined,
-        departureTime: data.departureTime || undefined,
+        pickupLocation: data.pickup || '',
+        dropoffLocation: data.dropoff || '',
         passengers: data.passengers,
         serviceType: data.serviceType,
         tripType: data.tripType,
         route: data.route,
         items,
-        notes: data.extras.length > 0 ? `Extras: ${data.extras.join(', ')}` : undefined,
       };
+      if (useAreaPricing) {
+        bookingPayload.areaId = data.areaId;
+        bookingPayload.tripType = data.tripType;
+      }
+      if (data.flightNumber) bookingPayload.flightNumber = data.flightNumber;
+      if (data.arrivalTime) bookingPayload.arrivalTime = data.arrivalTime;
+      if (data.departureFlightNumber) bookingPayload.departureFlightNumber = data.departureFlightNumber;
+      if (data.departureTime) bookingPayload.departureTime = data.departureTime;
+      if (data.extras.length > 0) bookingPayload.notes = `Extras: ${data.extras.map(getExtraLabel).join(', ')}`;
 
       // Create booking
-      const apiUrl = `${API_BASE_URL}/api/bookings`;
-      console.log('[Book] Creating booking at:', apiUrl);
+      const apiUrl = `${getApiBaseUrl()}/api/bookings`;
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -244,12 +338,20 @@ const Book = () => {
     }
   };
 
-  const extrasOptions = [
-    { id: 'baby', label: t('book.extras.babySeat') },
-    { id: 'assist', label: t('book.extras.specialAssist') },
-    { id: 'grocery', label: t('book.extras.groceryStop') },
-    { id: 'oversize', label: t('book.extras.oversize') },
-  ];
+  const includedExtras = pricingExtras.filter((e) => e.included);
+  const paidExtrasRaw = pricingExtras.filter((e) => !e.included && !['CHAMPAGNE_UPGRADE', 'ROMANTIC_KIT', 'BIRTHDAY_KIT', 'DELUXE_ARRIVAL_KIT', 'CHAMPAGNE', 'LUXURY_WELCOME'].includes(e.code));
+  // Shuttle: only luggage, stops, seats, assistance, wait/time extras (no personalized kits)
+  const SHUTTLE_ALLOWED_EXTRA_CODES = new Set(['OVERSIZE_LUGGAGE', 'EXTRA_STOP', 'GROCERY_STOP', 'BABY_SEAT', 'BOOSTER', 'SPECIAL_ASSISTANCE', 'WAIT_TIME', 'EARLY_MORNING', 'LATE_NIGHT']);
+  const paidExtras = data.serviceType === 'shuttle'
+    ? paidExtrasRaw.filter((e) => SHUTTLE_ALLOWED_EXTRA_CODES.has(e.code))
+    : paidExtrasRaw;
+  const upsellKits = pricingExtras.filter((e) => !e.included && ['CHAMPAGNE_UPGRADE', 'ROMANTIC_KIT', 'BIRTHDAY_KIT', 'DELUXE_ARRIVAL_KIT', 'CHAMPAGNE', 'LUXURY_WELCOME'].includes(e.code));
+  const roundTripSuggestedCodes = ['GROCERY_STOP', 'BABY_SEAT'];
+  const getExtraLabel = (code: string) => {
+    const e = pricingExtras.find((x) => x.code === code);
+    if (!e) return code;
+    return (lang === 'es' && e.labelEs ? e.labelEs : e.label) || code;
+  };
 
   const renderStep = () => {
     switch (steps[current]) {
@@ -261,22 +363,30 @@ const Book = () => {
               <p className="text-muted-foreground text-sm md:text-base mt-2 leading-relaxed">{t('book.service.subtitle')}</p>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
-              <button onClick={() => { setData({ ...data, serviceType: 'private' }); }}
-                className={`booking-card rounded-xl p-8 text-center ${data.serviceType === 'private' ? 'selected border-gold' : ''}`}>
+              <motion.button
+                onClick={() => { setData({ ...data, serviceType: 'private' }); }}
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                className={`booking-card rounded-xl p-8 text-center ${data.serviceType === 'private' ? 'selected border-gold' : ''}`}
+              >
                 <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-4">
                   <Car size={26} className="text-gold" />
                 </div>
                 <p className="font-display font-bold text-lg text-foreground">{t('book.service.private')}</p>
                 <p className="text-muted-foreground text-sm mt-2 leading-relaxed">{t('book.service.privateDesc')}</p>
-              </button>
-              <button onClick={() => { setData({ ...data, serviceType: 'shuttle' }); }}
-                className={`booking-card rounded-xl p-8 text-center ${data.serviceType === 'shuttle' ? 'selected border-gold' : ''}`}>
+              </motion.button>
+              <motion.button
+                onClick={() => { setData({ ...data, serviceType: 'shuttle' }); }}
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                className={`booking-card rounded-xl p-8 text-center ${data.serviceType === 'shuttle' ? 'selected border-gold' : ''}`}
+              >
                 <div className="w-14 h-14 rounded-full bg-ocean/10 flex items-center justify-center mx-auto mb-4">
                   <Users size={26} className="text-ocean" />
                 </div>
                 <p className="font-display font-bold text-lg text-foreground">{t('book.service.shuttle')}</p>
                 <p className="text-muted-foreground text-sm mt-2 leading-relaxed">{t('book.service.shuttleDesc')}</p>
-              </button>
+              </motion.button>
             </div>
           </div>
         );
@@ -291,14 +401,27 @@ const Book = () => {
               { id: 'oneway' as const, label: t('book.trip.oneWay'), desc: t('book.trip.oneWayDesc') },
               { id: 'roundtrip' as const, label: t('book.trip.roundTrip'), desc: t('book.trip.roundTripDesc') },
             ].map(s => (
-              <button key={s.id} onClick={() => { setData({ ...data, tripType: s.id }); }}
-                className={`w-full booking-card rounded-xl p-5 md:p-6 text-left flex items-center justify-between ${data.tripType === s.id ? 'selected border-gold' : ''}`}>
+              <motion.button
+                key={s.id}
+                onClick={() => { setData({ ...data, tripType: s.id }); }}
+                whileHover={{ scale: 1.01, x: 4 }}
+                whileTap={{ scale: 0.99 }}
+                className={`w-full booking-card rounded-xl p-5 md:p-6 text-left flex items-center justify-between ${data.tripType === s.id ? 'selected border-gold' : ''}`}
+              >
                 <div>
                   <p className="font-semibold text-base text-foreground">{s.label}</p>
                   <p className="text-muted-foreground text-sm mt-1 leading-relaxed">{s.desc}</p>
                 </div>
-                {data.tripType === s.id && <div className="w-7 h-7 rounded-full gold-gradient flex items-center justify-center flex-shrink-0 ml-3"><Check size={15} className="text-navy" /></div>}
-              </button>
+                {data.tripType === s.id && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="w-7 h-7 rounded-full gold-gradient flex items-center justify-center flex-shrink-0 ml-3"
+                  >
+                    <Check size={15} className="text-navy" />
+                  </motion.div>
+                )}
+              </motion.button>
             ))}
           </div>
         );
@@ -313,11 +436,24 @@ const Book = () => {
               { id: 'airport-hotel' as const, label: t('book.route.airportToHotel') },
               { id: 'hotel-airport' as const, label: t('book.route.hotelToAirport') },
             ].map(s => (
-              <button key={s.id} onClick={() => { setData({ ...data, route: s.id }); }}
-                className={`w-full booking-card rounded-xl p-5 md:p-6 text-left flex items-center justify-between ${data.route === s.id ? 'selected border-gold' : ''}`}>
+              <motion.button
+                key={s.id}
+                onClick={() => { setData({ ...data, route: s.id }); }}
+                whileHover={{ scale: 1.01, x: 4 }}
+                whileTap={{ scale: 0.99 }}
+                className={`w-full booking-card rounded-xl p-5 md:p-6 text-left flex items-center justify-between ${data.route === s.id ? 'selected border-gold' : ''}`}
+              >
                 <p className="font-semibold text-base text-foreground">{s.label}</p>
-                {data.route === s.id && <div className="w-7 h-7 rounded-full gold-gradient flex items-center justify-center flex-shrink-0 ml-3"><Check size={15} className="text-navy" /></div>}
-              </button>
+                {data.route === s.id && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="w-7 h-7 rounded-full gold-gradient flex items-center justify-center flex-shrink-0 ml-3"
+                  >
+                    <Check size={15} className="text-navy" />
+                  </motion.div>
+                )}
+              </motion.button>
             ))}
           </div>
         );
@@ -411,29 +547,174 @@ const Book = () => {
             <div>
               <label className="text-sm font-semibold text-foreground mb-3 block">{t('book.date.passengers')}</label>
               <div className="flex items-center gap-5">
-                <button onClick={() => setData(d => ({ ...d, passengers: Math.max(1, d.passengers - 1) }))}
-                  className="w-12 h-12 rounded-xl border-2 border-border flex items-center justify-center hover:border-gold/40 hover:bg-gold/5 transition-all active:scale-95">
+                <motion.button
+                  onClick={() => setData((d) => {
+                    const minPax = d.serviceType === 'private' && d.vehicleClass === 'SPRINTER' ? 6 : 1;
+                    return { ...d, passengers: Math.max(minPax, d.passengers - 1) };
+                  })}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="w-12 h-12 rounded-xl border-2 border-border flex items-center justify-center hover:border-gold/40 hover:bg-gold/5 transition-all"
+                >
                   <Minus size={18} />
-                </button>
+                </motion.button>
                 <span className="text-3xl font-bold w-10 text-center text-foreground">{data.passengers}</span>
-                <button onClick={() => setData(d => ({ ...d, passengers: Math.min(10, d.passengers + 1) }))}
-                  className="w-12 h-12 rounded-xl border-2 border-border flex items-center justify-center hover:border-gold/40 hover:bg-gold/5 transition-all active:scale-95">
+                <motion.button
+                  onClick={() => setData((d) => {
+                    const maxPax = d.serviceType === 'private' && d.vehicleClass === 'SUV' ? 5 : 14;
+                    return { ...d, passengers: Math.min(maxPax, d.passengers + 1) };
+                  })}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="w-12 h-12 rounded-xl border-2 border-border flex items-center justify-center hover:border-gold/40 hover:bg-gold/5 transition-all"
+                >
                   <Plus size={18} />
-                </button>
+                </motion.button>
               </div>
             </div>
+            {/* Vehicle class for private */}
+            {data.serviceType === 'private' && (
+              <div className="space-y-3">
+                <label className="text-sm font-semibold text-foreground mb-3 block">
+                  {t('book.vehicle.title', { defaultValue: 'Vehicle' })}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {(['SUV', 'SPRINTER'] as const).map((vc) => {
+                    const paxRange = vc === 'SUV' ? '1-5' : '6-14';
+                    return (
+                      <button
+                        key={vc}
+                        onClick={() => setData((d) => {
+                          const next = { ...d, vehicleClass: vc };
+                          if (vc === 'SPRINTER' && d.passengers < 6) next.passengers = 6;
+                          return next;
+                        })}
+                        className={cn(
+                          'px-4 py-2.5 rounded-xl text-sm font-semibold transition-all',
+                          data.vehicleClass === vc ? 'gold-gradient text-secondary-foreground' : 'border border-border hover:border-gold/40'
+                        )}
+                      >
+                        {vc} ({paxRange})
+                      </button>
+                    );
+                  })}
+                </div>
+                {data.vehicleClass === 'SUV' && data.passengers >= 5 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    {lang === 'es' ? 'Para 6 o más pasajeros, elige Sprinter.' : 'For 6+ passengers, choose Sprinter.'}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         );
-      case 'locations':
+      case 'locations': {
+        const searchLower = hotelSearch.toLowerCase();
+        const filteredHotels = hotels.filter(
+          (h) =>
+            h.name.toLowerCase().includes(searchLower) || h.zone.toLowerCase().includes(searchLower)
+        );
+        const byZone = filteredHotels.reduce<Record<string, typeof hotels>>((acc, h) => {
+          if (!acc[h.zone]) acc[h.zone] = [];
+          acc[h.zone].push(h);
+          return acc;
+        }, {});
         return (
           <div className="space-y-5">
             <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t('book.locations.title')}</h2>
+            {/* Hotel selection (private only) - zone derived from hotel */}
+            {data.serviceType === 'private' && data.route && (
+              <div className="space-y-4 p-4 rounded-xl border border-border bg-muted/20">
+                <p className="text-sm font-medium text-foreground">
+                  {data.route === 'airport-hotel'
+                    ? t('book.locations.selectHotel', { en: 'Select your hotel (zone & price auto-filled)', es: 'Selecciona tu hotel (zona y precio se completan)' })
+                    : t('book.locations.selectHotelOrigin', { en: 'Select your hotel', es: 'Selecciona tu hotel' })}
+                </p>
+                <input
+                  type="text"
+                  placeholder={t('book.locations.searchHotel', { en: 'Search hotel...', es: 'Buscar hotel...' })}
+                  value={hotelSearch}
+                  onChange={(e) => setHotelSearch(e.target.value)}
+                  className="input-luxury w-full"
+                />
+                <div className="max-h-48 overflow-y-auto space-y-3 pr-1">
+                  {Object.entries(byZone).map(([zone, list]) => (
+                    <div key={zone}>
+                      <p className="text-xs font-semibold text-muted-foreground mb-1.5">{zone}</p>
+                      <div className="space-y-1">
+                        {list.map((h) => {
+                          const isSelected = data.selectedHotel?.id === h.id;
+                          return (
+                            <button
+                              key={h.id}
+                              type="button"
+                              onClick={() => selectHotel(h)}
+                              className={cn(
+                                'w-full text-left px-3 py-2 rounded-lg text-sm transition-all',
+                                isSelected ? 'bg-gold/20 border border-gold' : 'border border-transparent hover:bg-muted/50'
+                              )}
+                            >
+                              {h.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {filteredHotels.length === 0 && hotels.length > 0 && (
+                  <div className="pt-2">
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {t('book.locations.noHotel', { en: 'Hotel not listed? Select zone and enter address below:', es: '¿No está tu hotel? Selecciona zona y escribe la dirección abajo:' })}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {[...new Set(hotels.map((h) => h.zone))].sort().map((z) => {
+                        const isSelected = data.route === 'airport-hotel' ? data.zoneTo === z : data.zoneFrom === z;
+                        return (
+                          <button
+                            key={z}
+                            type="button"
+                            onClick={() => {
+                              const zoneHotel = hotels.find((h) => h.zone === z);
+                              if (zoneHotel) selectHotel(zoneHotel);
+                              else setData((d) => {
+                                const next = { ...d, selectedHotel: null };
+                                if (d.route === 'airport-hotel') next.zoneTo = z;
+                                else next.zoneFrom = z;
+                                const area = areas.find((a) => a.name === z || a.name.toLowerCase() === z.toLowerCase());
+                                if (area) next.areaId = area.id;
+                                return next;
+                              });
+                            }}
+                            className={cn(
+                              'px-3 py-1.5 rounded-lg text-xs font-semibold',
+                              isSelected ? 'bg-gold/20 border border-gold' : 'border border-border hover:bg-muted/50'
+                            )}
+                          >
+                            {z}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {hotelsLoading && (
+                  <p className="text-sm text-muted-foreground">{t('book.locations.loadingHotels', { en: 'Loading hotels...', es: 'Cargando hoteles...' })}</p>
+                )}
+                {!hotelsLoading && hotelsError && (
+                  <p className="text-sm text-amber-600">{t('book.locations.hotelsError', { en: 'Could not load hotels. Check that the backend is running.', es: 'No se pudieron cargar hoteles. Verifica que el backend esté corriendo.' })}</p>
+                )}
+                {!hotelsLoading && !hotelsError && hotels.length === 0 && (
+                  <p className="text-sm text-muted-foreground">{t('book.locations.noHotels', { en: 'No hotels in database. Run: cd backend && npm run db:seed', es: 'No hay hoteles. Ejecuta: cd backend && npm run db:seed' })}</p>
+                )}
+              </div>
+            )}
             <InputField label={t('book.locations.pickup')} icon={<MapPin size={18} className="text-gold" />}>
               <div className="flex gap-3">
                 <input type="text" placeholder={t('book.locations.placeholder')} value={data.pickup}
                   onChange={e => setData({ ...data, pickup: e.target.value })}
                   className="input-luxury pl-11 flex-1" />
-                <button onClick={() => setData(d => ({ ...d, pickup: 'SJD International Airport' }))}
+                <button type="button" onClick={() => setData(d => ({ ...d, pickup: 'SJD International Airport' }))}
                   className="text-xs font-bold text-gold border-2 border-gold/30 rounded-xl px-4 hover:bg-gold/5 hover:border-gold/50 transition-all whitespace-nowrap">
                   {t('book.locations.quickFill')}
                 </button>
@@ -446,23 +727,146 @@ const Book = () => {
             </InputField>
           </div>
         );
+      }
       case 'extras':
+        const isAirportRoute = data.route === 'airport-hotel' || data.route === 'hotel-airport';
         return (
-          <div className="space-y-5">
+          <div className="space-y-6">
             <div>
               <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t('book.extras.title')}</h2>
               <p className="text-muted-foreground text-sm md:text-base mt-2 leading-relaxed">{t('book.extras.subtitle')}</p>
             </div>
-            {extrasOptions.map(e => (
-              <button key={e.id} onClick={() => toggleExtra(e.id)}
-                className={`w-full booking-card rounded-xl p-5 text-left flex items-center justify-between ${data.extras.includes(e.id) ? 'selected border-gold' : ''}`}>
-                <div className="flex items-center gap-3">
-                  <span className="font-medium text-sm text-foreground">{e.label}</span>
-                  <span className="text-xs text-gold font-bold bg-gold/10 px-2 py-0.5 rounded-full">{t('common.free')}</span>
+
+            {/* Included - always shown */}
+            {includedExtras.length > 0 && (
+              <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="p-4 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/50">
+                <p className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider mb-2">
+                  {t('book.extras.included', { en: 'Included', es: 'Incluido' })}
+                </p>
+                <p className="text-sm font-medium text-foreground">
+                  {includedExtras.map((e) => (lang === 'es' && e.labelEs ? e.labelEs : e.label)).join(' · ')}
+                </p>
+              </motion.div>
+            )}
+
+            {/* Round trip suggestions */}
+            {data.tripType === 'roundtrip' && (
+              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="p-4 rounded-xl bg-gold/5 border border-gold/20">
+                <p className="text-xs font-semibold text-gold uppercase tracking-wider mb-3">
+                  {t('book.upsells.roundTripSuggest', { en: 'Popular with round trip guests', es: 'Popular con viajes redondos' })}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {roundTripSuggestedCodes.map((code) => {
+                    const ex = pricingExtras.find((e) => e.code === code);
+                    if (!ex) return null;
+                    const selected = data.extras.includes(code);
+                    return (
+                      <motion.button
+                        key={code}
+                        type="button"
+                        onClick={() => toggleExtra(code)}
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        className={cn(
+                          'inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all',
+                          selected ? 'bg-gold/20 border border-gold text-foreground' : 'border border-gold/30 text-muted-foreground hover:border-gold/50 hover:text-foreground'
+                        )}
+                      >
+                        {selected && (
+                          <motion.span
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                          >
+                            <Check size={14} className="text-gold" />
+                          </motion.span>
+                        )}
+                        {(lang === 'es' && ex.labelEs ? ex.labelEs : ex.label)} (+${(ex.priceCents / 100).toFixed(0)})
+                      </motion.button>
+                    );
+                  })}
                 </div>
-                {data.extras.includes(e.id) && <div className="w-7 h-7 rounded-full gold-gradient flex items-center justify-center flex-shrink-0"><Check size={15} className="text-navy" /></div>}
-              </button>
-            ))}
+              </motion.div>
+            )}
+
+            {/* Paid extras (grocery, baby, oversize, etc.) */}
+            {paidExtras.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-gold uppercase tracking-wider">{t('book.extras.addOns', { en: 'Add-ons', es: 'Complementos' })}</p>
+                {paidExtras.map((ex) => {
+                  const selected = data.extras.includes(ex.code);
+                  return (
+                    <motion.button
+                      key={ex.code}
+                      type="button"
+                      onClick={() => toggleExtra(ex.code)}
+                      whileHover={{ scale: 1.01, x: 2 }}
+                      whileTap={{ scale: 0.99 }}
+                      layout
+                      className={cn(
+                        'w-full booking-card rounded-xl p-5 text-left flex items-center justify-between transition-all',
+                        selected ? 'selected border-gold' : ''
+                      )}
+                    >
+                      <span className="font-medium text-sm text-foreground">{lang === 'es' && ex.labelEs ? ex.labelEs : ex.label}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gold font-bold">${(ex.priceCents / 100).toFixed(0)}</span>
+                        {selected && (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                            className="w-7 h-7 rounded-full gold-gradient flex items-center justify-center flex-shrink-0"
+                          >
+                            <Check size={15} className="text-navy" />
+                          </motion.div>
+                        )}
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Upgrade kits (private only; shuttle does not allow personalized extras) */}
+            {upsellKits.length > 0 && data.serviceType !== 'shuttle' && (isAirportRoute || true) && (
+              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+                <p className="text-xs font-semibold text-gold uppercase tracking-wider">{t('book.upsells.arrivalUpgrades', { en: 'Upgrade kits', es: 'Kits de upgrade' })}</p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {upsellKits.map((ex) => {
+                    const selected = data.extras.includes(ex.code);
+                    return (
+                      <motion.button
+                        key={ex.code}
+                        type="button"
+                        onClick={() => toggleExtra(ex.code)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={cn(
+                          'flex items-center justify-between gap-3 p-4 rounded-xl border text-left transition-all',
+                          selected ? 'border-gold bg-gold/5' : 'border-border hover:border-gold/30 glass-card'
+                        )}
+                      >
+                        <span className="font-medium text-sm text-foreground">{lang === 'es' && ex.labelEs ? ex.labelEs : ex.label}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-gold font-bold">${(ex.priceCents / 100).toFixed(0)}</span>
+                          {selected && (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                              className="w-6 h-6 rounded-full gold-gradient flex items-center justify-center"
+                            >
+                              <Check size={12} className="text-navy" />
+                            </motion.div>
+                          )}
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
           </div>
         );
 
@@ -645,121 +1049,283 @@ const Book = () => {
         return (
           <div className="space-y-6">
             <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t('book.review.title')}</h2>
-            <div className="booking-card rounded-2xl p-6 md:p-8 space-y-4 text-sm">
-              <Row label={t('book.review.service')} value={data.serviceType || '—'} />
-              <Row label={t('book.review.trip')} value={data.tripType || '—'} />
-              <Row label={t('book.review.route')} value={data.route || '—'} />
-              <Row label={t('book.review.date')} value={data.arrivalDate ? format(data.arrivalDate, 'PPP') : '—'} />
-              <Row label={t('book.review.passengers')} value={String(data.passengers)} />
-              <Row label={t('book.review.pickup')} value={data.pickup || '—'} />
-              <Row label={t('book.review.dropoff')} value={data.dropoff || '—'} />
-              {data.extras.length > 0 && <Row label={t('book.review.extras')} value={data.extras.join(', ')} />}
-              {data.activities.length > 0 && (
-                <Row label={t('book.review.activitiesUpsell')} value={data.activities.map(id => {
-                  const act = upsellActivities.find(a => a.id === id);
-                  return act ? t(act.key) : id;
-                }).join(', ')} />
-              )}
-            </div>
 
-            {/* Pricing */}
-            <div className="booking-card rounded-2xl p-6 md:p-8 space-y-4 text-sm">
-              <Row label={t('book.review.transferPrice')} value={`$${transferPrice} USD`} gold />
-              {activitiesPrice > 0 && (
-                <Row label={data.comboMode === 'crazy' ? 'Crazy Combo' : data.comboMode === 'combo' ? 'Combo' : t('book.review.activitiesDeposit')}
-                  value={`$${activitiesPrice} USD`} gold />
-              )}
-              <div className="border-t border-border pt-4">
-                <Row label={t('book.review.total')} value={`$${total} USD`} gold bold />
-              </div>
-            </div>
-
-            {/* Trust elements */}
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1.5"><Shield size={14} className="text-gold" /> {lang === 'es' ? 'Pago seguro' : 'Secure checkout'}</div>
-              <div className="flex items-center gap-1.5"><Star size={14} className="text-gold" /> {lang === 'es' ? '4.9/5 calificación' : '4.9/5 rating'}</div>
-            </div>
-
-            {/* PayPal Checkout Button */}
-            <button
-              onClick={handlePayPalCheckout}
-              disabled={creatingBooking}
-              className="w-full py-4 rounded-xl bg-[#0070ba] hover:bg-[#005ea6] text-white font-bold text-base transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            {/* Trip summary - premium card */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="glass-card rounded-2xl p-6 md:p-8 space-y-4"
             >
-              {creatingBooking ? (
-                <>
-                  <Loader2 size={20} className="animate-spin" />
-                  {lang === 'es' ? 'Creando reserva...' : 'Creating booking...'}
-                </>
-              ) : (
-                <>
-                  <Shield size={20} />
-                  {t('book.review.paypal')}
-                </>
+              <h3 className="font-display text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                {lang === 'es' ? 'Resumen del viaje' : 'Trip summary'}
+              </h3>
+              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <Row label={t('book.review.service')} value={data.serviceType || '—'} />
+                <Row label={t('book.review.trip')} value={data.tripType || '—'} />
+                <Row label={t('book.review.route')} value={data.route || '—'} />
+                <Row label={t('book.review.date')} value={data.arrivalDate ? format(data.arrivalDate, 'PPP') : '—'} />
+                <Row label={t('book.review.passengers')} value={String(data.passengers)} />
+                <Row label={t('book.review.pickup')} value={data.pickup || '—'} />
+                <Row label={t('book.review.dropoff')} value={data.dropoff || '—'} />
+                {data.extras.length > 0 && <Row label={t('book.review.extras')} value={data.extras.map(getExtraLabel).join(', ')} className="sm:col-span-2" />}
+                {data.activities.length > 0 && (
+                  <Row label={t('book.review.activitiesUpsell')} value={data.activities.map(id => {
+                    const act = upsellActivities.find(a => a.id === id);
+                    return act ? t(act.key) : id;
+                  }).join(', ')} className="sm:col-span-2" />
+                )}
+              </div>
+            </motion.div>
+
+            {/* Pricing breakdown - premium */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.05 }}
+              className="glass-card rounded-2xl p-6 md:p-8 border-2 border-gold/20"
+            >
+              <h3 className="font-display text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-5">
+                {lang === 'es' ? 'Desglose de precios' : 'Price breakdown'}
+              </h3>
+              <div className="space-y-4">
+                {data.serviceType && selectedArea ? (
+                  <>
+                    <Row
+                      label={t('book.review.transferPrice')}
+                      value={`$${transferPrice.toFixed(0)} USD`}
+                      gold
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {selectedArea.name} · {data.tripType === 'roundtrip' ? (lang === 'es' ? 'Ida y vuelta' : 'Round trip') : (lang === 'es' ? 'Solo ida' : 'One way')}
+                    </p>
+                  </>
+                ) : data.serviceType && !data.areaId ? (
+                  <p className="text-amber-600 dark:text-amber-400 text-sm py-2">{t('book.area.selectToSeePrice')}</p>
+                ) : data.serviceType ? (
+                  <Row label={t('book.review.transferPrice')} value={`$${transferPrice.toFixed(0)} USD`} gold />
+                ) : null}
+                {activitiesPrice > 0 && (
+                  <Row label={data.comboMode === 'crazy' ? 'Crazy Combo' : data.comboMode === 'combo' ? 'Combo' : t('book.review.activitiesDeposit')}
+                    value={`$${activitiesPrice} USD`} gold />
+                )}
+              </div>
+
+              {/* Total - prominent */}
+              <div className="mt-6 pt-6 border-t-2 border-gold/30 bg-gold/5 -mx-6 md:-mx-8 px-6 md:px-8 py-5 rounded-b-2xl">
+                <div className="flex justify-between items-center">
+                  <span className="font-display text-base font-bold text-foreground">{t('book.review.total')}</span>
+                  <span className="text-gold font-display text-2xl font-bold">${total} USD</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Trust + CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              className="space-y-4"
+            >
+              <TrustBadges compact />
+
+              <motion.button
+                onClick={handlePayPalCheckout}
+                disabled={
+                  creatingBooking ||
+                  (!!data.serviceType && !data.areaId)
+                }
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                className={cn(
+                  'w-full py-5 rounded-xl font-bold text-base flex items-center justify-center gap-3 transition-all',
+                  'bg-[#0070ba] hover:bg-[#005ea6] text-white',
+                  'shadow-lg shadow-[#0070ba]/25 hover:shadow-xl hover:shadow-[#0070ba]/30',
+                  'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
+                )}
+              >
+                {creatingBooking ? (
+                  <>
+                    <LuxurySpinner size={22} />
+                    {lang === 'es' ? 'Creando reserva...' : 'Creating booking...'}
+                  </>
+                ) : (
+                  <>
+                    <Shield size={22} />
+                    {t('book.review.paypal')}
+                  </>
+                )}
+              </motion.button>
+              {bookingError && (
+                <p className="text-center text-sm text-destructive mt-2">{bookingError}</p>
               )}
-            </button>
-            {bookingError && (
-              <p className="text-center text-sm text-destructive mt-2">{bookingError}</p>
-            )}
-            {!bookingError && !creatingBooking && (
-              <p className="text-center text-sm text-muted-foreground mt-2">
-                {lang === 'es' ? 'Serás redirigido a PayPal para completar el pago' : 'You will be redirected to PayPal to complete payment'}
-              </p>
-            )}
+              {!bookingError && !creatingBooking && (
+                <p className="text-center text-sm text-muted-foreground">
+                  {lang === 'es' ? 'Serás redirigido a PayPal para completar el pago' : 'You will be redirected to PayPal to complete payment'}
+                </p>
+              )}
+            </motion.div>
+          </div>
+        );
+      default:
+        return (
+          <div className="space-y-5">
+            <h2 className="font-display text-2xl font-bold text-foreground">{t('book.title')}</h2>
+            <p className="text-muted-foreground text-sm">{lang === 'es' ? 'Cargando...' : 'Loading...'}</p>
           </div>
         );
     }
   };
 
-  return (
-    <div className="pt-32 pb-28 lg:pb-20 px-4">
-      <div className="container mx-auto max-w-5xl">
-        {/* Title + step counter */}
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">{t('book.title')}</h1>
-          <span className="text-muted-foreground text-sm font-semibold bg-accent px-3 py-1 rounded-full">{current + 1}/8</span>
-        </div>
+  const stepLabels: Record<string, string> = {
+    service: t('book.step.service'),
+    trip: t('book.step.trip'),
+    route: t('book.step.route'),
+    date: t('book.step.date'),
+    locations: t('book.step.locations'),
+    extras: t('book.step.extras'),
+    upsell: t('book.step.activities'),
+    review: t('book.step.review'),
+  };
 
-        {/* Progress bar */}
-        <div className="flex gap-1.5 mb-10">
-          {steps.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => i <= current && setCurrent(i)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                i === current ? 'w-8 bg-gold' : i < current ? 'w-2 bg-gold/50 hover:bg-gold/70' : 'w-2 bg-border'
-              }`}
-            />
-          ))}
-        </div>
+  return (
+    <div className="pt-28 pb-36 lg:pb-24 px-4 min-h-screen bg-gradient-to-b from-background to-muted/30">
+      <div className="container mx-auto max-w-5xl">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="mb-8"
+        >
+          <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">{t('book.title')}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {(stepLabels[steps[current]] || steps[current])} · {current + 1} {lang === 'es' ? 'de' : 'of'} {steps.length}
+          </p>
+        </motion.div>
+
+        {/* Modern Stepper */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          className="mb-10"
+        >
+          <div className="hidden md:flex items-center justify-between gap-1">
+            {steps.map((step, i) => {
+              const isActive = i === current;
+              const isComplete = i < current;
+              const isClickable = i <= current;
+              return (
+                <div key={step} className="flex flex-1 items-center last:flex-initial">
+                  <button
+                    type="button"
+                    onClick={() => isClickable && setCurrent(i)}
+                    disabled={!isClickable}
+                    className={cn(
+                      'flex flex-col items-center gap-1.5 transition-all duration-300',
+                      isClickable && 'cursor-pointer'
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300',
+                        isActive && 'gold-gradient text-secondary-foreground shadow-lg shadow-gold/20 scale-110',
+                        isComplete && 'bg-gold/20 text-gold',
+                        !isActive && !isComplete && 'bg-muted text-muted-foreground'
+                      )}
+                    >
+                      {isComplete ? <Check size={16} strokeWidth={3} /> : i + 1}
+                    </div>
+                    <span
+                      className={cn(
+                        'text-[10px] font-medium max-w-[4rem] text-center leading-tight transition-colors',
+                        isActive ? 'text-foreground' : 'text-muted-foreground'
+                      )}
+                    >
+                      {(typeof stepLabels[step] === 'string' ? stepLabels[step] : step).split(' ')[0]}
+                    </span>
+                  </button>
+                  {i < steps.length - 1 && (
+                    <div className="flex-1 min-w-[12px] h-0.5 mx-0.5 rounded-full bg-muted overflow-hidden">
+                      <motion.div
+                        className="h-full bg-gold/60 rounded-full"
+                        initial={false}
+                        animate={{ width: current > i ? '100%' : 0 }}
+                        transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {/* Mobile: compact progress */}
+          <div className="md:hidden flex items-center gap-2">
+            <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+              <motion.div
+                className="h-full gold-gradient rounded-full"
+                initial={false}
+                animate={{ width: `${((current + 1) / steps.length) * 100}%` }}
+                transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+                style={{ width: `${((current + 1) / steps.length) * 100}%` }}
+              />
+            </div>
+            <span className="text-xs font-semibold text-muted-foreground tabular-nums">{current + 1}/{steps.length}</span>
+          </div>
+        </motion.div>
 
         <div className="grid lg:grid-cols-5 gap-8">
           {/* Wizard */}
           <div className="lg:col-span-3">
             <AnimatePresence mode="wait">
-              <motion.div key={current} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
+              <motion.div
+                key={current}
+                initial={{ opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -24 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              >
                 {renderStep()}
               </motion.div>
             </AnimatePresence>
 
-            {/* Nav buttons */}
-            <div className="flex justify-between mt-10">
-              <button onClick={prev} disabled={current === 0}
-                className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors py-2">
-                <ArrowLeft size={16} /> {t('book.back')}
-              </button>
+            {/* Nav buttons - touch-friendly min height on mobile */}
+            <motion.div
+              layout
+              className="flex justify-between items-center mt-10 gap-4 touch-target"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.15 }}
+            >
+              <motion.button
+                onClick={prev}
+                disabled={current === 0}
+                whileHover={current > 0 ? { scale: 1.02 } : {}}
+                whileTap={current > 0 ? { scale: 0.98 } : {}}
+                className={cn(
+                  'flex items-center gap-2 text-sm font-semibold py-3 px-4 rounded-xl transition-all duration-200',
+                  'text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent'
+                )}
+              >
+                <ArrowLeft size={18} /> {t('book.back')}
+              </motion.button>
               {current < steps.length - 1 && (
-                <button onClick={next}
-                  className="gold-gradient text-navy px-8 py-3 rounded-xl text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow active:scale-[0.97]">
-                  {t('book.next')} <ArrowRight size={16} />
-                </button>
+                <motion.button
+                  onClick={next}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="gold-gradient text-navy px-10 py-3.5 rounded-xl text-sm font-bold inline-flex items-center gap-2 shadow-lg shadow-gold/25 hover:shadow-xl hover:shadow-gold/30 transition-shadow active:scale-[0.98]"
+                >
+                  {t('book.next')} <ArrowRight size={18} />
+                </motion.button>
               )}
-            </div>
+            </motion.div>
           </div>
 
           {/* Sticky Summary (desktop) */}
           <div className="lg:col-span-2 hidden lg:block">
-            <div className="sticky top-32 booking-card rounded-2xl p-6 space-y-4">
+            <div className="sticky top-32 glass-card rounded-2xl p-6 space-y-4 border-2 border-gold/10">
               <h3 className="font-display text-lg font-bold text-foreground">{t('book.summary')}</h3>
               <div className="space-y-2.5 text-sm">
                 {data.serviceType && <Row label={t('book.review.service')} value={data.serviceType} />}
@@ -771,7 +1337,7 @@ const Book = () => {
                 {data.extras.length > 0 && (
                   <div>
                     <span className="text-muted-foreground block mb-1">{t('book.review.extras')}</span>
-                    {data.extras.map(e => <span key={e} className="inline-block bg-gold/10 text-gold text-xs font-semibold px-2.5 py-1 rounded-full mr-1 mb-1">{e}</span>)}
+                    {data.extras.map(e => <span key={e} className="inline-block bg-gold/10 text-gold text-xs font-semibold px-2.5 py-1 rounded-full mr-1 mb-1">{getExtraLabel(e)}</span>)}
                   </div>
                 )}
                 {data.activities.length > 0 && (
@@ -788,10 +1354,10 @@ const Book = () => {
 
               {transferPrice > 0 && (
                 <div className="border-t border-border pt-4 space-y-2.5">
-                  <Row label={t('book.review.transferPrice')} value={`$${transferPrice}`} gold />
-                  {activitiesPrice > 0 && <Row label={data.comboMode === 'crazy' ? 'Crazy Combo' : data.comboMode === 'combo' ? 'Combo' : lang === 'es' ? 'Actividades' : 'Activities'} value={`$${activitiesPrice}`} gold />}
-                  <div className="border-t border-border pt-3">
-                    <Row label={t('book.review.total')} value={`$${total}`} gold bold />
+                  <Row label={t('book.review.transferPrice')} value={`$${transferPrice} USD`} gold />
+                  {activitiesPrice > 0 && <Row label={data.comboMode === 'crazy' ? 'Crazy Combo' : data.comboMode === 'combo' ? 'Combo' : lang === 'es' ? 'Actividades' : 'Activities'} value={`$${activitiesPrice} USD`} gold />}
+                  <div className="border-t-2 border-gold/20 pt-4 mt-2 rounded-xl bg-gold/5 px-4 py-3">
+                    <Row label={t('book.review.total')} value={`$${total} USD`} gold bold />
                   </div>
                 </div>
               )}
@@ -822,9 +1388,38 @@ const Book = () => {
         </div>
       </div>
 
-      {/* Mobile bottom summary bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/98 backdrop-blur-xl border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
-        <button onClick={() => setMobileOpen(!mobileOpen)} className="w-full px-4 py-3 flex items-center justify-between">
+      {/* Mobile: sticky CTA bar (Prev/Next) when not on review */}
+      {current < steps.length - 1 && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/98 backdrop-blur-xl border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] safe-area-pb">
+          <div className="flex items-center justify-between gap-4 px-4 py-3 min-h-[56px]">
+            <motion.button
+              onClick={prev}
+              disabled={current === 0}
+              whileTap={{ scale: 0.98 }}
+              className={cn(
+                'flex items-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold touch-manipulation min-h-[44px]',
+                'text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:pointer-events-none'
+              )}
+            >
+              <ArrowLeft size={18} /> {t('book.back')}
+            </motion.button>
+            <motion.button
+              onClick={next}
+              whileTap={{ scale: 0.98 }}
+              className="gold-gradient text-navy px-6 py-3 rounded-xl text-sm font-bold inline-flex items-center gap-2 touch-manipulation min-h-[44px] shadow-lg shadow-gold/25"
+            >
+              {t('book.next')} <ArrowRight size={18} />
+            </motion.button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile bottom summary bar - visible on review or as expandable */}
+      <div className={cn(
+        'lg:hidden fixed left-0 right-0 z-40 bg-card/98 backdrop-blur-xl border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] safe-area-pb',
+        current < steps.length - 1 ? 'bottom-14' : 'bottom-0'
+      )}>
+        <button onClick={() => setMobileOpen(!mobileOpen)} className="w-full px-4 py-3 flex items-center justify-between min-h-[48px] touch-manipulation">
           <div className="flex items-center gap-3">
             <ChevronUp size={16} className={cn("text-muted-foreground transition-transform", mobileOpen && "rotate-180")} />
             <span className="text-sm font-semibold text-foreground">{t('book.summary')}</span>
@@ -876,10 +1471,14 @@ const InputField = ({ label, icon, children }: { label: string; icon: React.Reac
   </div>
 );
 
-const Row = ({ label, value, gold, bold }: { label: string; value: string; gold?: boolean; bold?: boolean }) => (
-  <div className={`flex justify-between items-baseline ${bold ? 'font-bold' : ''}`}>
-    <span className="text-muted-foreground text-sm">{label}</span>
-    <span className={`${gold ? 'text-gold font-semibold' : 'text-foreground'} ${bold ? 'text-lg' : ''} ml-3 truncate max-w-[180px] text-right`}>{value}</span>
+const Row = ({ label, value, gold, bold, className }: { label: string; value: string; gold?: boolean; bold?: boolean; className?: string }) => (
+  <div className={cn('flex justify-between items-baseline gap-3', bold && 'font-bold', className)}>
+    <span className="text-muted-foreground text-sm shrink-0">{label}</span>
+    <span className={cn(
+      gold ? 'text-gold font-semibold' : 'text-foreground',
+      bold && 'text-lg',
+      'ml-auto truncate max-w-[220px] text-right'
+    )}>{value}</span>
   </div>
 );
 

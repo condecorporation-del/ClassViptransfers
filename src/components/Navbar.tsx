@@ -64,22 +64,24 @@ const Navbar = () => {
 
         <div className="flex items-center gap-3">
           <div className={`flex rounded-full overflow-hidden border ${isDarkHero ? 'border-off-white/20' : 'border-border'}`}>
-            <button
+            <motion.button
               onClick={() => setLang('en')}
+              whileTap={{ scale: 0.95 }}
               className={`text-[10px] font-bold px-3 py-1.5 transition-all ${
                 lang === 'en' ? 'gold-gradient text-secondary-foreground' : `${mutedText}`
               }`}
             >
               EN
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               onClick={() => setLang('es')}
+              whileTap={{ scale: 0.95 }}
               className={`text-[10px] font-bold px-3 py-1.5 transition-all ${
                 lang === 'es' ? 'gold-gradient text-secondary-foreground' : `${mutedText}`
               }`}
             >
               ES
-            </button>
+            </motion.button>
           </div>
 
           <Link

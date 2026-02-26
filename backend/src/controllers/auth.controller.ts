@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { prisma } from '../lib/prisma';
 import { createAuditLog } from '../lib/audit';
 import { z } from 'zod';
 
@@ -12,106 +13,130 @@ const loginSchema = z.object({
 export class AuthController {
   /**
    * POST /api/admin/auth/login
-   * Admin login
+   * Admin login - find user in DB, compare password, issue JWT
    */
   async login(req: Request, res: Response) {
     try {
-      const { email, password } = loginSchema.parse(req.body);
+      console.log('[Auth] Login attempt - body keys:', req.body ? Object.keys(req.body) : 'none');
+      const raw = loginSchema.safeParse(req.body);
+      if (!raw.success) {
+        console.log('[Auth] Validation failed:', raw.error.flatten());
+        return res.status(400).json({
+          success: false,
+          error: raw.error.errors?.[0]?.message || 'Invalid request',
+        });
+      }
+      const { email, password } = raw.data;
+      console.log('[Auth] Looking up user by email:', email);
 
-      // Get admin credentials from env
-      const adminEmail = process.env.ADMIN_EMAIL;
-      const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
       const jwtSecret = process.env.ADMIN_JWT_SECRET;
-
-      if (!adminEmail || !adminPasswordHash || !jwtSecret) {
+      if (!jwtSecret) {
+        console.error('[Auth] ADMIN_JWT_SECRET not set');
         return res.status(500).json({
           success: false,
           error: 'Admin authentication not configured',
         });
       }
 
-      // Verify email
-      if (email !== adminEmail) {
+      const user = await prisma.adminUser.findUnique({
+        where: { email: email.toLowerCase().trim() },
+      });
+
+      if (!user) {
+        console.log('[Auth] User not found:', email);
         await createAuditLog({
           action: 'UPDATE',
           entityType: 'Auth',
           entityId: 'login',
-          description: `Failed login attempt: Invalid email (${email})`,
+          description: `Failed login: user not found (${email})`,
         });
-
         return res.status(401).json({
           success: false,
           error: 'Invalid credentials',
         });
       }
 
-      // Verify password
-      const passwordMatch = await bcrypt.compare(password, adminPasswordHash);
+      console.log('[Auth] User found:', user.email, '| role:', user.role);
+
+      const passwordMatch = await bcrypt.compare(password, user.passwordHash);
+      console.log('[Auth] Password comparison result:', passwordMatch ? 'match' : 'no match');
+
       if (!passwordMatch) {
+        console.log('[Auth] Invalid password for:', email);
         await createAuditLog({
           action: 'UPDATE',
           entityType: 'Auth',
           entityId: 'login',
-          description: `Failed login attempt: Invalid password for ${email}`,
+          description: `Failed login: invalid password for ${email}`,
         });
-
         return res.status(401).json({
           success: false,
           error: 'Invalid credentials',
         });
       }
 
-      // Generate JWT
-      const token = jwt.sign(
-        { email: adminEmail },
-        jwtSecret,
-        { expiresIn: '7d' } // 7 days
-      );
+      if (user.role !== 'admin') {
+        console.log('[Auth] User has insufficient role:', user.role);
+        await createAuditLog({
+          action: 'UPDATE',
+          entityType: 'Auth',
+          entityId: 'login',
+          description: `Failed login: insufficient role for ${email} (${user.role})`,
+        });
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied',
+        });
+      }
 
-      // Set httpOnly cookie
+      const token = jwt.sign(
+        { email: user.email, role: user.role, userId: user.id },
+        jwtSecret,
+        { expiresIn: '7d' }
+      );
+      console.log('[Auth] Token created, expires 7d');
+
       const isProduction = process.env.NODE_ENV === 'production';
       res.cookie('admin_token', token, {
         httpOnly: true,
-        secure: isProduction, // HTTPS only in production
-        sameSite: isProduction ? 'none' : 'lax', // Allow cross-site in production if needed
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
         path: '/',
       });
 
-      // Audit log
+      console.log('[Auth] Login success:', user.email, '| role:', user.role);
+
       await createAuditLog({
         action: 'CREATE',
         entityType: 'Auth',
         entityId: 'login',
-        userEmail: adminEmail,
-        description: `Admin login successful: ${adminEmail}`,
+        userId: user.id,
+        userEmail: user.email,
+        description: `Admin login successful: ${user.email}`,
       });
 
       res.json({
         success: true,
         data: {
           authenticated: true,
-          email: adminEmail,
+          email: user.email,
+          role: user.role,
         },
       });
     } catch (error: any) {
-      console.error('Login error:', error);
-      res.status(400).json({
+      console.error('[Auth] Login error:', error);
+      res.status(500).json({
         success: false,
         error: error.message || 'Login failed',
       });
     }
   }
 
-  /**
-   * POST /api/admin/auth/logout
-   * Admin logout
-   */
   async logout(req: Request, res: Response) {
     try {
       const adminEmail = (req as any).adminEmail;
 
-      // Clear cookie
       res.clearCookie('admin_token', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -119,7 +144,6 @@ export class AuthController {
         path: '/',
       });
 
-      // Audit log
       if (adminEmail) {
         await createAuditLog({
           action: 'DELETE',
@@ -135,7 +159,7 @@ export class AuthController {
         data: { authenticated: false },
       });
     } catch (error: any) {
-      console.error('Logout error:', error);
+      console.error('[Auth] Logout error:', error);
       res.status(500).json({
         success: false,
         error: 'Logout failed',
@@ -143,13 +167,10 @@ export class AuthController {
     }
   }
 
-  /**
-   * GET /api/admin/auth/me
-   * Get current admin user
-   */
   async me(req: Request, res: Response) {
     try {
       const adminEmail = (req as any).adminEmail;
+      const adminRole = (req as any).adminRole;
 
       if (!adminEmail) {
         return res.status(401).json({
@@ -163,10 +184,11 @@ export class AuthController {
         data: {
           authenticated: true,
           email: adminEmail,
+          role: adminRole || 'admin',
         },
       });
     } catch (error: any) {
-      console.error('Me error:', error);
+      console.error('[Auth] Me error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get user info',
@@ -174,4 +196,3 @@ export class AuthController {
     }
   }
 }
-

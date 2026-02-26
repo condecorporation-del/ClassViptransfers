@@ -18,6 +18,15 @@ export default defineConfig(({ mode }) => {
     hmr: {
       overlay: false,
     },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+        // Forward cookies so admin login works (cookie set by backend reaches browser for 5173)
+        cookieDomainRewrite: '',
+      },
+    },
   },
   plugins: [
     react(),

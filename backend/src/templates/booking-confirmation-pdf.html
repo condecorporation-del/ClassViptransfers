@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reservation Confirmed | {{brandName}}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #1a1a1a; }
+    .watermark { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-image: url('{{logoUrl}}'); background-repeat: no-repeat; background-position: center; background-size: 320px; opacity: 0.06; pointer-events: none; z-index: 0; }
+    .content { position: relative; z-index: 1; max-width: 600px; margin: 0 auto; background: #fff; }
+    table { border-collapse: collapse; width: 100%; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .watermark { opacity: 0.08; }
+      .content { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="watermark" aria-hidden="true"></div>
+  <div class="content">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+      <!-- Header: full-width banner -->
+      {{#if logoUrl}}
+      <tr>
+        <td style="padding: 0; line-height: 0;">
+          <img src="{{logoUrl}}" alt="{{brandName}}" width="600" style="width: 100%; max-width: 100%; height: auto; display: block;" />
+        </td>
+      </tr>
+      {{/if}}
+      <!-- Header text -->
+      <tr>
+        <td style="padding: 24px 32px 32px; background-color: {{primaryColor}}; text-align: center;">
+          <div style="display: inline-block; background-color: rgba(217, 174, 95, 0.25); border: 2px solid {{accentColor}}; border-radius: 50px; padding: 10px 24px; margin-bottom: 16px;">
+            <p style="margin: 0; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: {{accentColor}}; font-weight: 700;">✓ RESERVATION CONFIRMED</p>
+          </div>
+          <p style="margin: 0; font-size: 20px; font-weight: 600; color: #fff;">Thank you, {{customerName}}</p>
+          <p style="margin: 6px 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">Your luxury transfer has been confirmed</p>
+        </td>
+      </tr>
+
+      <!-- Booking Details -->
+      <tr>
+        <td style="padding: 24px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #e8eaed; border-radius: 6px;">
+            <tr>
+              <td style="padding: 14px 20px; background-color: {{primaryColor}}; border-radius: 6px 6px 0 0;">
+                <p style="margin: 0; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: {{accentColor}}; font-weight: 700;">ARRIVAL INFORMATION</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 0;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                  <tr>
+                    <td width="50%" style="padding: 16px 20px; border-bottom: 1px solid #e8eaed; border-right: 1px solid #e8eaed;">
+                      <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Booking ID</p>
+                      <p style="margin: 0; font-size: 15px; font-weight: 700; color: {{primaryColor}}; font-family: monospace;">{{bookingIdShort}}</p>
+                    </td>
+                    <td width="50%" style="padding: 16px 20px; border-bottom: 1px solid #e8eaed;">
+                      <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Date</p>
+                      <p style="margin: 0; font-size: 14px; font-weight: 600; color: {{primaryColor}};">{{formattedDate}}</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td width="50%" style="padding: 16px 20px; border-bottom: 1px solid #e8eaed; border-right: 1px solid #e8eaed;">
+                      <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Pickup Time</p>
+                      <p style="margin: 0; font-size: 14px; font-weight: 600; color: {{primaryColor}};">{{pickupTime}}</p>
+                    </td>
+                    <td width="50%" style="padding: 16px 20px; border-bottom: 1px solid #e8eaed;">
+                      <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Passengers</p>
+                      <p style="margin: 0; font-size: 14px; font-weight: 600; color: {{primaryColor}};">{{passengers}}</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td width="50%" style="padding: 16px 20px; border-right: 1px solid #e8eaed;">
+                      <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Payment Method</p>
+                      <p style="margin: 0; font-size: 13px; font-weight: 600; color: #10B981;">{{paymentMethodText}}</p>
+                    </td>
+                    <td width="50%" style="padding: 16px 20px; background-color: #FAFBFB;">
+                      <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Amount Paid</p>
+                      <p style="margin: 0; font-size: 18px; font-weight: 700; color: {{accentColor}};">{{totalPaidText}}</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Extras -->
+      {{#if extrasWithPrices}}
+      {{#if extrasWithPrices.length}}
+      <tr>
+        <td style="padding: 0 24px 20px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #e8eaed; border-radius: 6px;">
+            <tr>
+              <td style="padding: 12px 20px; background-color: {{primaryColor}}; border-bottom: 1px solid #e8eaed;">
+                <p style="margin: 0; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: {{accentColor}}; font-weight: 700;">EXTRAS</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 0;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                  {{#each extrasWithPrices}}
+                  <tr>
+                    <td width="70%" style="padding: 12px 20px; border-bottom: 1px solid #f0f0f0; font-size: 13px; color: {{../primaryColor}};">{{label}}</td>
+                    <td width="30%" align="right" style="padding: 12px 20px; border-bottom: 1px solid #f0f0f0; font-size: 13px; font-weight: 700; color: {{../accentColor}};">{{priceText}}</td>
+                  </tr>
+                  {{/each}}
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      {{/if}}
+      {{/if}}
+
+      <!-- Services -->
+      {{#if items}}
+      {{#if items.length}}
+      <tr>
+        <td style="padding: 0 24px 20px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #e8eaed; border-radius: 6px;">
+            <tr>
+              <td style="padding: 12px 20px; background-color: {{primaryColor}}; border-bottom: 1px solid #e8eaed;">
+                <p style="margin: 0; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: {{accentColor}}; font-weight: 700;">ACTIVITIES</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 0;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                  {{#each items}}
+                  <tr>
+                    <td style="padding: 12px 20px; border-bottom: 1px solid #f0f0f0;">
+                      <p style="margin: 0; font-size: 13px; font-weight: 600; color: {{../primaryColor}};">{{name}}</p>
+                      {{#if metaText}}
+                      <p style="margin: 4px 0 0; font-size: 12px; color: #666;">{{metaText}}</p>
+                      {{/if}}
+                    </td>
+                    <td align="right" style="padding: 12px 20px; border-bottom: 1px solid #f0f0f0; font-size: 13px; font-weight: 700; color: {{../accentColor}}; vertical-align: top;">{{priceText}}</td>
+                  </tr>
+                  {{/each}}
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      {{/if}}
+      {{/if}}
+
+      <!-- Pickup & Flight -->
+      {{#if pickupLocation}}
+      <tr>
+        <td style="padding: 0 24px 20px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #e8eaed; border-radius: 6px;">
+            <tr>
+              <td style="padding: 12px 20px; background-color: {{primaryColor}}; border-bottom: 1px solid #e8eaed;">
+                <p style="margin: 0; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: {{accentColor}}; font-weight: 700;">DEPARTURE</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 16px 20px;">
+                <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Pickup</p>
+                <p style="margin: 0 0 10px; font-size: 13px; font-weight: 600; color: {{primaryColor}};">{{pickupLocation}}</p>
+                {{#if dropoffLocation}}
+                <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Dropoff</p>
+                <p style="margin: 0 0 10px; font-size: 13px; font-weight: 600; color: {{primaryColor}};">{{dropoffLocation}}</p>
+                {{/if}}
+                {{#if flightDetails}}
+                {{#if flightDetails.arrival}}
+                <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Arrival Flight</p>
+                <p style="margin: 0 0 10px; font-size: 12px; font-weight: 600; color: {{primaryColor}};">{{flightDetails.arrival.displayText}}</p>
+                {{/if}}
+                {{#if flightDetails.departure}}
+                <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Departure Flight</p>
+                <p style="margin: 0; font-size: 12px; font-weight: 600; color: {{primaryColor}};">{{flightDetails.departure.displayText}}</p>
+                {{/if}}
+                {{/if}}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      {{/if}}
+
+      <!-- Included -->
+      {{#if includedItems}}
+      {{#if includedItems.length}}
+      <tr>
+        <td style="padding: 0 24px 20px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #BBF7D0; background-color: #F0FDF4; border-radius: 6px;">
+            <tr>
+              <td style="padding: 16px 20px;">
+                <p style="margin: 0 0 8px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #166534; font-weight: 700;">✓ Included</p>
+                {{#each includedItems}}
+                <p style="margin: 0 0 2px; font-size: 12px; color: #166534;">• {{this}}</p>
+                {{/each}}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      {{/if}}
+      {{/if}}
+
+      <!-- Cancellation Policy -->
+      <tr>
+        <td style="padding: 0 24px 24px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #e8eaed; border-radius: 6px;">
+            <tr>
+              <td style="padding: 16px 20px;">
+                <p style="margin: 0 0 8px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #888; font-weight: 600;">Cancellation Policy</p>
+                {{#each cancellationPolicy}}
+                <p style="margin: 0 0 4px; font-size: 12px; color: #5a5a5a;">• {{this}}</p>
+                {{/each}}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Footer -->
+      <tr>
+        <td style="padding: 20px 24px; background-color: {{primaryColor}}; text-align: center;">
+          {{#if logoUrl}}
+          <img src="{{logoUrl}}" alt="{{brandName}}" width="64" style="max-width: 64px; height: auto; margin: 0 auto 12px; opacity: 0.9;" />
+          {{/if}}
+          <p style="margin: 0 0 8px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.6);">Contact</p>
+          <p style="margin: 0 0 4px; font-size: 12px; color: {{accentColor}};">+52 624 122 2174</p>
+          <p style="margin: 0 0 4px; font-size: 12px; color: {{accentColor}};">Armando@caboviptransfers.com</p>
+          <p style="margin: 12px 0 0; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.2); font-size: 11px; color: rgba(255,255,255,0.8);">© {{brandName}}</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

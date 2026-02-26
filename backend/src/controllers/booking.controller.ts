@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { BookingService } from '../services/booking.service';
+import { EmailService } from '../services/email.service';
+import { PdfService } from '../services/pdf.service';
 import {
   createBookingSchema,
   confirmBookingSchema,
@@ -11,6 +13,8 @@ import {
 } from '../lib/validation';
 
 const bookingService = new BookingService();
+const emailService = new EmailService();
+const pdfService = new PdfService();
 
 export class BookingController {
   /**
@@ -20,13 +24,48 @@ export class BookingController {
   async createBooking(req: Request, res: Response) {
     const input = createBookingSchema.parse(req.body);
     const source = (req.body.source || 'WEBSITE').toUpperCase();
-    
+
     const booking = await bookingService.createDraftBooking(input, source as any);
-    
+
+    // Send "Booking Received / Pending Payment" email (non-blocking, errors logged)
+    emailService.sendBookingReceived(booking).catch((err) => {
+      console.error('[Booking] Email failed:', err?.message || err);
+      if (err?.stack) console.error(err.stack);
+    });
+
     res.status(201).json({
       success: true,
       data: booking,
     });
+  }
+
+  /**
+   * GET /api/bookings/:id/confirmation-pdf?token=xxx
+   * Download booking confirmation PDF (token from email link; no auth required)
+   */
+  async getConfirmationPdf(req: Request, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const token = typeof req.query.token === 'string' ? req.query.token : null;
+    if (!id) {
+      return res.status(400).json({ error: 'Booking ID is required' });
+    }
+    if (!token) {
+      return res.status(401).json({ error: 'Download token is required. Use the link from your confirmation email.' });
+    }
+    const bookingId = pdfService.verifyPdfToken(token);
+    if (!bookingId || bookingId !== id) {
+      return res.status(403).json({ error: 'Invalid or expired download link.' });
+    }
+    try {
+      const pdfBuffer = await pdfService.generateBookingConfirmationPdf(bookingId);
+      const filename = `reservation-${id.substring(0, 8).toUpperCase()}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(pdfBuffer);
+    } catch (err: any) {
+      console.error('[Booking] PDF generation failed:', err?.message || err);
+      res.status(500).json({ error: 'Failed to generate PDF.', details: err?.message });
+    }
   }
 
   /**
@@ -64,7 +103,12 @@ export class BookingController {
     const userEmail = req.headers['x-user-email'] as string | undefined;
     
     const booking = await bookingService.confirmBooking(id, userId, userEmail, notes);
-    
+
+    // Send manual confirmation emails (admin confirmed / paid offline)
+    emailService.sendConfirmationEmails(booking, false, { manualConfirm: true }).catch((err) => {
+      console.error('[Booking] Failed to send manual confirmation emails:', err);
+    });
+
     res.json({
       success: true,
       data: booking,
@@ -87,7 +131,12 @@ export class BookingController {
     const userEmail = req.headers['x-user-email'] as string | undefined;
     
     const booking = await bookingService.cancelBooking(id, reason, userId, userEmail);
-    
+
+    // Send cancellation email (non-blocking)
+    emailService.sendCancellation(booking, reason).catch((err) => {
+      console.error('[Booking] Failed to send cancellation email:', err);
+    });
+
     res.json({
       success: true,
       data: booking,

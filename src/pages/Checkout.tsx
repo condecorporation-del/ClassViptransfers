@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Loader2, CreditCard, CheckCircle, Mail, User, Phone } from 'lucide-react';
+import { Loader2, CreditCard, CheckCircle, Mail, User, Phone, Shield } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+import { getApiBaseUrl } from '@/lib/api';
 
 interface Booking {
   id: string;
@@ -53,7 +53,7 @@ export default function Checkout() {
 
   const fetchBooking = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}`);
+      const response = await fetch(`${getApiBaseUrl()}/api/bookings/${bookingId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch booking');
       }
@@ -92,7 +92,7 @@ export default function Checkout() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}/customer`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/bookings/${bookingId}/customer`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -128,7 +128,7 @@ export default function Checkout() {
     // If customer info needs to be updated, update it first
     if (showCustomerForm) {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}/customer`, {
+        const response = await fetch(`${getApiBaseUrl()}/api/bookings/${bookingId}/customer`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -154,7 +154,7 @@ export default function Checkout() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/paypal/create-order`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/paypal/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -220,6 +220,14 @@ export default function Checkout() {
   return (
     <div className="min-h-screen bg-background py-16 px-4">
       <div className="max-w-2xl mx-auto">
+        {/* Progress indicator - Secure Payment */}
+        <div className="flex items-center justify-center gap-2 mb-8">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/30">
+            <Shield size={18} className="text-gold" />
+            <span className="font-semibold text-gold text-sm">{lang === 'es' ? 'Pago Seguro' : 'Secure Payment'}</span>
+          </div>
+        </div>
+
         <div className="bg-card border border-gold/20 rounded-xl shadow-lg p-8 space-y-6">
           <div className="text-center">
             <h1 className="text-3xl font-display text-foreground mb-2">
@@ -324,7 +332,7 @@ export default function Checkout() {
                     <span>
                       {item.name} × {item.quantity}
                     </span>
-                    <span>${((item.totalPrice / 100) * item.quantity).toFixed(2)}</span>
+                    <span>${((item.totalPrice ?? 0) / 100).toFixed(2)}</span>
                   </li>
                 ))}
               </ul>
@@ -367,11 +375,14 @@ export default function Checkout() {
               )}
             </button>
 
-            <p className="text-xs text-muted-foreground mt-4 text-center">
-              {lang === 'es'
-                ? 'Serás redirigido a PayPal para completar el pago de forma segura'
-                : 'You will be redirected to PayPal to complete your secure payment'}
-            </p>
+            <div className="flex items-center justify-center gap-2 mt-4 text-xs text-muted-foreground">
+              <Shield size={14} className="text-gold flex-shrink-0" />
+              <span>
+                {lang === 'es'
+                  ? 'Pago protegido por PayPal. Serás redirigido de forma segura.'
+                  : 'PayPal protected. You will be securely redirected.'}
+              </span>
+            </div>
           </div>
 
           {/* Important Note */}

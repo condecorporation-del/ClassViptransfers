@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+import { getApiBaseUrl } from '@/lib/api';
 
 interface AuthState {
   authenticated: boolean;
@@ -23,9 +22,9 @@ export const useAdminAuth = () => {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/auth/me`, {
-        credentials: 'include',
-      });
+      const base = getApiBaseUrl();
+      const url = base ? `${base}/api/admin/auth/me` : '/api/admin/auth/me';
+      const response = await fetch(url, { credentials: 'include' });
 
       if (response.ok) {
         const data = await response.json();
@@ -48,7 +47,9 @@ export const useAdminAuth = () => {
 
   const logout = async () => {
     try {
-      await fetch(`${API_BASE_URL}/api/admin/auth/logout`, {
+      const base = getApiBaseUrl();
+      const url = base ? `${base}/api/admin/auth/logout` : '/api/admin/auth/logout';
+      await fetch(url, {
         method: 'POST',
         credentials: 'include',
       });
@@ -59,6 +60,12 @@ export const useAdminAuth = () => {
     }
   };
 
-  return { ...auth, checkAuth, logout };
+  const getAuthHeaders = () => {
+    return {
+      'Content-Type': 'application/json',
+    };
+  };
+
+  return { ...auth, checkAuth, logout, getAuthHeaders };
 };
 

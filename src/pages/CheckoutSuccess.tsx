@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Loader2, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+import { getApiBaseUrl } from '@/lib/api';
 
 export default function CheckoutSuccess() {
   const [searchParams] = useSearchParams();
@@ -40,7 +40,7 @@ export default function CheckoutSuccess() {
     try {
       // Call capture-order endpoint
       // Use token from URL as orderId (PayPal returns token=ORDER_ID)
-      const response = await fetch(`${API_BASE_URL}/api/paypal/capture-order`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/paypal/capture-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,7 +71,7 @@ export default function CheckoutSuccess() {
       
       if (data.success) {
         // Fetch updated booking to show confirmation
-        const bookingResponse = await fetch(`${API_BASE_URL}/api/bookings/${bookingIdParam}`);
+        const bookingResponse = await fetch(`${getApiBaseUrl()}/api/bookings/${bookingIdParam}`);
         if (bookingResponse.ok) {
           const bookingData = await bookingResponse.json();
           setBooking(bookingData.data);

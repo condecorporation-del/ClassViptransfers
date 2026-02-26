@@ -70,7 +70,6 @@ const Index = () => {
   ];
 
   const includes = [
-    t('transfers.included.meetGreet'),
     t('transfers.included.flight'),
     t('transfers.included.water'),
     t('transfers.included.bilingual'),
@@ -218,22 +217,9 @@ const Index = () => {
                   <p className="text-muted-foreground text-sm">{t('home.transfers.privateDesc')}</p>
                 </div>
               </div>
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center justify-between bg-sand-light rounded-xl px-5 py-4 border border-border/50">
-                  <div>
-                    <span className="text-sm font-semibold text-foreground">{t('home.transfers.privateSuburban')}</span>
-                    <span className="text-muted-foreground text-xs ml-2">{t('home.transfers.privateSuburbanPax')}</span>
-                  </div>
-                  <span className="text-gold font-bold text-lg">{t('home.transfers.privateSuburbanPrice')}</span>
-                </div>
-                <div className="flex items-center justify-between bg-sand-light rounded-xl px-5 py-4 border border-border/50">
-                  <div>
-                    <span className="text-sm font-semibold text-foreground">{t('home.transfers.privateSprinter')}</span>
-                    <span className="text-muted-foreground text-xs ml-2">{t('home.transfers.privateSprinterPax')}</span>
-                  </div>
-                  <span className="text-gold font-bold text-lg">{t('home.transfers.privateSprinterPrice')}</span>
-                </div>
-              </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                {t('home.transfers.privatePricingNote', { en: 'SUV, Sprinter. Pricing by zone on Transfers page.', es: 'SUV, Sprinter. Precios por zona en página Transfers.' })}
+              </p>
               <div className="flex flex-wrap gap-2 mb-6">
                 {includes.slice(0, 4).map((inc, i) => (
                   <span key={i} className="text-[11px] text-muted-foreground bg-sand-light px-3 py-1 rounded-full flex items-center gap-1">
@@ -258,15 +244,9 @@ const Index = () => {
                   <p className="text-muted-foreground text-sm">{t('home.transfers.shuttleDesc')}</p>
                 </div>
               </div>
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center justify-between bg-sand-light rounded-xl px-5 py-4 border border-border/50">
-                  <div>
-                    <span className="text-sm font-semibold text-foreground">{t('home.transfers.shuttleSprinter')}</span>
-                    <span className="text-muted-foreground text-xs ml-2">{t('home.transfers.shuttleSprinterPax')}</span>
-                  </div>
-                  <span className="text-gold font-bold text-lg">{t('home.transfers.shuttlePrice')}</span>
-                </div>
-              </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                {t('home.transfers.shuttlePricingNote', { en: 'Contact for shared shuttle pricing.', es: 'Contacta para precios de shuttle compartido.' })}
+              </p>
               <div className="flex flex-wrap gap-2 mb-6">
                 {includes.slice(0, 4).map((inc, i) => (
                   <span key={i} className="text-[11px] text-muted-foreground bg-sand-light px-3 py-1 rounded-full flex items-center gap-1">

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
+import { prisma } from '../lib/prisma';
 import { BookingService } from '../services/booking.service';
 import { EmailService } from '../services/email.service';
+import { PdfService } from '../services/pdf.service';
 import { DriverVehicleService } from '../services/driver-vehicle.service';
 import {
   listBookingsSchema,
@@ -15,9 +17,172 @@ import { createAuditLog } from '../lib/audit';
 
 const bookingService = new BookingService();
 const emailService = new EmailService();
+const pdfService = new PdfService();
 const driverVehicleService = new DriverVehicleService();
 
 export class AdminController {
+  /**
+   * GET /api/admin/bookings/:id
+   * Get single booking with email logs
+   */
+  async getBooking(req: Request, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    if (!id) {
+      return res.status(400).json({ error: 'Booking ID is required' });
+    }
+    try {
+      const booking = await bookingService.getBookingById(id, { includeEmailLogs: true });
+      res.json({ success: true, data: booking });
+    } catch {
+      res.status(404).json({ error: 'Booking not found' });
+    }
+  }
+
+  /**
+   * GET /api/admin/bookings/:id/confirmation-pdf
+   * Download booking confirmation PDF (admin auth; no token required)
+   */
+  async getConfirmationPdf(req: Request, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    if (!id) {
+      return res.status(400).json({ error: 'Booking ID is required' });
+    }
+    try {
+      const pdfBuffer = await pdfService.generateBookingConfirmationPdf(id);
+      const filename = `reservation-${id.substring(0, 8).toUpperCase()}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(pdfBuffer);
+    } catch (err: any) {
+      console.error('[Admin] PDF generation failed:', err?.message || err);
+      res.status(500).json({ error: 'Failed to generate PDF.', details: err?.message });
+    }
+  }
+
+  /**
+   * GET /api/admin/stats
+   * Dashboard stats including emails sent today
+   */
+  async getStats(req: Request, res: Response) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const [bookingsToday, emailsSentToday, pendingCount] = await Promise.all([
+      prisma.booking.count({
+        where: {
+          bookingDate: { gte: today, lt: tomorrow },
+          status: { not: 'CANCELLED' },
+        },
+      }),
+      prisma.emailLog.count({
+        where: {
+          createdAt: { gte: today, lt: tomorrow },
+          status: 'SENT',
+        },
+      }),
+      prisma.booking.count({
+        where: { status: { in: ['DRAFT', 'PENDING_PAYMENT'] } },
+      }),
+    ]);
+
+    const revenueResult = await prisma.booking.aggregate({
+      where: {
+        bookingDate: { gte: today, lt: tomorrow },
+        status: { in: ['PAID', 'CONFIRMED', 'COMPLETED'] },
+      },
+      _sum: { totalAmount: true },
+    });
+    const revenueCents = revenueResult._sum.totalAmount || 0;
+
+    res.json({
+      success: true,
+      data: {
+        bookingsToday,
+        emailsSentToday,
+        pendingCount,
+        revenueToday: (revenueCents / 100).toFixed(2),
+      },
+    });
+  }
+
+  /**
+   * GET /api/admin/dashboard
+   * Full dashboard: totalToday, totalMonth, revenueToday, revenueMonth, bookingsToday[], bookingsRecent[]
+   */
+  async getDashboard(req: Request, res: Response) {
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    const [
+      totalToday,
+      totalMonth,
+      revenueTodayResult,
+      revenueMonthResult,
+      bookingsTodayList,
+      bookingsRecentList,
+    ] = await Promise.all([
+      prisma.booking.count({
+        where: {
+          bookingDate: { gte: todayStart, lt: todayEnd },
+          status: { not: 'CANCELLED' },
+        },
+      }),
+      prisma.booking.count({
+        where: {
+          bookingDate: { gte: monthStart, lt: monthEnd },
+          status: { not: 'CANCELLED' },
+        },
+      }),
+      prisma.booking.aggregate({
+        where: {
+          bookingDate: { gte: todayStart, lt: todayEnd },
+          status: { in: ['PAID', 'CONFIRMED', 'COMPLETED'] },
+        },
+        _sum: { totalAmount: true },
+      }),
+      prisma.booking.aggregate({
+        where: {
+          bookingDate: { gte: monthStart, lt: monthEnd },
+          status: { in: ['PAID', 'CONFIRMED', 'COMPLETED'] },
+        },
+        _sum: { totalAmount: true },
+      }),
+      prisma.booking.findMany({
+        where: {
+          bookingDate: { gte: todayStart, lt: todayEnd },
+          status: { not: 'CANCELLED' },
+        },
+        include: { customer: true, items: true },
+        orderBy: [{ bookingTime: 'asc' }, { createdAt: 'asc' }],
+        take: 50,
+      }),
+      prisma.booking.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: { customer: true, items: true },
+        take: 20,
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        totalToday,
+        totalMonth,
+        revenueToday: ((revenueTodayResult._sum.totalAmount || 0) / 100).toFixed(2),
+        revenueMonth: ((revenueMonthResult._sum.totalAmount || 0) / 100).toFixed(2),
+        bookingsToday: bookingsTodayList,
+        bookingsRecent: bookingsRecentList,
+      },
+    });
+  }
+
   /**
    * GET /api/admin/bookings
    * List bookings with filters
@@ -57,6 +222,31 @@ export class AdminController {
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', `attachment; filename="bookings-${date}.json"`);
       res.json(result.bookings);
+    }
+  }
+
+  /**
+   * POST /api/admin/bookings/:id/confirm
+   * Mark booking as paid offline (confirm)
+   */
+  async confirmBooking(req: Request, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    if (!id) {
+      return res.status(400).json({ error: 'Booking ID is required' });
+    }
+    try {
+      const { notes } = (req.body || {}) as { notes?: string };
+      const userId = req.headers['x-user-id'] as string | undefined;
+      const userEmail = (req as any).adminEmail;
+      const booking = await bookingService.confirmBooking(id, userId, userEmail, notes);
+      try {
+        await emailService.sendConfirmationEmails(booking, false, { manualConfirm: true });
+      } catch (e) {
+        console.error('[Admin] Confirm emails failed:', e);
+      }
+      res.json({ success: true, data: booking });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message || 'Failed to confirm booking' });
     }
   }
 
@@ -198,16 +388,18 @@ export class AdminController {
         ],
       };
 
-      // Format data using email service
       const emailService = new EmailService();
       const data = (emailService as any).formatBookingData(mockBooking);
-      
-      // Load and render template
+      Object.assign(data, {
+        companyEmailTitle: 'New Booking Confirmed',
+        companyStatusBadge: 'CONFIRMED',
+        companyStatusBadgeColor: '#10B981',
+        companyPaymentStatusText: '✓ Confirmed',
+        companyPaymentStatusColor: '#10B981',
+      });
       const templateName = templateType === 'company' ? 'company-confirmed' : 'customer-confirmed';
-      let html = (emailService as any).loadTemplate(templateName);
-      html = (emailService as any).replaceTemplateVariables(html, data);
+      const html = (emailService as any).renderTemplate(templateName, data);
 
-      // Return HTML
       res.setHeader('Content-Type', 'text/html');
       res.send(html);
     } catch (error: any) {
@@ -337,13 +529,12 @@ export class AdminController {
         input.totalAmount
       );
 
-      // Send confirmation email if requested
+      // Send confirmation email if requested (manual/offline booking)
       if (input.sendConfirmation) {
         try {
-          await emailService.sendConfirmationEmails(booking, false);
+          await emailService.sendConfirmationEmails(booking, false, { manualConfirm: true });
         } catch (emailError) {
           console.error('Failed to send confirmation emails:', emailError);
-          // Don't fail the booking creation
         }
       }
 

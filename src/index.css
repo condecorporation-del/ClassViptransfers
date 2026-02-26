@@ -82,6 +82,10 @@
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
@@ -170,6 +174,22 @@
   transform-origin: bottom left;
 }
 
+/* Skeleton shimmer - elegant loading placeholder */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--muted-foreground) / 0.08) 50%,
+    hsl(var(--muted)) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* Premium shimmer effect */
 .shimmer {
   background: linear-gradient(
@@ -232,6 +252,18 @@
   animation: pulse-gold 2s ease-in-out infinite;
 }
 
+/* Touch-friendly horizontal scroll (momentum on iOS) */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Touch-optimized tables - smooth horizontal scroll */
+.table-scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
 /* Hide scrollbar */
 .scrollbar-hide {
   -ms-overflow-style: none;
@@ -251,18 +283,39 @@
   background: hsl(var(--sand-light));
 }
 
-/* Premium input styles */
+/* Premium input styles - touch-friendly (min 48px height on mobile) */
 .input-luxury {
   @apply w-full bg-background border-2 border-border rounded-xl px-4 py-3.5 text-sm text-foreground;
   @apply focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold/50;
   @apply transition-all duration-200;
   @apply placeholder:text-muted-foreground/60;
+  @apply touch-manipulation;
+  min-height: 44px;
+}
+@media (max-width: 768px) {
+  .input-luxury {
+    min-height: 48px;
+    padding-top: 0.875rem;
+    padding-bottom: 0.875rem;
+    font-size: 16px; /* prevents zoom on iOS focus */
+  }
 }
 .input-luxury.pl-11 {
   padding-left: 2.75rem !important;
 }
 .input-luxury:hover {
   border-color: hsl(var(--gold) / 0.3);
+}
+
+/* Touch-friendly button/CTA min size */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Safe area padding for notched devices */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Bright booking card */

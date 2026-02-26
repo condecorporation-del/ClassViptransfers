@@ -25,3 +25,11 @@ dist-ssr
 
 # Local Netlify folder
 .netlify
+
+# Environment files (never commit credentials)
+.env
+.env.local
+.env.*.local
+backend/.env
+backend/.env.bak
+backend/.env.bak2

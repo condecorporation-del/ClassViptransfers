@@ -48,6 +48,12 @@ router.patch(
   asyncHandler((req, res) => bookingController.updateCustomer(req, res))
 );
 
+// GET /api/bookings/:id/confirmation-pdf - Download PDF (token in query; must be before /:id)
+router.get(
+  '/:id/confirmation-pdf',
+  asyncHandler((req, res) => bookingController.getConfirmationPdf(req, res))
+);
+
 // GET /api/bookings/:id - Get booking details (must be last)
 router.get(
   '/:id',

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller';
+import { optionalAdminAuth } from '../middleware/auth';
 import { validate, asyncHandler } from '../middleware/validation';
 import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
@@ -37,9 +38,10 @@ router.post(
   asyncHandler((req, res) => authController.logout(req, res))
 );
 
-// GET /api/admin/auth/me
+// GET /api/admin/auth/me - optional auth to check if logged in
 router.get(
   '/me',
+  optionalAdminAuth,
   asyncHandler((req, res) => authController.me(req, res))
 );
 

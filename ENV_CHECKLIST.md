@@ -80,6 +80,7 @@ ADMIN_AUTH_DISABLED=false
 - [ ] `RESEND_API_KEY`
 - [ ] `EMAIL_FROM`
 - [ ] `EMAIL_COMPANY_TO`
+- [ ] `EMAIL_LOGO_URL` – URL del logo en el **header** de los correos (opcional; si no se define se usa FRONTEND_URL/logo.png)
 
 ### Backend - OpenAI
 - [ ] `OPENAI_API_KEY`
@@ -110,6 +111,7 @@ ADMIN_AUTH_DISABLED=false
 - RESEND_API_KEY
 - EMAIL_FROM
 - EMAIL_COMPANY_TO
+- EMAIL_LOGO_URL
 - OPENAI_API_KEY
 - OPENAI_MODEL
 - OPENAI_WHISPER_MODEL

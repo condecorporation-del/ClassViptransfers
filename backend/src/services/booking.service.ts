@@ -2,16 +2,179 @@ import { prisma } from '../lib/prisma';
 import { createAuditLog } from '../lib/audit';
 import { moneyToCents, CreateBookingInput } from '../lib/validation';
 import { BookingStatus, BookingType, BookingSource } from '@prisma/client';
+import { PricingService } from './pricing.service';
+
+const pricingService = new PricingService();
+
+// Extras allowed only for shuttle (no personalized/kits)
+const SHUTTLE_ALLOWED_EXTRA_CODES = new Set([
+  'OVERSIZE_LUGGAGE', 'EXTRA_STOP', 'GROCERY_STOP', 'BABY_SEAT', 'BOOSTER',
+  'SPECIAL_ASSISTANCE', 'WAIT_TIME', 'EARLY_MORNING', 'LATE_NIGHT', 'INCLUDED_BASIC_KIT',
+]);
+// Personalized/kits — not allowed for shuttle
+const SHUTTLE_BLOCKED_EXTRA_CODES = new Set([
+  'BIRTHDAY_KIT', 'ROMANTIC_KIT', 'CHAMPAGNE', 'CHAMPAGNE_UPGRADE',
+  'DELUXE_ARRIVAL_KIT', 'LUXURY_WELCOME',
+]);
 
 export class BookingService {
   /**
    * Create a draft booking
    */
   async createDraftBooking(input: CreateBookingInput, source: BookingSource = 'WEBSITE') {
-    // Calculate total amount in cents
-    const totalAmount = input.items.reduce((sum, item) => {
-      return sum + moneyToCents(item.unitPrice) * item.quantity;
-    }, 0);
+    const pax = Math.max(1, input.passengers ?? 1);
+
+    // --- Log payload (sanitized) ---
+    console.log('[Booking] Payload received:', {
+      type: input.type,
+      serviceType: input.serviceType,
+      tripType: input.tripType,
+      areaId: input.areaId ?? null,
+      passengers: pax,
+      itemsCount: input.items?.length ?? 0,
+      hasPricingData: !!input.pricingData,
+    });
+
+    let totalAmount: number;
+    let items = input.items;
+
+    // --- Validation: passengers range for transport ---
+    if (input.type === 'TRANSPORTATION') {
+      if (pax < 1 || pax > 14) {
+        throw new Error('Passengers must be between 1 and 14 for transport bookings.');
+      }
+    }
+
+    // --- Validation: shuttle extras + vehicle capacity (backend enforcement) ---
+    if (input.type === 'TRANSPORTATION') {
+      if (input.serviceType === 'shuttle') {
+        const extraCodes = new Set<string>();
+        if (input.pricingData?.extras?.length) {
+          input.pricingData.extras.forEach((e) => extraCodes.add(e.code));
+        }
+        items.forEach((item) => {
+          if (item.type === 'ADDON' && item.metadata?.code) {
+            extraCodes.add(String(item.metadata.code));
+          }
+        });
+        for (const code of extraCodes) {
+          if (SHUTTLE_BLOCKED_EXTRA_CODES.has(code)) {
+            throw new Error('Shuttle does not allow personalized extras');
+          }
+        }
+      }
+
+      const vehicleClass = (input.pricingData?.vehicleClass ?? (input.metadata as Record<string, unknown>)?.vehicleClass) as string | undefined;
+      const vc = vehicleClass?.toUpperCase?.() || vehicleClass;
+      if (input.serviceType === 'private' && vc) {
+        if (vc === 'SUV') {
+          if (pax > 5) {
+            throw new Error('SUV allows 1-5 passengers. For 6 or more, please select Sprinter.');
+          }
+        }
+        if (vc === 'SPRINTER') {
+          if (pax < 6 || pax > 14) {
+            throw new Error('Sprinter allows 6-14 passengers.');
+          }
+        }
+      }
+    }
+
+    // If TRANSPORTATION type with areaId, calculate price from Area
+    if (input.type === 'TRANSPORTATION' && input.areaId && input.tripType) {
+      try {
+        const { totalCents: baseCents, area } = await pricingService.getTransportPriceByArea(
+          input.areaId,
+          input.tripType
+        );
+        // Shuttle: price per passenger; private: flat rate
+        const totalCents = input.serviceType === 'shuttle'
+          ? Math.round(baseCents * pax)
+          : baseCents;
+        totalAmount = totalCents;
+        items = [
+          {
+            type: 'TRANSPORTATION' as const,
+            name: `Transfer: ${area.name} (${input.tripType === 'roundtrip' ? 'Round trip' : 'One way'})`,
+            quantity: input.serviceType === 'shuttle' ? pax : 1,
+            unitPrice: totalCents / 100,
+            metadata: {
+              areaId: area.id,
+              areaName: area.name,
+              tripType: input.tripType,
+              oneWayPriceCents: area.oneWayPriceCents,
+              roundTripPriceCents: area.roundTripPriceCents,
+              pricePerPax: input.serviceType === 'shuttle',
+            },
+          },
+        ];
+        console.log('[Booking] Price from area:', { areaName: area.name, tripType: input.tripType, baseCents, passengers: pax, totalCents, serviceType: input.serviceType });
+      } catch (error: any) {
+        console.error('[Booking] Area pricing failed:', error?.message || error);
+        throw new Error(error.message || 'Invalid area for transport pricing');
+      }
+    } else if (input.type === 'TRANSPORTATION' && input.pricingData) {
+      // Legacy: pricing from zones/vehicle
+      try {
+        const quote = await pricingService.calculateQuote({
+          serviceType: 'TRANSFER',
+          tripType: input.pricingData.tripType === 'roundtrip' ? 'ROUND_TRIP' : 'ONE_WAY',
+          zoneFrom: input.pricingData.zoneFrom,
+          zoneTo: input.pricingData.zoneTo,
+          vehicleClass: input.pricingData.vehicleClass,
+          passengers: input.passengers,
+          extras: input.pricingData.extras,
+        });
+
+        totalAmount = quote.totalCents;
+
+        // Override items with calculated pricing
+        items = [
+          {
+            type: 'TRANSPORTATION' as const,
+            name: `Transfer: ${input.pricingData.zoneFrom} → ${input.pricingData.zoneTo}`,
+            quantity: 1,
+            unitPrice: quote.basePrice,
+            metadata: {
+              pricingRuleId: quote.pricingRuleId,
+              basePriceCents: quote.basePriceCents,
+              extras: quote.extrasBreakdown,
+              included: quote.includedBreakdown || [],
+            },
+          },
+        ];
+
+        // Add extras as separate items
+        for (const extra of quote.extrasBreakdown) {
+          items.push({
+            type: 'ADDON' as const,
+            name: extra.label,
+            quantity: extra.qty,
+            unitPrice: extra.price,
+            metadata: {
+              code: extra.code,
+            },
+          });
+        }
+      } catch (error: any) {
+        console.error('[Booking] Pricing calculation failed (legacy path):', error?.message || error);
+        throw new Error(
+          `Pricing calculation failed: ${error?.message || 'Invalid zones or pricing data'}. Please check route and try again.`
+        );
+      }
+    } else {
+      // Calculate total amount in cents from items (e.g. ACTIVITY, COMBO, or transport without areaId/pricingData)
+      totalAmount = Math.round(
+        input.items.reduce((sum, item) => sum + moneyToCents(item.unitPrice) * item.quantity, 0)
+      );
+      console.log('[Booking] Total from items:', { totalCents: totalAmount, itemsCount: input.items.length });
+    }
+
+    totalAmount = Math.round(totalAmount);
+    if (totalAmount < 0) {
+      throw new Error('Booking total cannot be negative');
+    }
+    console.log('[Booking] Final total (cents):', totalAmount);
 
     // Create or find customer by email
     let customer = await prisma.customer.findFirst({
@@ -55,7 +218,7 @@ export class BookingService {
       }
     }
 
-    // Create booking with items
+    // Create booking with items (totalAmount and item prices stored in cents)
     const booking = await prisma.booking.create({
       data: {
         type: input.type as BookingType,
@@ -70,7 +233,7 @@ export class BookingService {
         arrivalTime: input.arrivalTime,
         departureFlightNumber: input.departureFlightNumber,
         departureTime: input.departureTime,
-        passengers: input.passengers,
+        passengers: pax,
         serviceType: input.serviceType,
         tripType: input.tripType,
         route: input.route,
@@ -79,15 +242,19 @@ export class BookingService {
         notes: input.notes,
         metadata: input.metadata || {},
         items: {
-          create: input.items.map(item => ({
-            type: item.type,
-            name: item.name,
-            slug: item.slug,
-            quantity: item.quantity,
-            unitPrice: moneyToCents(item.unitPrice),
-            totalPrice: moneyToCents(item.unitPrice) * item.quantity,
-            metadata: item.metadata || {},
-          })),
+          create: items.map((item) => {
+            const unitCents = moneyToCents(item.unitPrice);
+            const totalPrice = unitCents * item.quantity;
+            return {
+              type: item.type,
+              name: item.name,
+              slug: item.slug,
+              quantity: item.quantity,
+              unitPrice: unitCents,
+              totalPrice,
+              metadata: item.metadata || {},
+            };
+          }),
         },
       },
       include: {
@@ -95,6 +262,8 @@ export class BookingService {
         items: true,
       },
     });
+
+    console.log('[Booking] Saved:', { id: booking.id, totalAmount: booking.totalAmount, itemsCount: booking.items.length });
 
     // Create audit log
     await createAuditLog({
@@ -110,7 +279,7 @@ export class BookingService {
   /**
    * Get booking by ID
    */
-  async getBookingById(id: string) {
+  async getBookingById(id: string, options?: { includeEmailLogs?: boolean }) {
     const booking = await prisma.booking.findUnique({
       where: { id },
       include: {
@@ -123,11 +292,13 @@ export class BookingService {
           orderBy: { createdAt: 'desc' },
         },
         assignments: {
-          include: {
-            // Note: Driver and Vehicle relations would be included here
-            // when those models are fully implemented
-          },
+          include: {},
         },
+        ...(options?.includeEmailLogs && {
+          emailLogs: {
+            orderBy: { createdAt: 'desc' },
+          },
+        }),
       },
     });
 

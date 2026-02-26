@@ -34,6 +34,7 @@ export const createBookingSchema = z.object({
   passengers: z.number().int().min(1).default(1),
   serviceType: z.enum(['private', 'shuttle']).optional(),
   tripType: z.enum(['oneway', 'roundtrip']).optional(),
+  areaId: z.string().cuid().optional(),
   route: z.string().optional(),
   items: z.array(z.object({
     type: z.enum(['TRANSPORTATION', 'ACTIVITY', 'ADDON', 'PARK_ENTRANCE', 'COMBO', 'CRAZY_COMBO']),
@@ -43,9 +44,34 @@ export const createBookingSchema = z.object({
     unitPrice: z.number().nonnegative(), // In dollars
     metadata: z.record(z.any()).optional(),
   })).min(1, 'At least one item is required'),
+  pricingData: z.object({
+    tripType: z.enum(['oneway', 'roundtrip']),
+    zoneFrom: z.string(),
+    zoneTo: z.string(),
+    vehicleClass: z.string(),
+    extras: z.array(z.object({
+      code: z.string(),
+      qty: z.number().int().min(1),
+    })).optional(),
+  }).optional(),
   notes: z.string().optional(),
   metadata: z.record(z.any()).optional(),
-});
+})
+  .refine(
+    (data) => {
+      if (data.type !== 'TRANSPORTATION') return true;
+      return !!(data.areaId && data.tripType) || !!data.pricingData;
+    },
+    { message: 'Transport bookings require areaId and tripType, or pricingData', path: ['areaId'] }
+  )
+  .refine(
+    (data) => {
+      const p = data.passengers ?? 1;
+      if (data.type !== 'TRANSPORTATION') return true;
+      return p >= 1 && p <= 14;
+    },
+    { message: 'Passengers must be between 1 and 14 for transport', path: ['passengers'] }
+  );
 
 export const confirmBookingSchema = z.object({
   notes: z.string().optional(),
@@ -166,10 +192,18 @@ export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
 export type ManualBookingInput = z.infer<typeof manualBookingSchema>;
 
 export const aiChatSchema = z.object({
-  message: z.string().min(1, 'Message is required'),
-  bookingDraftId: z.string().cuid().optional().nullable(),
+  message: z.string().transform((s) => (s && typeof s === 'string' ? s.trim() : '')).pipe(z.string().min(1, 'Message is required')),
+  bookingDraftId: z
+    .union([z.string(), z.null(), z.undefined()])
+    .optional()
+    .nullable()
+    .transform((v) => (v && typeof v === 'string' && v.trim().length > 0 ? v.trim() : null)),
   locale: z.enum(['en', 'es']).default('en'),
-  sessionId: z.string().optional(),
+  sessionId: z
+    .union([z.string(), z.null(), z.undefined()])
+    .optional()
+    .nullable()
+    .transform((v) => (v && typeof v === 'string' && v.trim().length > 0 ? v.trim() : undefined)),
 });
 
 export type AIChatInput = z.infer<typeof aiChatSchema>;

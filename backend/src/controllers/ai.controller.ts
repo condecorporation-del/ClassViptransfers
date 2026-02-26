@@ -63,6 +63,7 @@ export class AIController {
   async chat(req: Request, res: Response) {
     try {
       if (!aiService) {
+        console.warn('[AI Chat] OPENAI_API_KEY missing - service not configured');
         return res.status(400).json({
           success: false,
           error: 'OPENAI_API_KEY missing - AI service is not configured',
@@ -70,16 +71,25 @@ export class AIController {
       }
 
       const input = aiChatSchema.parse(req.body);
-      
-      // Generate or use session ID
       const sessionId = input.sessionId || randomUUID();
+
+      if (!input.message || input.message.trim().length < 1) {
+        return res.status(400).json({ success: false, error: 'Message is required' });
+      }
+      if (input.message.length > 2000) {
+        return res.status(400).json({ success: false, error: 'Message too long (max 2000 characters)' });
+      }
+
+      console.log('[AI Chat] Request:', { sessionId: sessionId.slice(0, 8), locale: input.locale, messageLen: input.message?.length, hasDraft: !!input.bookingDraftId });
 
       const result = await aiService.chat(
         input.message,
-        input.bookingDraftId || null,
+        input.bookingDraftId ?? null,
         sessionId,
         input.locale
       );
+
+      console.log('[AI Chat] Success:', { replyLen: result.reply?.length, bookingDraftId: result.bookingDraftId ?? null, nextAction: result.nextAction });
 
       res.json({
         success: true,
@@ -93,8 +103,8 @@ export class AIController {
         },
       });
     } catch (error: any) {
-      console.error('Chat error:', error);
-      const statusCode = error.message?.includes('OPENAI_API_KEY') ? 400 : 500;
+      console.error('[AI Chat] Error:', error?.message ?? error);
+      const statusCode = error.message?.includes('OPENAI_API_KEY') ? 400 : (error?.code === 'ZodError' || error?.name === 'ZodError' ? 400 : 500);
       res.status(statusCode).json({
         success: false,
         error: error.message || 'Failed to process chat',

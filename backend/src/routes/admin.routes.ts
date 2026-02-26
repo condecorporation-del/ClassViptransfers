@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { AdminController } from '../controllers/admin.controller';
+import { PricingController } from '../controllers/pricing.controller';
 import { validate, asyncHandler } from '../middleware/validation';
 import { requireAdminAuth } from '../middleware/auth';
 import {
@@ -14,9 +15,22 @@ import {
 
 const router = Router();
 const adminController = new AdminController();
+const pricingController = new PricingController();
 
 // Apply auth middleware to all routes (except auth routes which are in separate file)
 router.use(requireAdminAuth);
+
+// GET /api/admin/stats - Dashboard stats (emails today, bookings today, etc.)
+router.get(
+  '/stats',
+  asyncHandler((req, res) => adminController.getStats(req, res))
+);
+
+// GET /api/admin/dashboard - Full dashboard with bookings
+router.get(
+  '/dashboard',
+  asyncHandler((req, res) => adminController.getDashboard(req, res))
+);
 
 // GET /api/admin/bookings - List bookings with filters
 router.get(
@@ -25,11 +39,29 @@ router.get(
   asyncHandler((req, res) => adminController.listBookings(req, res))
 );
 
-// GET /api/admin/bookings/export - Export bookings
+// GET /api/admin/bookings/export - Export bookings (must be before /:id)
 router.get(
   '/bookings/export',
   validate(exportBookingsSchema, 'query'),
   asyncHandler((req, res) => adminController.exportBookings(req, res))
+);
+
+// GET /api/admin/bookings/:id - Get single booking with email logs
+router.get(
+  '/bookings/:id',
+  asyncHandler((req, res) => adminController.getBooking(req, res))
+);
+
+// GET /api/admin/bookings/:id/confirmation-pdf - Download confirmation PDF
+router.get(
+  '/bookings/:id/confirmation-pdf',
+  asyncHandler((req, res) => adminController.getConfirmationPdf(req, res))
+);
+
+// POST /api/admin/bookings/:id/confirm - Mark as paid offline
+router.post(
+  '/bookings/:id/confirm',
+  asyncHandler((req, res) => adminController.confirmBooking(req, res))
 );
 
 // POST /api/admin/bookings/:id/resend-confirmation - Resend confirmation emails
@@ -101,6 +133,66 @@ router.post(
   '/vehicles',
   validate(createVehicleSchema, 'body'),
   asyncHandler((req, res) => adminController.createVehicle(req, res))
+);
+
+// Pricing Rules
+router.get(
+  '/pricing/rules',
+  asyncHandler((req, res) => pricingController.listRules(req, res))
+);
+
+router.post(
+  '/pricing/rules',
+  asyncHandler((req, res) => pricingController.createRule(req, res))
+);
+
+router.put(
+  '/pricing/rules/:id',
+  asyncHandler((req, res) => pricingController.updateRule(req, res))
+);
+
+router.delete(
+  '/pricing/rules/:id',
+  asyncHandler((req, res) => pricingController.deleteRule(req, res))
+);
+
+// Pricing Extras
+router.get(
+  '/pricing/extras',
+  asyncHandler((req, res) => pricingController.listExtras(req, res))
+);
+
+router.post(
+  '/pricing/extras',
+  asyncHandler((req, res) => pricingController.createExtra(req, res))
+);
+
+router.put(
+  '/pricing/extras/:id',
+  asyncHandler((req, res) => pricingController.updateExtra(req, res))
+);
+
+router.delete(
+  '/pricing/extras/:id',
+  asyncHandler((req, res) => pricingController.deleteExtra(req, res))
+);
+
+// Pricing Areas (admin CRUD)
+router.get(
+  '/pricing/areas',
+  asyncHandler((req, res) => pricingController.listAreas(req, res))
+);
+router.post(
+  '/pricing/areas',
+  asyncHandler((req, res) => pricingController.createArea(req, res))
+);
+router.put(
+  '/pricing/areas/:id',
+  asyncHandler((req, res) => pricingController.updateArea(req, res))
+);
+router.delete(
+  '/pricing/areas/:id',
+  asyncHandler((req, res) => pricingController.deactivateArea(req, res))
 );
 
 export default router;

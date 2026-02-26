@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Lock, Mail } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+import { getApiBaseUrl } from '@/lib/api';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -21,17 +20,15 @@ export default function AdminLogin() {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/auth/me`, {
-        credentials: 'include',
-      });
-
+      const base = getApiBaseUrl();
+      const url = base ? `${base}/api/admin/auth/me` : '/api/admin/auth/me';
+      const response = await fetch(url, { credentials: 'include' });
       if (response.ok) {
-        // Already authenticated, redirect to admin
         navigate('/admin');
-      } else {
-        setCheckingAuth(false);
       }
     } catch (err) {
+      console.debug('[AdminLogin] checkAuth error:', err);
+    } finally {
       setCheckingAuth(false);
     }
   };
@@ -42,24 +39,33 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/auth/login`, {
+      const base = getApiBaseUrl();
+      const url = base ? `${base}/api/admin/auth/login` : '/api/admin/auth/login';
+      console.debug('[AdminLogin] POST', url, { email });
+      const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      let data: { success?: boolean; error?: string } = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        setError(`Invalid response (${response.status})`);
+        return;
+      }
+      console.debug('[AdminLogin] Response', response.status, data);
 
       if (data.success) {
-        // Redirect to admin
         navigate('/admin');
       } else {
         setError(data.error || 'Login failed');
       }
     } catch (err: any) {
+      console.error('[AdminLogin] Request error:', err);
       setError(err.message || 'Network error');
     } finally {
       setLoading(false);

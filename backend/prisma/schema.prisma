@@ -12,6 +12,17 @@ datasource db {
   // Or use: ?pgbouncer=true&connection_limit=1 for connection pooling
 }
 
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([email])
+}
+
 model Customer {
   id        String   @id @default(cuid())
   name      String
@@ -318,9 +329,12 @@ model AdminAuditLog {
 }
 
 enum EmailType {
-  CUSTOMER_CONFIRMATION
+  CUSTOMER_CONFIRMATION   // Payment confirmed (PayPal)
   COMPANY_NOTIFICATION
   ADMIN_RESEND
+  BOOKING_RECEIVED       // Pending payment - draft created
+  MANUAL_CONFIRMED       // Admin marked paid offline
+  CANCELLED              // Booking cancelled
 }
 
 enum EmailStatus {
@@ -339,15 +353,16 @@ model EmailLog {
   
   // Recipient
   to          String      // Email address
+  bcc         String?     // BCC address (e.g. company copy)
   from        String?     // From address used
   
   // Provider tracking
-  providerId  String?     // Resend email ID or SendGrid message ID
-  provider    String?     // "resend" or "sendgrid"
+  providerId  String?     // Resend email ID
+  provider    String?     // "resend"
+  error       String?     // Error message if failed
   
   // Content
   subject     String
-  error       String?     // Error message if failed
   
   // Timestamps
   sentAt      DateTime?
@@ -357,6 +372,7 @@ model EmailLog {
   @@index([bookingId])
   @@index([type, status])
   @@index([sentAt])
+  @@index([createdAt])
 }
 
 model AIConversation {
@@ -388,5 +404,122 @@ model AIConversation {
   @@index([bookingId])
   @@index([sessionId])
   @@index([createdAt])
+}
+
+enum ServiceType {
+  TRANSFER
+  ACTIVITY
+  COMBO
+}
+
+enum TripType {
+  ONE_WAY
+  ROUND_TRIP
+}
+
+enum VehicleClass {
+  SUV
+  SUBURBAN
+  SPRINTER
+  VAN
+  SEDAN
+  LUXURY
+}
+
+model Hotel {
+  id        String   @id @default(cuid())
+  name      String
+  zone      String   // Must match zoneTo/zoneFrom in PricingRule
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, zone])
+  @@index([zone])
+  @@index([isActive])
+}
+
+model Area {
+  id                 String   @id @default(cuid())
+  name               String   @unique
+  oneWayPriceCents   Int      // Price in cents for one-way
+  roundTripPriceCents Int     // Price in cents for round-trip
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model PricingRule {
+  id            String      @id @default(cuid())
+  active        Boolean     @default(true)
+  serviceType   ServiceType @default(TRANSFER)
+  tripType      TripType
+  zoneFrom      String      // e.g., "SJD", "Cabo San Lucas", "San Jose", "Corridor"
+  zoneTo        String
+  vehicleClass  VehicleClass
+  basePriceCents Int       // Base price in cents
+  currency      String      @default("USD")
+  passengersMin Int?       // Optional min passengers
+  passengersMax Int?       // Optional max passengers
+  notes         String?     // Optional notes
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([active, serviceType, tripType])
+  @@index([zoneFrom, zoneTo])
+  @@index([vehicleClass])
+}
+
+enum ExtraCode {
+  // Included (no charge)
+  INCLUDED_BASIC_KIT
+  // Paid extras
+  GROCERY_STOP
+  EXTRA_STOP
+  BABY_SEAT
+  BOOSTER
+  MEET_GREET
+  SPECIAL_ASSISTANCE
+  OVERSIZE_LUGGAGE
+  WAIT_TIME
+  LATE_NIGHT
+  EARLY_MORNING
+  // Upsell kits
+  CHAMPAGNE
+  CHAMPAGNE_UPGRADE
+  LUXURY_WELCOME
+  ROMANTIC_KIT
+  BIRTHDAY_KIT
+  DELUXE_ARRIVAL_KIT
+}
+
+enum PricingMode {
+  PER_BOOKING
+  PER_STOP
+  PER_SEAT
+  PER_HOUR
+}
+
+model PricingExtra {
+  id            String      @id @default(cuid())
+  active        Boolean     @default(true)
+  included      Boolean     @default(false)  // If true: always included, no charge, show in "Included" section
+  code          ExtraCode
+  label         String      // Display label (EN)
+  labelEs       String?     // Display label (ES)
+  priceCents    Int         // Price in cents (0 if included)
+  pricingMode   PricingMode // How price is applied
+  maxQty        Int?        // Optional max quantity
+  description   String?     // Optional description
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([active])
+  @@index([code])
+  @@index([included])
 }
 

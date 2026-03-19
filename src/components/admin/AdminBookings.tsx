@@ -9,6 +9,10 @@ type Booking = {
   status: string;
   bookingDate: string;
   bookingTime: string | null;
+  arrivalTime: string | null;
+  flightNumber: string | null;
+  route: string | null;
+  serviceType: string | null;
   totalAmount: number;
   passengers: number;
   customer: { name: string; email: string; phone: string };
@@ -145,14 +149,15 @@ export const AdminBookings = () => {
           No bookings found for this date
         </div>
       ) : (
-        <div className="glass-card rounded-xl border border-border overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="glass-card rounded-xl border border-border overflow-hidden overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                <th className="text-left p-3 font-medium">ID</th>
                 <th className="text-left p-3 font-medium">Date</th>
                 <th className="text-left p-3 font-medium">Customer</th>
-                <th className="text-left p-3 font-medium">Type</th>
+                <th className="text-left p-3 font-medium">Arrival time</th>
+                <th className="text-left p-3 font-medium">Flight</th>
+                <th className="text-left p-3 font-medium">Service / Route</th>
                 <th className="text-left p-3 font-medium">Status</th>
                 <th className="text-right p-3 font-medium">Total</th>
                 <th className="p-3" />
@@ -165,10 +170,13 @@ export const AdminBookings = () => {
                   className="border-b border-border hover:bg-muted/20 cursor-pointer"
                   onClick={() => fetchBookingDetail(b.id)}
                 >
-                  <td className="p-3 font-mono text-xs">{b.id.slice(0, 8)}</td>
-                  <td className="p-3">{formatDate(b.bookingDate)} {b.bookingTime || ''}</td>
+                  <td className="p-3">{formatDate(b.bookingDate)}</td>
                   <td className="p-3">{b.customer?.name || '-'}</td>
-                  <td className="p-3">{formatType(b.type)}</td>
+                  <td className="p-3">{b.bookingTime || b.arrivalTime || '—'}</td>
+                  <td className="p-3 font-mono text-xs">{b.flightNumber || '—'}</td>
+                  <td className="p-3 text-muted-foreground">
+                    {[b.serviceType, b.route].filter(Boolean).join(' · ') || '—'}
+                  </td>
                   <td className="p-3">
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${formatStatus(b.status)}`}>
                       {formatType(b.status)}
@@ -273,6 +281,9 @@ function BookingDetailView({
           <div>
             <p className="text-muted-foreground">Details</p>
             <p>Date: {new Date(booking.bookingDate).toLocaleDateString()} {booking.bookingTime || ''}</p>
+            <p>Arrival time: {booking.bookingTime || booking.arrivalTime || '—'}</p>
+            <p>Flight: {booking.flightNumber || '—'}</p>
+            <p>Service / Route: {[booking.serviceType, booking.route].filter(Boolean).join(' · ') || '—'}</p>
             <p>Total: ${(booking.totalAmount / 100).toFixed(2)}</p>
             <p>Status: {formatType(booking.status)}</p>
           </div>

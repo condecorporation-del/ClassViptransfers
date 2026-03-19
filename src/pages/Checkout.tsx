@@ -51,9 +51,15 @@ export default function Checkout() {
     fetchBooking();
   }, [bookingId, lang]);
 
+  const getBookingToken = () => {
+    if (!bookingId) return '';
+    const bt = sessionStorage.getItem(`bt_${bookingId}`) || searchParams.get('bt') || '';
+    return bt ? `?token=${bt}` : '';
+  };
+
   const fetchBooking = async () => {
     try {
-      const response = await fetch(`${getApiBaseUrl()}/api/bookings/${bookingId}`);
+      const response = await fetch(`${getApiBaseUrl()}/api/bookings/${bookingId}${getBookingToken()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch booking');
       }

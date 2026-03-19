@@ -217,7 +217,7 @@ const ActivityDetail = () => {
                 className="gold-gradient text-secondary-foreground px-8 py-3.5 rounded-full text-base font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
                 {lang === 'en' ? 'Reserve Experience' : 'Reservar Experiencia'} <ArrowRight size={18} />
               </Link>
-              <a href={`https://wa.me/5216241234567?text=${encodeURIComponent(activity.whatsappMessage)}`}
+              <a href={`https://wa.me/5216241222174?text=${encodeURIComponent(activity.whatsappMessage)}`}
                 target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-off-white/80 hover:text-white border border-off-white/30 px-6 py-3 rounded-full text-sm font-medium transition-colors">
                 <MessageCircle size={16} /> {lang === 'en' ? 'Ask via WhatsApp' : 'Preguntar por WhatsApp'}

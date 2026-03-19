@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Shield, MapPin, Clock, Headphones, ArrowRight, Star, ChevronDown, Trophy, Car, Users, Quote, Plane, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Shield, MapPin, Headphones, ArrowRight, Star, ChevronDown, Trophy, Car, Quote, Plane, Sparkles, CheckCircle2 } from 'lucide-react';
+import { SEO } from '@/components/SEO';
 import {
   Accordion,
   AccordionContent,
@@ -48,15 +49,6 @@ const Index = () => {
     { value: '24/7', label: t('trust.support') },
   ];
 
-  const activities = [
-    { key: 'activity.camel', duration: '1h', price: '$120', slug: 'camel-ride' },
-    { key: 'activity.horseback', duration: '1h', price: '$120', slug: 'horseback-riding' },
-    { key: 'activity.atv', duration: '2h', price: '$120', slug: 'atv' },
-    { key: 'activity.rzr', duration: '2h', price: '$205+', slug: 'utv-adventure' },
-    { key: 'activity.sunset', duration: '—', price: t('activities.quoteOnRequest'), slug: null },
-    { key: 'activity.fishing', duration: '—', price: t('activities.quoteOnRequest'), slug: null },
-  ];
-
   const steps = [
     { num: '01', titleKey: 'howItWorks.step1.title', descKey: 'howItWorks.step1.desc', icon: <Plane size={24} /> },
     { num: '02', titleKey: 'howItWorks.step2.title', descKey: 'howItWorks.step2.desc', icon: <CheckCircle2 size={24} /> },
@@ -77,8 +69,41 @@ const Index = () => {
     t('transfers.included.door'),
   ];
 
+  const localBusinessLd = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: 'Class VIP Transfers',
+    description: 'Premium luxury airport transportation and adventure experiences in Los Cabos, Mexico.',
+    url: 'https://classviptransfers.com',
+    telephone: '+526241222174',
+    email: 'Armando@caboviptransfers.com',
+    address: { '@type': 'PostalAddress', addressLocality: 'Los Cabos', addressRegion: 'Baja California Sur', addressCountry: 'MX' },
+    geo: { '@type': 'GeoCoordinates', latitude: 22.8905, longitude: -109.9167 },
+    priceRange: '$$',
+    image: 'https://classviptransfers.com/logo.png',
+    sameAs: ['https://wa.me/5216241222174'],
+    openingHoursSpecification: { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'], opens: '00:00', closes: '23:59' },
+  };
+
+  const faqLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      { '@type': 'Question', name: 'How far in advance should I book a Los Cabos airport transfer?', acceptedAnswer: { '@type': 'Answer', text: 'We recommend booking at least 24 hours in advance to guarantee availability. However, we accept last-minute bookings subject to vehicle availability.' } },
+      { '@type': 'Question', name: 'What is included in a private airport transfer in Los Cabos?', acceptedAnswer: { '@type': 'Answer', text: 'Private transfers include flight monitoring, cold beverages, bilingual driver, free Wi-Fi, and door-to-door service in a luxury SUV or Sprinter Van.' } },
+      { '@type': 'Question', name: 'Can I cancel or modify my Los Cabos transfer booking?', acceptedAnswer: { '@type': 'Answer', text: 'Yes! Free cancellation more than 48 hours before your service for a full refund. Modifications can be made anytime via WhatsApp or email.' } },
+      { '@type': 'Question', name: 'Do you provide child car seats for airport transfers?', acceptedAnswer: { '@type': 'Answer', text: 'Yes, we provide complimentary child seats upon request. Please mention it when booking or contact us via WhatsApp.' } },
+    ],
+  };
+
   return (
     <div className="overflow-hidden">
+      <SEO
+        title="Luxury Airport Transfers & Adventures in Los Cabos"
+        description="Book private luxury airport transfers in Los Cabos. SUV & Sprinter service from SJD airport to hotels in Cabo San Lucas, San Jose del Cabo & the Tourist Corridor. Adventure tours available."
+        keywords="Los Cabos airport transfer, cabo san lucas transportation, luxury transfer cabo, private transportation los cabos, SJD airport shuttle, cabo airport taxi, cabo luxury van, tourist corridor transfer"
+        jsonLd={[localBusinessLd, faqLd]}
+      />
       {/* ===== HERO (dark cinematic) ===== */}
       <section className="relative h-screen min-h-[700px] overflow-hidden">
         {/* All images stacked — crossfade via opacity, no unmounting = no gray flash */}
@@ -201,10 +226,10 @@ const Index = () => {
             <p className="text-muted-foreground max-w-xl mx-auto text-lg font-light">{t('home.transfers.subtitle')}</p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Private */}
+          <div className="max-w-xl mx-auto">
+            {/* Private only */}
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-              className="glass-card rounded-2xl p-8 premium-card border border-border group relative overflow-hidden">
+              className="glass-card rounded-2xl p-8 premium-card border-2 border-gold/20 group relative overflow-hidden">
               <div className="absolute top-0 right-0 gold-gradient text-secondary-foreground text-[10px] font-bold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider">
                 {t('transfers.private.badge')}
               </div>
@@ -231,33 +256,6 @@ const Index = () => {
                 {t('home.transfers.bookThis')} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </Link>
             </motion.div>
-
-            {/* Shuttle */}
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.15 }}
-              className="glass-card rounded-2xl p-8 premium-card border border-border group">
-              <div className="flex items-center gap-4 mb-5">
-                <div className="w-14 h-14 rounded-2xl bg-ocean/10 border border-ocean/20 flex items-center justify-center">
-                  <Users size={24} className="text-ocean" />
-                </div>
-                <div>
-                  <h3 className="font-display text-2xl font-bold text-foreground">{t('home.transfers.shuttle')}</h3>
-                  <p className="text-muted-foreground text-sm">{t('home.transfers.shuttleDesc')}</p>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground mb-6">
-                {t('home.transfers.shuttlePricingNote', { en: 'Contact for shared shuttle pricing.', es: 'Contacta para precios de shuttle compartido.' })}
-              </p>
-              <div className="flex flex-wrap gap-2 mb-6">
-                {includes.slice(0, 4).map((inc, i) => (
-                  <span key={i} className="text-[11px] text-muted-foreground bg-sand-light px-3 py-1 rounded-full flex items-center gap-1">
-                    <CheckCircle2 size={10} className="text-gold" /> {inc}
-                  </span>
-                ))}
-              </div>
-              <Link to="/book" className="border-2 border-gold/40 text-gold px-8 py-3.5 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:bg-gold/10 transition-all group">
-                {t('home.transfers.bookThis')} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </motion.div>
           </div>
         </div>
       </section>
@@ -271,36 +269,6 @@ const Index = () => {
             <span className="font-accent text-gold text-sm tracking-[0.3em] uppercase mb-3 block">{t('home.activities.eyebrow')}</span>
             <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-bold mb-5 text-foreground">{t('home.activities.title')}</h2>
             <p className="text-muted-foreground max-w-xl mx-auto text-lg font-light">{t('home.activities.subtitle')}</p>
-          </motion.div>
-
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10"
-          >
-            {activities.map((act, i) => {
-              const CardWrapper = act.slug ? Link : 'div';
-              const cardProps = act.slug ? { to: `/activities/${act.slug}` } : {};
-              return (
-                <motion.div key={i} variants={fadeUp}>
-                  <CardWrapper {...cardProps as any}
-                    className="glass-card rounded-xl p-6 premium-card border border-border text-center group block hover:border-gold/40 transition-all cursor-pointer">
-                    <p className="font-display text-lg font-bold mb-2 text-foreground group-hover:text-gold transition-colors">{t(act.key)}</p>
-                    <p className="text-muted-foreground text-xs flex items-center justify-center gap-1 mb-2">
-                      <Clock size={12} /> {act.duration}
-                    </p>
-                    <p className="text-gold font-bold text-sm">{act.price}</p>
-                    {act.slug && (
-                      <p className="text-xs text-gold/70 mt-2 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        View Details <ArrowRight size={10} />
-                      </p>
-                    )}
-                  </CardWrapper>
-                </motion.div>
-              );
-            })}
           </motion.div>
 
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid sm:grid-cols-2 gap-6 mb-8">

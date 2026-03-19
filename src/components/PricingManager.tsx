@@ -42,19 +42,29 @@ interface Area {
   isActive: boolean;
 }
 
+interface Hotel {
+  id: string;
+  name: string;
+  zone: string;
+  isActive: boolean;
+}
+
 export function PricingManager() {
   const { getAuthHeaders } = useAdminAuth();
   const [rules, setRules] = useState<PricingRule[]>([]);
   const [extras, setExtras] = useState<PricingExtra[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
+  const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'rules' | 'extras' | 'areas'>('areas');
+  const [activeTab, setActiveTab] = useState<'rules' | 'extras' | 'areas' | 'hotels'>('areas');
   const [editingRule, setEditingRule] = useState<PricingRule | null>(null);
   const [editingExtra, setEditingExtra] = useState<PricingExtra | null>(null);
   const [editingArea, setEditingArea] = useState<Area | null>(null);
+  const [editingHotel, setEditingHotel] = useState<Hotel | null>(null);
   const [showRuleForm, setShowRuleForm] = useState(false);
   const [showExtraForm, setShowExtraForm] = useState(false);
   const [showAreaForm, setShowAreaForm] = useState(false);
+  const [showHotelForm, setShowHotelForm] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -63,19 +73,22 @@ export function PricingManager() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [rulesRes, extrasRes, areasRes] = await Promise.all([
+      const [rulesRes, extrasRes, areasRes, hotelsRes] = await Promise.all([
         fetch(getAdminUrl('/api/admin/pricing/rules'), { credentials: 'include', headers: getAuthHeaders() }),
         fetch(getAdminUrl('/api/admin/pricing/extras'), { credentials: 'include', headers: getAuthHeaders() }),
         fetch(getAdminUrl('/api/admin/pricing/areas?includeInactive=true'), { credentials: 'include', headers: getAuthHeaders() }),
+        fetch(getAdminUrl('/api/admin/pricing/hotels'), { credentials: 'include', headers: getAuthHeaders() }),
       ]);
 
       const rulesData = await rulesRes.json();
       const extrasData = await extrasRes.json();
       const areasData = await areasRes.json();
+      const hotelsData = await hotelsRes.json();
 
       if (rulesData.success) setRules(rulesData.data);
       if (extrasData.success) setExtras(extrasData.data);
       if (areasData.success) setAreas(areasData.data);
+      if (hotelsData.success) setHotels(hotelsData.data);
     } catch (error) {
       console.error('Failed to fetch pricing data:', error);
     } finally {
@@ -205,6 +218,42 @@ export function PricingManager() {
     }
   };
 
+  const handleSaveHotel = async (hotel: { name?: string; zone?: string; isActive?: boolean }) => {
+    try {
+      const url = editingHotel
+        ? getAdminUrl(`/api/admin/pricing/hotels/${editingHotel.id}`)
+        : getAdminUrl('/api/admin/pricing/hotels');
+      const method = editingHotel ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        credentials: 'include',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(hotel),
+      });
+      if (res.ok) {
+        setShowHotelForm(false);
+        setEditingHotel(null);
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Failed to save hotel:', error);
+    }
+  };
+
+  const handleDeactivateHotel = async (id: string) => {
+    if (!confirm('Deactivate this hotel?')) return;
+    try {
+      const res = await fetch(getAdminUrl(`/api/admin/pricing/hotels/${id}`), {
+        credentials: 'include',
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) fetchData();
+    } catch (error) {
+      console.error('Failed to deactivate hotel:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -246,6 +295,16 @@ export function PricingManager() {
           }`}
         >
           Pricing Extras
+        </button>
+        <button
+          onClick={() => setActiveTab('hotels')}
+          className={`px-4 py-2 font-medium transition-colors ${
+            activeTab === 'hotels'
+              ? 'border-b-2 border-gold text-gold'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Hotels
         </button>
       </div>
 
@@ -482,6 +541,143 @@ export function PricingManager() {
           </div>
         </div>
       )}
+
+      {/* Hotels Tab */}
+      {activeTab === 'hotels' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <h2 className="text-xl font-semibold">Hotels ({hotels.filter(h => h.isActive).length} active)</h2>
+            <button
+              onClick={() => { setEditingHotel(null); setShowHotelForm(true); }}
+              className="flex items-center gap-2 px-4 py-2 bg-gold text-navy rounded-lg hover:bg-gold/90 transition-colors"
+            >
+              <Plus size={16} />
+              Add Hotel
+            </button>
+          </div>
+
+          {showHotelForm && (
+            <HotelForm
+              hotel={editingHotel}
+              zones={[...new Set(hotels.map(h => h.zone))].sort()}
+              onSave={handleSaveHotel}
+              onCancel={() => { setShowHotelForm(false); setEditingHotel(null); }}
+            />
+          )}
+
+          <div className="border rounded-lg overflow-x-auto table-scroll-x">
+            <table className="w-full min-w-[400px]">
+              <thead className="bg-muted">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Zone</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {hotels.map((hotel) => (
+                  <tr key={hotel.id} className={!hotel.isActive ? 'opacity-50' : ''}>
+                    <td className="px-4 py-3 text-sm font-medium">{hotel.name}</td>
+                    <td className="px-4 py-3 text-sm">{hotel.zone}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${hotel.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                        {hotel.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <div className="flex gap-2">
+                        <button onClick={() => { setEditingHotel(hotel); setShowHotelForm(true); }} className="text-gold hover:text-gold/80">
+                          <Edit size={16} />
+                        </button>
+                        {hotel.isActive && (
+                          <button onClick={() => handleDeactivateHotel(hotel.id)} className="text-red-500 hover:text-red-600">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HotelForm({
+  hotel,
+  zones,
+  onSave,
+  onCancel,
+}: {
+  hotel: Hotel | null;
+  zones: string[];
+  onSave: (data: { name?: string; zone?: string; isActive?: boolean }) => void;
+  onCancel: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    name: hotel?.name || '',
+    zone: hotel?.zone || '',
+    isActive: hotel?.isActive ?? true,
+  });
+
+  return (
+    <div className="border rounded-lg p-4 space-y-4 bg-muted/20">
+      <h3 className="font-semibold">{hotel ? 'Edit Hotel' : 'Add Hotel'}</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Name</label>
+          <input
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className="w-full px-3 py-2 border rounded-lg"
+            placeholder="Hotel name"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Zone</label>
+          <input
+            type="text"
+            list="zone-options"
+            value={formData.zone}
+            onChange={(e) => setFormData({ ...formData, zone: e.target.value })}
+            className="w-full px-3 py-2 border rounded-lg"
+            placeholder="e.g. Tourist Corridor"
+          />
+          <datalist id="zone-options">
+            {zones.map((z) => <option key={z} value={z} />)}
+          </datalist>
+        </div>
+        <div className="flex items-end gap-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={formData.isActive}
+              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+            />
+            Active
+          </label>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => onSave(formData)}
+          disabled={!formData.name || !formData.zone}
+          className="flex items-center gap-2 px-4 py-2 bg-gold text-navy rounded-lg hover:bg-gold/90 disabled:opacity-50"
+        >
+          <Save size={16} />
+          Save
+        </button>
+        <button onClick={onCancel} className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-muted">
+          <X size={16} />
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }

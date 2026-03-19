@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ArrowRight, Check, Shield, Car, Users, MessageCircle } from 'lucide-react';
+import { ArrowRight, Check, Shield, Car, MessageCircle } from 'lucide-react';
+import { SEO } from '@/components/SEO';
 import { PriceTable } from '@/components/Pricing/PriceTable';
 import { TrustBadges } from '@/components/trust/TrustBadges';
 import { WhyChooseUs } from '@/components/trust/WhyChooseUs';
@@ -22,8 +23,24 @@ const Transfers = () => {
     { key: 'transfers.included.wifi' },
   ];
 
+  const serviceLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    name: 'Private Airport Transfer Los Cabos',
+    provider: { '@type': 'LocalBusiness', name: 'Class VIP Transfers' },
+    areaServed: { '@type': 'Place', name: 'Los Cabos, Baja California Sur, Mexico' },
+    description: 'Private luxury SUV and Sprinter transfers from SJD airport to hotels in Cabo San Lucas, San Jose del Cabo, Tourist Corridor, and Pacific area.',
+    offers: { '@type': 'Offer', priceCurrency: 'USD', price: '90', priceValidUntil: '2027-12-31' },
+  };
+
   return (
     <div>
+      <SEO
+        title="Private Airport Transfers"
+        description="Private luxury SUV & Sprinter transfers from SJD airport to your hotel. Flight tracking, meet & greet, cold beverages included. Book your Los Cabos airport transfer now."
+        keywords="SJD airport transfer, cabo san lucas private transfer, los cabos luxury van, cabo airport shuttle, tourist corridor transfer, private driver cabo, san jose del cabo transportation"
+        jsonLd={serviceLd}
+      />
       {/* Hero - dark */}
       <section className="navy-gradient pt-36 pb-20 px-4">
         <div className="container mx-auto max-w-4xl text-center">
@@ -54,10 +71,9 @@ const Transfers = () => {
         </div>
       </section>
 
-      {/* Comparison - bright */}
+      {/* Private transfer - single option */}
       <section id="compare" className="py-20 px-4 -mt-8 scroll-mt-24">
-        <div className="container mx-auto max-w-6xl grid md:grid-cols-2 gap-6">
-          {/* Private - premium hover */}
+        <div className="container mx-auto max-w-xl">
           <motion.div
             initial="hidden"
             whileInView="visible"
@@ -81,33 +97,6 @@ const Transfers = () => {
             </p>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Link to="/book" className="gold-gradient text-secondary-foreground px-6 py-3 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow w-full justify-center">
-                {t('transfers.bookThis')} <ArrowRight size={16} />
-              </Link>
-            </motion.div>
-          </motion.div>
-
-          {/* Shuttle - premium hover */}
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            transition={{ delay: 0.1 }}
-            whileHover={{ y: -4, transition: { duration: 0.2 } }}
-            className="glass-card rounded-2xl p-8 premium-card border border-border cursor-default"
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-ocean/10 flex items-center justify-center">
-                <Users size={20} className="text-ocean" />
-              </div>
-              <h2 className="font-display text-2xl font-bold text-foreground">{t('transfers.shuttle.title')}</h2>
-            </div>
-            <p className="text-muted-foreground text-sm mb-6 leading-relaxed">{t('transfers.shuttle.desc')}</p>
-            <p className="text-sm text-muted-foreground mb-6">
-              {t('transfers.shuttle.pricingNote', { defaultValue: 'Contacta para precios de shuttle compartido.' })}
-            </p>
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Link to="/book" className="border-2 border-gold/40 text-gold px-6 py-3 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:bg-gold/10 transition-all w-full justify-center">
                 {t('transfers.bookThis')} <ArrowRight size={16} />
               </Link>
             </motion.div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SEO } from '@/components/SEO';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { X } from 'lucide-react';
@@ -30,7 +31,12 @@ const Gallery = () => {
   const [selected, setSelected] = useState<number | null>(null);
 
   return (
-    <div className="pt-28 pb-20 min-h-screen bg-background">
+    <>
+      <SEO
+        title="Gallery"
+        description="Photos of our luxury vehicles and experiences in Los Cabos, Mexico."
+      />
+      <div className="pt-28 pb-20 min-h-screen bg-background">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -100,6 +106,7 @@ const Gallery = () => {
         )}
       </AnimatePresence>
     </div>
+    </>
   );
 };
 

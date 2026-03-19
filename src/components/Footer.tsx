@@ -3,7 +3,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Phone, Mail, MapPin, ArrowRight } from 'lucide-react';
 
 const Footer = () => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   return (
     <footer className="navy-gradient text-off-white">
@@ -22,7 +22,6 @@ const Footer = () => {
               <Link to="/" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.home')}</Link>
               <Link to="/transfers" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.transfers')}</Link>
               <Link to="/activities" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.activities')}</Link>
-              <Link to="/gift-cards" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.giftCards')}</Link>
               <Link to="/contact" className="text-off-white/60 text-sm hover:text-off-white transition-colors">{t('nav.contact')}</Link>
             </div>
           </div>
@@ -58,6 +57,14 @@ const Footer = () => {
         <div className="text-center text-off-white/40 text-xs flex flex-col items-center justify-center gap-2">
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <span>© {new Date().getFullYear()} Class VIP Transfers. {t('footer.rights')}</span>
+            <span className="text-off-white/20">•</span>
+            <Link to="/terms" className="text-off-white/40 hover:text-off-white/60 transition-colors">
+              {lang === 'es' ? 'Términos y Condiciones' : 'Terms & Conditions'}
+            </Link>
+            <span className="text-off-white/20">•</span>
+            <Link to="/privacy" className="text-off-white/40 hover:text-off-white/60 transition-colors">
+              {lang === 'es' ? 'Política de Privacidad' : 'Privacy Policy'}
+            </Link>
             <span className="text-off-white/20">•</span>
             <Link
               to="/admin/login"

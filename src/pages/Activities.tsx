@@ -1,16 +1,10 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Clock, ArrowRight, Check, AlertTriangle, MessageCircle, Info } from 'lucide-react';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+import { ArrowRight, Check, MessageCircle } from 'lucide-react';
+import { SEO } from '@/components/SEO';
 
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
-const stagger = { visible: { transition: { staggerChildren: 0.08 } } };
 
 const Activities = () => {
   const { t } = useLanguage();
@@ -24,19 +18,13 @@ const Activities = () => {
     'activities.bring.clothes', 'activities.bring.shoes', 'activities.bring.sunscreen', 'activities.bring.payment',
   ];
 
-  const activities = [
-    { key: 'camel', emoji: '🐫', desc: 'Ride through the desert on a gentle camel with stunning mountain views.', duration: '1h', price: '$120 USD', combo: true, slug: 'camel-ride', whatsapp: "Hi! I'd like to book the Camel Ride individually." },
-    { key: 'horseback', emoji: '🐎', desc: 'Gallop along scenic trails and enjoy the beauty of Baja California.', duration: '1h', price: '$120 USD', combo: true, slug: 'horseback-riding', whatsapp: "Hi! I'd like to book the Horseback Riding individually." },
-    { key: 'atv', emoji: '🏍️', desc: 'Navigate rugged terrain on an ATV for an adrenaline-filled experience.', duration: '2h', price: '$120 USD', combo: true, insurance: true, slug: 'atv', whatsapp: "Hi! I'd like to book the ATV Tour individually." },
-    { key: 'doubleMoto', emoji: '🏍️', desc: 'Share the thrill — ride together on a powerful double-seat motorcycle.', duration: '2h', price: '$200 USD', combo: true, insurance: true, slug: 'double-motorcycle', whatsapp: "Hi! I'd like to book the Double Motorcycle individually." },
-    { key: 'rzr', emoji: '🏎️', desc: 'Off-road through canyons and desert trails in a powerful RZR.', duration: '2h', price: null, combo: true, insurance: true, rzrPricing: true, slug: 'utv-adventure', whatsapp: "Hi! I'd like to book the RZR individually." },
-    { key: 'skyBikes', emoji: '🚲', desc: 'Pedal through the sky on elevated bike trails with ocean panoramas.', duration: '2h', price: '$96 USD', combo: true, slug: 'sky-bikes', whatsapp: "Hi! I'd like to book the Sky Bikes individually." },
-    { key: 'fishing', emoji: '🎣', desc: "Deep-sea fishing on a private yacht in the Sea of Cortez. Price varies by group size.", duration: '—', price: null, combo: false, whatsapp: "Hi! I'm interested in the Fishing Yacht. Can you send me a quote?" },
-    { key: 'sunset', emoji: '🌅', desc: 'Sail into the sunset with drinks and breathtaking views of the Arch. Price varies by group size.', duration: '—', price: null, combo: false, whatsapp: "Hi! I'm interested in the Sunset Cruise. Can you send me a quote?" },
-  ];
-
   return (
     <div>
+      <SEO
+        title="Adventure Activities & Tours"
+        description="Book ATV, UTV, horseback riding, camel safari and more in Los Cabos. Transportation included. Perfect for families, couples and groups. Book your adventure today."
+        keywords="ATV tour los cabos, cabo activities, UTV cabo san lucas, horseback riding cabo, camel safari los cabos, cabo adventure tours, things to do cabo san lucas"
+      />
       {/* Hero - dark */}
       <section className="navy-gradient pt-36 pb-20 px-4">
         <div className="container mx-auto max-w-4xl text-center">
@@ -112,78 +100,27 @@ const Activities = () => {
         </div>
       </section>
 
-      <div className="section-divider mx-auto max-w-2xl" />
-
-      {/* Individual Activities */}
-      <section className="py-16 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-10">
-            <h2 className="font-display text-3xl font-bold mb-2 text-foreground">Or Book Individually</h2>
-            <p className="text-muted-foreground">Want just one activity? No problem — book any experience on its own</p>
-          </motion.div>
-          <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true }}
-            className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {activities.map((act, i) => (
-              <motion.div key={i} variants={fadeUp}
-                className="glass-card rounded-xl p-6 premium-card border border-border">
-                <p className="text-2xl mb-2">{act.emoji}</p>
-                <h3 className="font-display text-lg font-bold mb-1 text-foreground">{t(`activity.${act.key}`)}</h3>
-                <p className="text-muted-foreground text-sm mb-3 leading-relaxed">{act.desc}</p>
-
-                {act.insurance && (
-                  <p className="text-xs text-muted-foreground mb-3 bg-sand-light rounded-lg p-2.5 border border-border/50">
-                    Optional vehicle protection available. If declined, $500 USD credit card hold per vehicle required (released within 48 hrs).
-                  </p>
-                )}
-
-                {act.rzrPricing && (
-                  <p className="text-xs text-gold mb-3 font-medium">1 pax $205 · 2 pax $290 · 3 pax $350 · 4 pax $405</p>
-                )}
-
-                <Accordion type="single" collapsible>
-                  <AccordionItem value="restrictions" className="border-none">
-                    <AccordionTrigger className="text-xs text-muted-foreground py-2 hover:no-underline">
-                      Restrictions & Safety
-                    </AccordionTrigger>
-                    <AccordionContent className="text-xs text-muted-foreground leading-relaxed">
-                      {act.insurance
-                        ? 'Minimum age varies by activity. Closed-toe shoes required. Follow guide instructions at all times.'
-                        : act.key === 'fishing' || act.key === 'sunset'
-                        ? 'Subject to weather conditions. Cancellation policy applies.'
-                        : 'Minimum age varies by activity. Follow guide instructions at all times.'}
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock size={13} /> {act.duration}
-                  </div>
-                  {act.price ? (
-                    <span className="text-gold font-bold text-sm">{act.price}</span>
-                  ) : act.rzrPricing ? (
-                    <span className="text-gold font-bold text-sm">See pricing</span>
-                  ) : (
-                    <span className="text-ocean font-medium text-sm italic">Quote on request</span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2 mt-3">
-                  <a href={`https://wa.me/5216241222174?text=${encodeURIComponent(act.whatsapp)}`} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs font-semibold text-[#25D366] hover:underline">
-                    <MessageCircle size={12} /> {act.price || act.rzrPricing ? 'Book This Activity' : 'Request Quote via WhatsApp'}
-                  </a>
-                  {(act as any).slug && (
-                    <Link to={`/activities/${(act as any).slug}`} className="flex items-center gap-1 text-xs font-semibold text-gold hover:underline ml-auto">
-                      View Details <ArrowRight size={12} />
-                    </Link>
-                  )}
-                </div>
-              </motion.div>
-            ))}
+      {/* Yates & Masajes por WhatsApp */}
+      <section className="py-10 px-4">
+        <div className="container mx-auto max-w-4xl">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
+            className="glass-card rounded-2xl p-6 border border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-foreground/90 text-sm sm:text-base text-center sm:text-left">
+              {t('activities.yatesMasajes')}
+            </p>
+            <a
+              href="https://wa.me/5216241222174?text=Hola%2C%20me%20interesan%20yates%20privados%20o%20masajes%20a%20domicilio%20en%20villas"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="gold-gradient text-secondary-foreground px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow shrink-0"
+            >
+              <MessageCircle size={18} /> {t('activities.contactWhatsApp')}
+            </a>
           </motion.div>
         </div>
       </section>
+
+      <div className="section-divider mx-auto max-w-2xl" />
 
       {/* Park Fee + Safety */}
       <section className="py-8 px-4">

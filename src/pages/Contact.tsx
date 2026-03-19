@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { SEO } from '@/components/SEO';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Phone, Mail, MapPin, Clock, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
@@ -7,13 +8,39 @@ import { useState } from 'react';
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 
 const Contact = () => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [form, setForm] = useState({ name: '', email: '', message: '' });
+
+  const PHONE_WA = '5216241222174';
+  const PHONE_SMS = '+5262412222174';
+
+  const buildMessage = () => [
+    lang === 'es' ? `Hola, soy ${form.name}.` : `Hi, I'm ${form.name}.`,
+    form.email ? `Email: ${form.email}` : '',
+    form.message,
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const openWhatsApp = () => {
+    const msg = buildMessage();
+    const encoded = encodeURIComponent(msg);
+    window.open(`https://wa.me/${PHONE_WA}?text=${encoded}`, '_blank', 'noopener,noreferrer');
+    setForm({ name: '', email: '', message: '' });
+  };
+
+  // Uses the `sms:` scheme so on iOS it opens Messages (iMessage).
+  const openImessage = () => {
+    const msg = buildMessage();
+    const encoded = encodeURIComponent(msg);
+    window.location.href = `sms:${PHONE_SMS}?&body=${encoded}`;
+    setForm({ name: '', email: '', message: '' });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert(t('contact.thankYou'));
-    setForm({ name: '', email: '', message: '' });
+    // When user submits via Enter, default to WhatsApp (green button behavior)
+    openWhatsApp();
   };
 
   return (
@@ -53,9 +80,24 @@ const Contact = () => {
                 placeholder={t('contact.messagePlaceholder')}
                 className="input-luxury resize-none" />
             </div>
-            <button type="submit" className="gold-gradient text-secondary-foreground px-8 py-3.5 rounded-full font-bold text-sm hover:brightness-110 transition-all w-full gold-glow">
-              {t('contact.send')}
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={openImessage}
+                className="bg-[#F6C445] text-navy px-6 py-3.5 rounded-full font-bold text-sm hover:brightness-110 transition-all w-full"
+                aria-label="iMessage"
+              >
+                iMessage
+              </button>
+              <button
+                type="button"
+                onClick={openWhatsApp}
+                className="bg-[#25D366] text-white px-6 py-3.5 rounded-full font-bold text-sm hover:bg-[#20bd5a] transition-colors w-full"
+                aria-label="WhatsApp"
+              >
+                WhatsApp
+              </button>
+            </div>
           </motion.form>
 
           {/* Info */}

@@ -2,8 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Car, Users, Minus, Plus, Plane, MessageCircle, CalendarDays, Clock, MapPin, Sparkles, Shield, ChevronUp } from 'lucide-react';
-import { format } from 'date-fns';
+import { ArrowLeft, ArrowRight, Check, Car, Minus, Plus, Plane, MessageCircle, CalendarDays, Clock, MapPin, Sparkles, Shield, ChevronUp, AlertCircle } from 'lucide-react';
+import { format, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -11,16 +11,25 @@ import { usePricing, type PricingExtraPublic, type AreaPublic } from '@/hooks/us
 import { LuxurySpinner } from '@/components/ui/luxury-spinner';
 import { TrustBadges } from '@/components/trust/TrustBadges';
 import { getApiBaseUrl } from '@/lib/api';
+import { SEO } from '@/components/SEO';
 
-const steps = ['service', 'trip', 'route', 'date', 'locations', 'extras', 'upsell', 'review'] as const;
+const steps = ['route', 'date', 'extras', 'review'] as const;
+
+// Mapeo área → zona de hoteles (areas y hotels usan nombres distintos en algunos casos)
+const AREA_TO_HOTEL_ZONE: Record<string, string> = {
+  'Corredor Turistico': 'Tourist Corridor',
+  'Tourist Corridor': 'Tourist Corridor',
+  'East Cape': 'Pacific & East Cape',
+  'Pacific & East Cape': 'Pacific & East Cape',
+};
 
 const upsellActivities = [
   { id: 'camel', key: 'activity.camel', emoji: '🐫', duration: '1h', price: 120 },
   { id: 'horseback', key: 'activity.horseback', emoji: '🐎', duration: '1h', price: 120 },
-  { id: 'atv', key: 'activity.atv', emoji: '🏍️', duration: '2h', price: 120 },
-  { id: 'skyBikes', key: 'activity.skyBikes', emoji: '🚲', duration: '2h', price: 96 },
-  { id: 'rzr', key: 'activity.rzr', emoji: '🏎️', duration: '2h', price: 205 },
-  { id: 'doubleMoto', key: 'activity.doubleMoto', emoji: '🏍️', duration: '2h', price: 200 },
+  { id: 'atv', key: 'activity.atv', emoji: '🏍️', duration: '1h', price: 120 },
+  { id: 'skyBikes', key: 'activity.skyBikes', emoji: '🚲', duration: '1h', price: 96 },
+  { id: 'rzr', key: 'activity.rzr', emoji: '🏎️', duration: '1h', price: 205 },
+  { id: 'doubleMoto', key: 'activity.doubleMoto', emoji: '🏍️', duration: '1h', price: 200 },
   { id: 'camelKids', key: 'activity.camelKids', emoji: '🐫', duration: '1h', price: 120 },
 ];
 
@@ -32,7 +41,7 @@ const Book = () => {
   const [creatingBooking, setCreatingBooking] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [data, setData] = useState({
-    serviceType: '' as '' | 'private' | 'shuttle',
+    serviceType: 'private' as const,
     tripType: '' as '' | 'oneway' | 'roundtrip',
     areaId: '' as string,
     route: '' as '' | 'airport-hotel' | 'hotel-airport',
@@ -46,12 +55,13 @@ const Book = () => {
     arrivalTime: '',
     departureFlightNumber: '',
     departureTime: '',
+    pickupTime: '', // roundtrip: time we pick up at hotel (min 3h before departureTime)
     passengers: 1,
     pickup: '',
     dropoff: '',
     extras: [] as string[],
     activities: [] as string[],
-    comboMode: '' as '' | 'combo' | 'crazy' | 'individual',
+    comboMode: '' as '' | 'combo' | 'crazy',
   });
 
   const { getExtras, getAreas, loading: quoteLoading } = usePricing();
@@ -59,6 +69,54 @@ const Book = () => {
   const [areas, setAreas] = useState<AreaPublic[]>([]);
   const [hotels, setHotels] = useState<Array<{ id: string; name: string; zone: string }>>([]);
   const [hotelSearch, setHotelSearch] = useState('');
+  const [selectedZoneForHotel, setSelectedZoneForHotel] = useState<string | null>(null);
+
+  const FLIGHT_REGEX = /^[A-Za-z]{2,3}\s?\d{1,4}$/;
+  const timeToMinutes = (hhmm: string): number | null => {
+    if (!hhmm || !/^\d{1,2}:\d{2}$/.test(hhmm)) return null;
+    const [h, m] = hhmm.split(':').map(Number);
+    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+    return h * 60 + m;
+  };
+  const minutesToTime = (mins: number): string => {
+    const h = Math.floor(mins / 60) % 24;
+    const m = mins % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+  type DateStepErrors = { arrivalDate?: string; departureDate?: string; flightNumber?: string; departureFlightNumber?: string; pickupTime?: string };
+  const validateDateStep = (): DateStepErrors => {
+    const err: DateStepErrors = {};
+    const today = startOfDay(new Date());
+    if (data.arrivalDate && startOfDay(data.arrivalDate) < today) err.arrivalDate = t('book.date.errorPast');
+    if (data.tripType === 'roundtrip' && data.arrivalDate && data.departureDate) {
+      if (startOfDay(data.departureDate) < startOfDay(data.arrivalDate)) err.departureDate = t('book.date.errorDepartureBefore');
+    }
+    if (data.flightNumber.trim() && !FLIGHT_REGEX.test(data.flightNumber.trim())) err.flightNumber = t('book.date.errorFlightFormat');
+    if (data.tripType === 'roundtrip' && data.departureFlightNumber.trim() && !FLIGHT_REGEX.test(data.departureFlightNumber.trim())) err.departureFlightNumber = t('book.date.errorFlightFormat');
+    if (data.tripType === 'roundtrip' && data.departureTime && data.pickupTime) {
+      const depM = timeToMinutes(data.departureTime);
+      const pickM = timeToMinutes(data.pickupTime);
+      if (depM !== null && pickM !== null) {
+        const diffMinutes = depM - pickM;
+        if (diffMinutes < 180) err.pickupTime = t('book.date.errorPickupTooLate');
+      }
+    }
+    return err;
+  };
+  const [dateStepErrors, setDateStepErrors] = useState<DateStepErrors>({});
+  useEffect(() => {
+    setDateStepErrors(validateDateStep());
+  }, [data.arrivalDate, data.departureDate, data.flightNumber, data.departureFlightNumber, data.tripType, data.departureTime, data.pickupTime, t]);
+
+  // Suggest pickup time 3h before departure when departure time changes (roundtrip)
+  useEffect(() => {
+    if (data.tripType !== 'roundtrip' || !data.departureTime) return;
+    const depM = timeToMinutes(data.departureTime);
+    if (depM === null) return;
+    const suggestedPickM = Math.max(0, depM - 180);
+    const suggested = minutesToTime(suggestedPickM);
+    setData((d) => ({ ...d, pickupTime: suggested }));
+  }, [data.tripType, data.departureTime]);
 
   useEffect(() => {
     getExtras().then(setPricingExtras);
@@ -67,7 +125,24 @@ const Book = () => {
     getAreas().then(setAreas);
   }, [getAreas]);
 
-  // Fetch hotels from BD
+  const FALLBACK_HOTELS: Array<{ id: string; name: string; zone: string }> = [
+    { id: 'f-1', name: 'Hyatt Ziva Los Cabos', zone: 'San Jose del Cabo' },
+    { id: 'f-2', name: 'JW Marriott Los Cabos', zone: 'San Jose del Cabo' },
+    { id: 'f-3', name: 'Hilton Los Cabos', zone: 'San Jose del Cabo' },
+    { id: 'f-4', name: 'Grand Velas Los Cabos', zone: 'Port Los Cabos' },
+    { id: 'f-5', name: 'Secrets Puerto Los Cabos', zone: 'Port Los Cabos' },
+    { id: 'f-6', name: 'Le Blanc Spa Resort', zone: 'Tourist Corridor' },
+    { id: 'f-7', name: 'Chileno Bay Resort', zone: 'Tourist Corridor' },
+    { id: 'f-8', name: 'Grand Fiesta Americana', zone: 'Tourist Corridor' },
+    { id: 'f-9', name: 'Montage Los Cabos', zone: 'Tourist Corridor' },
+    { id: 'f-10', name: 'Riu Palace Cabo San Lucas', zone: 'Cabo San Lucas' },
+    { id: 'f-11', name: 'Hard Rock Hotel Los Cabos', zone: 'Cabo San Lucas' },
+    { id: 'f-12', name: 'Pueblo Bonito Sunset Beach', zone: 'Cabo San Lucas' },
+    { id: 'f-13', name: 'Grand Solmar Land\'s End', zone: 'Cabo San Lucas' },
+    { id: 'f-14', name: 'Paradisus Los Cabos', zone: 'Cabo Pacific Area' },
+    { id: 'f-15', name: 'Rancho San Lucas', zone: 'Cabo Pacific Area' },
+  ];
+
   const [hotelsLoading, setHotelsLoading] = useState(true);
   const [hotelsError, setHotelsError] = useState(false);
   useEffect(() => {
@@ -79,11 +154,12 @@ const Book = () => {
         return r.json();
       })
       .then((j) => {
-        setHotels(j.data || []);
+        const data = j.data || [];
+        setHotels(data.length > 0 ? data : FALLBACK_HOTELS);
         setHotelsError(false);
       })
       .catch(() => {
-        setHotels([]);
+        setHotels(FALLBACK_HOTELS);
         setHotelsError(true);
       })
       .finally(() => setHotelsLoading(false));
@@ -98,16 +174,22 @@ const Book = () => {
     }
   }, [data.route]);
 
+  const SJD_AIRPORT = 'SJD International Airport';
+
   // When hotel selected: set zone, pickup/dropoff, and areaId for pricing (area name matches zone)
   const selectHotel = (hotel: { id: string; name: string; zone: string }) => {
     setData((d) => {
       const next = { ...d, selectedHotel: hotel };
       if (d.route === 'airport-hotel') {
+        next.zoneFrom = 'SJD';
         next.zoneTo = hotel.zone;
+        next.pickup = SJD_AIRPORT;
         next.dropoff = hotel.name;
       } else if (d.route === 'hotel-airport') {
         next.zoneFrom = hotel.zone;
+        next.zoneTo = 'SJD';
         next.pickup = hotel.name;
+        next.dropoff = SJD_AIRPORT;
       }
       const zoneForPricing = hotel.zone;
       const area = areas.find((a) => a.name === zoneForPricing || a.name.toLowerCase() === zoneForPricing.toLowerCase());
@@ -125,11 +207,15 @@ const Book = () => {
     setData((d) => {
       const next = { ...d, selectedHotel: first };
       if (d.route === 'airport-hotel') {
+        next.zoneFrom = 'SJD';
         next.zoneTo = first.zone;
+        next.pickup = SJD_AIRPORT;
         next.dropoff = first.name;
       } else {
         next.zoneFrom = first.zone;
+        next.zoneTo = 'SJD';
         next.pickup = first.name;
+        next.dropoff = SJD_AIRPORT;
       }
       const area = areas.find((a) => a.name === first.zone || a.name.toLowerCase() === first.zone.toLowerCase());
       if (area) next.areaId = area.id;
@@ -157,7 +243,7 @@ const Book = () => {
     setData(d => {
       const has = d.activities.includes(val);
       if (has) return { ...d, activities: d.activities.filter(v => v !== val) };
-      const max = d.comboMode === 'combo' ? 2 : d.comboMode === 'crazy' ? 3 : 10;
+      const max = d.comboMode === 'combo' ? 2 : d.comboMode === 'crazy' ? 3 : 0;
       if (d.activities.length >= max) return d;
       return { ...d, activities: [...d.activities, val] };
     });
@@ -174,25 +260,17 @@ const Book = () => {
     if (data.activities.length === 0) return 0;
     if (data.comboMode === 'combo') return 100 * data.passengers;
     if (data.comboMode === 'crazy') return 125 * data.passengers;
-    // Individual pricing
-    return data.activities.reduce((sum, id) => {
-      const act = upsellActivities.find(a => a.id === id);
-      return sum + (act?.price || 120);
-    }, 0) * data.passengers;
+    return 0;
   }, [data.activities, data.comboMode, data.passengers]);
 
   const total = transferPrice + activitiesPrice;
 
   // Create booking and redirect to checkout
   const handlePayPalCheckout = async () => {
-    // Validate required fields
-    const msg = lang === 'es' ? 'Por favor completa todos los campos requeridos' : 'Please complete all required fields';
-    if (!data.serviceType || !data.tripType || !data.route || !data.arrivalDate || !data.pickup || !data.dropoff) {
-      setBookingError(msg);
-      return;
-    }
-    if (data.serviceType && !data.areaId) {
-      setBookingError(t('book.area.required'));
+    if (!reviewValidation.valid && reviewValidation.firstInvalidStepIndex !== null) {
+      const sectionKey = `book.step.${steps[reviewValidation.firstInvalidStepIndex]}`;
+      setBookingError(`${t('book.validation.incomplete')} ${t(sectionKey)}`);
+      setCurrent(reviewValidation.firstInvalidStepIndex);
       return;
     }
 
@@ -282,6 +360,7 @@ const Book = () => {
       if (data.arrivalTime) bookingPayload.arrivalTime = data.arrivalTime;
       if (data.departureFlightNumber) bookingPayload.departureFlightNumber = data.departureFlightNumber;
       if (data.departureTime) bookingPayload.departureTime = data.departureTime;
+      if (data.tripType === 'roundtrip' && data.pickupTime) bookingPayload.pickupTime = data.pickupTime;
       if (data.extras.length > 0) bookingPayload.notes = `Extras: ${data.extras.map(getExtraLabel).join(', ')}`;
 
       // Create booking
@@ -315,12 +394,16 @@ const Book = () => {
 
       const result = await response.json();
       const bookingId = result.data?.id;
+      const lookupToken = result.lookupToken;
 
       if (!bookingId) {
         throw new Error('No booking ID returned');
       }
 
-      // Redirect to checkout
+      if (lookupToken) {
+        sessionStorage.setItem(`bt_${bookingId}`, lookupToken);
+      }
+
       navigate(`/checkout?bookingId=${bookingId}`);
     } catch (err: any) {
       console.error('Error creating booking:', err);
@@ -339,13 +422,11 @@ const Book = () => {
   };
 
   const includedExtras = pricingExtras.filter((e) => e.included);
-  const paidExtrasRaw = pricingExtras.filter((e) => !e.included && !['CHAMPAGNE_UPGRADE', 'ROMANTIC_KIT', 'BIRTHDAY_KIT', 'DELUXE_ARRIVAL_KIT', 'CHAMPAGNE', 'LUXURY_WELCOME'].includes(e.code));
-  // Shuttle: only luggage, stops, seats, assistance, wait/time extras (no personalized kits)
-  const SHUTTLE_ALLOWED_EXTRA_CODES = new Set(['OVERSIZE_LUGGAGE', 'EXTRA_STOP', 'GROCERY_STOP', 'BABY_SEAT', 'BOOSTER', 'SPECIAL_ASSISTANCE', 'WAIT_TIME', 'EARLY_MORNING', 'LATE_NIGHT']);
-  const paidExtras = data.serviceType === 'shuttle'
-    ? paidExtrasRaw.filter((e) => SHUTTLE_ALLOWED_EXTRA_CODES.has(e.code))
-    : paidExtrasRaw;
-  const upsellKits = pricingExtras.filter((e) => !e.included && ['CHAMPAGNE_UPGRADE', 'ROMANTIC_KIT', 'BIRTHDAY_KIT', 'DELUXE_ARRIVAL_KIT', 'CHAMPAGNE', 'LUXURY_WELCOME'].includes(e.code));
+  const excludedExtras = ['EXTRA_STOP', 'WAIT_TIME', 'LATE_NIGHT', 'EARLY_MORNING', 'SPECIAL_ASSISTANCE'];
+  const arrivalUpgradeCodes = ['CHAMPAGNE', 'CHAMPAGNE_UPGRADE', 'BIRTHDAY_KIT', 'ROMANTIC_KIT', 'DELUXE_ARRIVAL_KIT'];
+  const paidExtrasRaw = pricingExtras.filter((e) => !e.included && !arrivalUpgradeCodes.includes(e.code) && !excludedExtras.includes(e.code));
+  const paidExtras = paidExtrasRaw;
+  const upsellKits = pricingExtras.filter((e) => !e.included && arrivalUpgradeCodes.includes(e.code));
   const roundTripSuggestedCodes = ['GROCERY_STOP', 'BABY_SEAT'];
   const getExtraLabel = (code: string) => {
     const e = pricingExtras.find((x) => x.code === code);
@@ -353,120 +434,218 @@ const Book = () => {
     return (lang === 'es' && e.labelEs ? e.labelEs : e.label) || code;
   };
 
+  // Checkout validation — mapped to new 4-step indices: 0=route, 1=date+locations, 2=extras, 3=review
+  const reviewValidation = useMemo(() => {
+    if (!data.tripType || !data.route || !data.areaId) return { valid: false, firstInvalidStepIndex: 0 };
+    if (!data.arrivalDate || Object.values(dateStepErrors).some(Boolean)) return { valid: false, firstInvalidStepIndex: 1 };
+    if (data.tripType === 'roundtrip') {
+      if (!data.departureDate || !data.departureTime?.trim() || !data.pickupTime?.trim()) return { valid: false, firstInvalidStepIndex: 1 };
+    }
+    if (!data.pickup?.trim() || !data.dropoff?.trim()) return { valid: false, firstInvalidStepIndex: 1 };
+    return { valid: true, firstInvalidStepIndex: null as number | null };
+  }, [
+    data.tripType,
+    data.serviceType,
+    data.route,
+    data.areaId,
+    data.arrivalDate,
+    data.departureDate,
+    data.departureTime,
+    data.pickupTime,
+    data.pickup,
+    data.dropoff,
+    dateStepErrors,
+  ]);
+
   const renderStep = () => {
     switch (steps[current]) {
-      case 'service':
-        return (
-          <div className="space-y-5">
-            <div>
-              <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t('book.service.title')}</h2>
-              <p className="text-muted-foreground text-sm md:text-base mt-2 leading-relaxed">{t('book.service.subtitle')}</p>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <motion.button
-                onClick={() => { setData({ ...data, serviceType: 'private' }); }}
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                className={`booking-card rounded-xl p-8 text-center ${data.serviceType === 'private' ? 'selected border-gold' : ''}`}
-              >
-                <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-4">
-                  <Car size={26} className="text-gold" />
-                </div>
-                <p className="font-display font-bold text-lg text-foreground">{t('book.service.private')}</p>
-                <p className="text-muted-foreground text-sm mt-2 leading-relaxed">{t('book.service.privateDesc')}</p>
-              </motion.button>
-              <motion.button
-                onClick={() => { setData({ ...data, serviceType: 'shuttle' }); }}
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                className={`booking-card rounded-xl p-8 text-center ${data.serviceType === 'shuttle' ? 'selected border-gold' : ''}`}
-              >
-                <div className="w-14 h-14 rounded-full bg-ocean/10 flex items-center justify-center mx-auto mb-4">
-                  <Users size={26} className="text-ocean" />
-                </div>
-                <p className="font-display font-bold text-lg text-foreground">{t('book.service.shuttle')}</p>
-                <p className="text-muted-foreground text-sm mt-2 leading-relaxed">{t('book.service.shuttleDesc')}</p>
-              </motion.button>
-            </div>
-          </div>
+      case 'route': {
+        const zonesOrdered = areas.length > 0 ? areas.map((a) => a.name) : [...new Set(hotels.map((h) => h.zone))].sort();
+        const zoneSelected = selectedZoneForHotel ?? data.selectedHotel?.zone ?? null;
+        const hotelZone = zoneSelected ? (AREA_TO_HOTEL_ZONE[zoneSelected] || zoneSelected) : '';
+        const hotelsInZone = hotelZone ? hotels.filter((h) => h.zone === hotelZone) : [];
+        const searchLower = hotelSearch.toLowerCase();
+        const filteredHotels = hotelsInZone.filter(
+          (h) => h.name.toLowerCase().includes(searchLower)
         );
-      case 'trip':
         return (
-          <div className="space-y-5">
+          <div className="space-y-6">
             <div>
-              <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t('book.trip.title')}</h2>
-              <p className="text-muted-foreground text-sm md:text-base mt-2 leading-relaxed">{t('book.trip.subtitle')}</p>
+              <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">
+                {lang === 'es' ? 'Tu Traslado' : 'Your Transfer'}
+              </h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                {lang === 'es' ? 'Tipo de viaje, dirección y hotel' : 'Trip type, direction & hotel'}
+              </p>
             </div>
-            {[
-              { id: 'oneway' as const, label: t('book.trip.oneWay'), desc: t('book.trip.oneWayDesc') },
-              { id: 'roundtrip' as const, label: t('book.trip.roundTrip'), desc: t('book.trip.roundTripDesc') },
-            ].map(s => (
-              <motion.button
-                key={s.id}
-                onClick={() => { setData({ ...data, tripType: s.id }); }}
-                whileHover={{ scale: 1.01, x: 4 }}
-                whileTap={{ scale: 0.99 }}
-                className={`w-full booking-card rounded-xl p-5 md:p-6 text-left flex items-center justify-between ${data.tripType === s.id ? 'selected border-gold' : ''}`}
-              >
-                <div>
-                  <p className="font-semibold text-base text-foreground">{s.label}</p>
-                  <p className="text-muted-foreground text-sm mt-1 leading-relaxed">{s.desc}</p>
-                </div>
-                {data.tripType === s.id && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="w-7 h-7 rounded-full gold-gradient flex items-center justify-center flex-shrink-0 ml-3"
+
+            {/* Trip type */}
+            <div>
+              <p className="text-xs font-semibold text-gold uppercase tracking-wider mb-3">{t('book.trip.title')}</p>
+              <div className="flex gap-3">
+                {[
+                  { id: 'oneway' as const, label: t('book.trip.oneWay') },
+                  { id: 'roundtrip' as const, label: t('book.trip.roundTrip') },
+                ].map(s => (
+                  <motion.button
+                    key={s.id}
+                    onClick={() => setData({ ...data, tripType: s.id })}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={cn('flex-1 booking-card rounded-xl p-4 text-center', data.tripType === s.id ? 'selected border-gold' : '')}
                   >
-                    <Check size={15} className="text-navy" />
-                  </motion.div>
-                )}
-              </motion.button>
-            ))}
-          </div>
-        );
-      case 'route':
-        return (
-          <div className="space-y-5">
-            <div>
-              <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t('book.route.title')}</h2>
-              <p className="text-muted-foreground text-sm md:text-base mt-2 leading-relaxed">{t('book.route.subtitle')}</p>
+                    <p className="font-semibold text-sm text-foreground">{s.label}</p>
+                    {data.tripType === s.id && (
+                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-5 h-5 rounded-full gold-gradient flex items-center justify-center mx-auto mt-2">
+                        <Check size={11} className="text-navy" />
+                      </motion.div>
+                    )}
+                  </motion.button>
+                ))}
+              </div>
             </div>
-            {[
-              { id: 'airport-hotel' as const, label: t('book.route.airportToHotel') },
-              { id: 'hotel-airport' as const, label: t('book.route.hotelToAirport') },
-            ].map(s => (
-              <motion.button
-                key={s.id}
-                onClick={() => { setData({ ...data, route: s.id }); }}
-                whileHover={{ scale: 1.01, x: 4 }}
-                whileTap={{ scale: 0.99 }}
-                className={`w-full booking-card rounded-xl p-5 md:p-6 text-left flex items-center justify-between ${data.route === s.id ? 'selected border-gold' : ''}`}
-              >
-                <p className="font-semibold text-base text-foreground">{s.label}</p>
-                {data.route === s.id && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="w-7 h-7 rounded-full gold-gradient flex items-center justify-center flex-shrink-0 ml-3"
-                  >
-                    <Check size={15} className="text-navy" />
-                  </motion.div>
+
+            {/* Route direction */}
+            {data.tripType && (
+              <div>
+                <p className="text-xs font-semibold text-gold uppercase tracking-wider mb-3">{t('book.route.title')}</p>
+                <div className="flex gap-3">
+                  {[
+                    { id: 'airport-hotel' as const, label: t('book.route.airportToHotel') },
+                    { id: 'hotel-airport' as const, label: t('book.route.hotelToAirport') },
+                  ].map(s => (
+                    <motion.button
+                      key={s.id}
+                      onClick={() => { setData({ ...data, route: s.id }); setSelectedZoneForHotel(null); }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={cn('flex-1 booking-card rounded-xl p-4 text-center', data.route === s.id ? 'selected border-gold' : '')}
+                    >
+                      <p className="font-semibold text-sm text-foreground">{s.label}</p>
+                      {data.route === s.id && (
+                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-5 h-5 rounded-full gold-gradient flex items-center justify-center mx-auto mt-2">
+                          <Check size={11} className="text-navy" />
+                        </motion.div>
+                      )}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Area + Hotel — shown when route is set */}
+            {data.route && (
+              <div className="space-y-4 p-4 rounded-xl border border-border bg-muted/20">
+                {!zoneSelected ? (
+                  <>
+                    <p className="text-sm font-semibold text-foreground">
+                      {lang === 'es' ? 'Selecciona tu área' : 'Select your area'}
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {zonesOrdered.map((zone) => {
+                        const hz = AREA_TO_HOTEL_ZONE[zone] || zone;
+                        const count = hotels.filter((h) => h.zone === hz).length;
+                        return (
+                          <button
+                            key={zone}
+                            type="button"
+                            onClick={() => setSelectedZoneForHotel(zone)}
+                            className="booking-card rounded-xl p-4 text-left border border-border hover:border-gold/40 transition-all"
+                          >
+                            <p className="font-semibold text-sm text-foreground">{zone} · {count} {lang === 'es' ? 'hoteles' : 'hotels'}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <p className="text-sm font-semibold text-foreground">
+                        {lang === 'es' ? 'Hotel en' : 'Hotel in'} <span className="text-gold">{zoneSelected}</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedZoneForHotel(null); setData((d) => ({ ...d, selectedHotel: null })); }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold border-2 border-gold text-gold bg-gold/10 hover:bg-gold/20 hover:border-gold transition-all focus:outline-none focus:ring-2 focus:ring-gold/40"
+                      >
+                        {lang === 'es' ? '← Cambiar área' : '← Change area'}
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder={t('book.locations.searchHotel')}
+                      value={hotelSearch}
+                      onChange={(e) => setHotelSearch(e.target.value)}
+                      className="input-luxury w-full"
+                    />
+                    <div className="max-h-52 overflow-y-auto space-y-1 pr-1">
+                      {filteredHotels.map((h) => {
+                        const isSelected = data.selectedHotel?.id === h.id;
+                        return (
+                          <button
+                            key={h.id}
+                            type="button"
+                            onClick={() => selectHotel(h)}
+                            className={cn(
+                              'w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all',
+                              isSelected ? 'bg-gold/20 border border-gold' : 'border border-transparent hover:bg-muted/50'
+                            )}
+                          >
+                            {h.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {filteredHotels.length === 0 && hotelsInZone.length > 0 && (
+                      <p className="text-sm text-muted-foreground">{t('book.locations.noHotel')}</p>
+                    )}
+                    {/* Hotel not listed → WhatsApp */}
+                    <a
+                      href={`https://wa.me/5216241222174?text=${encodeURIComponent(lang === 'es' ? 'Hola, mi hotel no aparece en la lista. ¿Pueden ayudarme con una cotización?' : 'Hi, my hotel is not listed. Can you help me with a quote?')}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm text-[#25D366] hover:underline mt-2 font-medium"
+                    >
+                      <MessageCircle size={14} />
+                      {lang === 'es' ? '¿Tu hotel no está en la lista? Contáctanos' : "Hotel not listed? Contact us"}
+                    </a>
+                  </>
                 )}
-              </motion.button>
-            ))}
+                {hotelsLoading && <p className="text-sm text-muted-foreground">{t('book.locations.loadingHotels')}</p>}
+                {!hotelsLoading && hotelsError && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-amber-600">
+                      {lang === 'es' ? 'No pudimos cargar la lista de hoteles.' : 'Could not load hotel list.'}
+                    </p>
+                    <a href="https://wa.me/5216241222174" target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm text-[#25D366] font-medium hover:underline">
+                      <MessageCircle size={14} />
+                      {lang === 'es' ? 'Cotiza por WhatsApp' : 'Get a quote via WhatsApp'}
+                    </a>
+                  </div>
+                )}
+                {!hotelsLoading && !hotelsError && hotels.length === 0 && <p className="text-sm text-muted-foreground">{t('book.locations.noHotels')}</p>}
+              </div>
+            )}
           </div>
         );
+      }
       case 'date':
         return (
           <div className="space-y-6">
-            <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t('book.date.title')}</h2>
+            <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">
+              {lang === 'es' ? 'Fecha & Detalles' : 'Date & Details'}
+            </h2>
             <div className="grid sm:grid-cols-2 gap-5">
               <div>
                 <label className="text-sm font-semibold text-foreground mb-2 block">{t('book.date.arrival')}</label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className={cn("input-luxury w-full flex items-center gap-3 text-left", !data.arrivalDate && "text-muted-foreground")}>
+                    <button className={cn(
+                      "input-luxury w-full flex items-center gap-3 text-left",
+                      !data.arrivalDate && "text-muted-foreground",
+                      dateStepErrors.arrivalDate && "border-destructive ring-1 ring-destructive"
+                    )}>
                       <CalendarDays size={18} className="text-gold flex-shrink-0" />
                       {data.arrivalDate ? format(data.arrivalDate, 'PPP') : 'Select date'}
                     </button>
@@ -478,10 +657,16 @@ const Book = () => {
                       initialFocus className={cn("p-3 pointer-events-auto")} />
                   </PopoverContent>
                 </Popover>
+                {dateStepErrors.arrivalDate && (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-sm text-destructive">
+                    <AlertCircle size={14} className="flex-shrink-0" />
+                    {dateStepErrors.arrivalDate}
+                  </p>
+                )}
               </div>
-              <InputField label={t('book.date.flightNumber')} icon={<Plane size={18} className="text-gold" />}>
+              <InputField label={t('book.date.flightNumber')} icon={<Plane size={18} className="text-gold" />} error={dateStepErrors.flightNumber}>
                 <input type="text" placeholder="AA 1234" value={data.flightNumber} onChange={e => setData({ ...data, flightNumber: e.target.value })}
-                  className="input-luxury pl-11" />
+                  className={cn("input-luxury pl-11", dateStepErrors.flightNumber && "border-destructive ring-1 ring-destructive")} />
               </InputField>
               <div>
                 <label className="text-sm font-semibold text-foreground mb-2 block">{t('book.date.arrivalTime')}</label>
@@ -506,7 +691,11 @@ const Book = () => {
                   <label className="text-sm font-semibold text-foreground mb-2 block">{t('book.date.departure')}</label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button className={cn("input-luxury w-full flex items-center gap-3 text-left", !data.departureDate && "text-muted-foreground")}>
+                      <button className={cn(
+                        "input-luxury w-full flex items-center gap-3 text-left",
+                        !data.departureDate && "text-muted-foreground",
+                        dateStepErrors.departureDate && "border-destructive ring-1 ring-destructive"
+                      )}>
                         <CalendarDays size={18} className="text-gold flex-shrink-0" />
                         {data.departureDate ? format(data.departureDate, 'PPP') : 'Select date'}
                       </button>
@@ -518,7 +707,17 @@ const Book = () => {
                         initialFocus className={cn("p-3 pointer-events-auto")} />
                     </PopoverContent>
                   </Popover>
+                  {dateStepErrors.departureDate && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-sm text-destructive">
+                      <AlertCircle size={14} className="flex-shrink-0" />
+                      {dateStepErrors.departureDate}
+                    </p>
+                  )}
                 </div>
+                <InputField label={t('book.date.flightNumber')} icon={<Plane size={18} className="text-gold" />} error={dateStepErrors.departureFlightNumber}>
+                  <input type="text" placeholder="AA 1234" value={data.departureFlightNumber} onChange={e => setData({ ...data, departureFlightNumber: e.target.value })}
+                    className={cn("input-luxury pl-11", dateStepErrors.departureFlightNumber && "border-destructive ring-1 ring-destructive")} />
+                </InputField>
                 <div>
                   <label className="text-sm font-semibold text-foreground mb-2 block">{t('book.date.departureTime')}</label>
                   <div className="relative">
@@ -533,6 +732,28 @@ const Book = () => {
                       })).flat()}
                     </select>
                   </div>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-foreground mb-2 block">{t('book.date.pickupTime')}</label>
+                  <div className="relative">
+                    <Clock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gold pointer-events-none z-10" />
+                    <select value={data.pickupTime} onChange={e => setData({ ...data, pickupTime: e.target.value })}
+                      className={cn("input-luxury pl-11 w-full appearance-none cursor-pointer", dateStepErrors.pickupTime && "border-destructive ring-1 ring-destructive")}>
+                      <option value="">Select time</option>
+                      {Array.from({ length: 24 }, (_, h) => [0, 30].map(m => {
+                        const val = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                        const label = `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+                        return <option key={val} value={val}>{label}</option>;
+                      })).flat()}
+                    </select>
+                  </div>
+                  {dateStepErrors.pickupTime && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-sm text-destructive">
+                      <AlertCircle size={14} className="flex-shrink-0" />
+                      {dateStepErrors.pickupTime}
+                    </p>
+                  )}
+                  <p className="mt-1 text-xs text-muted-foreground">{t('book.date.pickupSuggestion')}</p>
                 </div>
               </div>
             )}
@@ -606,128 +827,40 @@ const Book = () => {
                 )}
               </div>
             )}
-          </div>
-        );
-      case 'locations': {
-        const searchLower = hotelSearch.toLowerCase();
-        const filteredHotels = hotels.filter(
-          (h) =>
-            h.name.toLowerCase().includes(searchLower) || h.zone.toLowerCase().includes(searchLower)
-        );
-        const byZone = filteredHotels.reduce<Record<string, typeof hotels>>((acc, h) => {
-          if (!acc[h.zone]) acc[h.zone] = [];
-          acc[h.zone].push(h);
-          return acc;
-        }, {});
-        return (
-          <div className="space-y-5">
-            <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t('book.locations.title')}</h2>
-            {/* Hotel selection (private only) - zone derived from hotel */}
-            {data.serviceType === 'private' && data.route && (
-              <div className="space-y-4 p-4 rounded-xl border border-border bg-muted/20">
-                <p className="text-sm font-medium text-foreground">
-                  {data.route === 'airport-hotel'
-                    ? t('book.locations.selectHotel', { en: 'Select your hotel (zone & price auto-filled)', es: 'Selecciona tu hotel (zona y precio se completan)' })
-                    : t('book.locations.selectHotelOrigin', { en: 'Select your hotel', es: 'Selecciona tu hotel' })}
-                </p>
-                <input
-                  type="text"
-                  placeholder={t('book.locations.searchHotel', { en: 'Search hotel...', es: 'Buscar hotel...' })}
-                  value={hotelSearch}
-                  onChange={(e) => setHotelSearch(e.target.value)}
-                  className="input-luxury w-full"
-                />
-                <div className="max-h-48 overflow-y-auto space-y-3 pr-1">
-                  {Object.entries(byZone).map(([zone, list]) => (
-                    <div key={zone}>
-                      <p className="text-xs font-semibold text-muted-foreground mb-1.5">{zone}</p>
-                      <div className="space-y-1">
-                        {list.map((h) => {
-                          const isSelected = data.selectedHotel?.id === h.id;
-                          return (
-                            <button
-                              key={h.id}
-                              type="button"
-                              onClick={() => selectHotel(h)}
-                              className={cn(
-                                'w-full text-left px-3 py-2 rounded-lg text-sm transition-all',
-                                isSelected ? 'bg-gold/20 border border-gold' : 'border border-transparent hover:bg-muted/50'
-                              )}
-                            >
-                              {h.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
+
+            {/* Locations — merged into date step */}
+            <div className="pt-4 border-t border-border space-y-4">
+              <p className="text-xs font-semibold text-gold uppercase tracking-wider">
+                {lang === 'es' ? 'Puntos de traslado' : 'Transfer points'}
+              </p>
+              <p className="text-sm text-muted-foreground -mt-2">
+                {lang === 'es' ? 'Pre-llenados según tu hotel. Edita si es necesario.' : 'Pre-filled from your hotel. Edit if needed.'}
+              </p>
+              <InputField label={t('book.locations.pickup')} icon={<MapPin size={18} className="text-gold" />}>
+                <div className="flex gap-3">
+                  <input type="text" placeholder={t('book.locations.placeholder')} value={data.pickup}
+                    onChange={e => setData({ ...data, pickup: e.target.value })}
+                    className="input-luxury pl-11 flex-1" />
+                  <button type="button" onClick={() => setData(d => ({ ...d, pickup: SJD_AIRPORT }))}
+                    className="text-xs font-bold text-gold border-2 border-gold/30 rounded-xl px-4 hover:bg-gold/5 hover:border-gold/50 transition-all whitespace-nowrap">
+                    {t('book.locations.quickFill')}
+                  </button>
                 </div>
-                {filteredHotels.length === 0 && hotels.length > 0 && (
-                  <div className="pt-2">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {t('book.locations.noHotel', { en: 'Hotel not listed? Select zone and enter address below:', es: '¿No está tu hotel? Selecciona zona y escribe la dirección abajo:' })}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {[...new Set(hotels.map((h) => h.zone))].sort().map((z) => {
-                        const isSelected = data.route === 'airport-hotel' ? data.zoneTo === z : data.zoneFrom === z;
-                        return (
-                          <button
-                            key={z}
-                            type="button"
-                            onClick={() => {
-                              const zoneHotel = hotels.find((h) => h.zone === z);
-                              if (zoneHotel) selectHotel(zoneHotel);
-                              else setData((d) => {
-                                const next = { ...d, selectedHotel: null };
-                                if (d.route === 'airport-hotel') next.zoneTo = z;
-                                else next.zoneFrom = z;
-                                const area = areas.find((a) => a.name === z || a.name.toLowerCase() === z.toLowerCase());
-                                if (area) next.areaId = area.id;
-                                return next;
-                              });
-                            }}
-                            className={cn(
-                              'px-3 py-1.5 rounded-lg text-xs font-semibold',
-                              isSelected ? 'bg-gold/20 border border-gold' : 'border border-border hover:bg-muted/50'
-                            )}
-                          >
-                            {z}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-                {hotelsLoading && (
-                  <p className="text-sm text-muted-foreground">{t('book.locations.loadingHotels', { en: 'Loading hotels...', es: 'Cargando hoteles...' })}</p>
-                )}
-                {!hotelsLoading && hotelsError && (
-                  <p className="text-sm text-amber-600">{t('book.locations.hotelsError', { en: 'Could not load hotels. Check that the backend is running.', es: 'No se pudieron cargar hoteles. Verifica que el backend esté corriendo.' })}</p>
-                )}
-                {!hotelsLoading && !hotelsError && hotels.length === 0 && (
-                  <p className="text-sm text-muted-foreground">{t('book.locations.noHotels', { en: 'No hotels in database. Run: cd backend && npm run db:seed', es: 'No hay hoteles. Ejecuta: cd backend && npm run db:seed' })}</p>
-                )}
-              </div>
-            )}
-            <InputField label={t('book.locations.pickup')} icon={<MapPin size={18} className="text-gold" />}>
-              <div className="flex gap-3">
-                <input type="text" placeholder={t('book.locations.placeholder')} value={data.pickup}
-                  onChange={e => setData({ ...data, pickup: e.target.value })}
-                  className="input-luxury pl-11 flex-1" />
-                <button type="button" onClick={() => setData(d => ({ ...d, pickup: 'SJD International Airport' }))}
-                  className="text-xs font-bold text-gold border-2 border-gold/30 rounded-xl px-4 hover:bg-gold/5 hover:border-gold/50 transition-all whitespace-nowrap">
-                  {t('book.locations.quickFill')}
-                </button>
-              </div>
-            </InputField>
-            <InputField label={t('book.locations.dropoff')} icon={<MapPin size={18} className="text-ocean" />}>
-              <input type="text" placeholder={t('book.locations.placeholder')} value={data.dropoff}
-                onChange={e => setData({ ...data, dropoff: e.target.value })}
-                className="input-luxury pl-11" />
-            </InputField>
+              </InputField>
+              <InputField label={t('book.locations.dropoff')} icon={<MapPin size={18} className="text-ocean" />}>
+                <div className="flex gap-3">
+                  <input type="text" placeholder={t('book.locations.placeholder')} value={data.dropoff}
+                    onChange={e => setData({ ...data, dropoff: e.target.value })}
+                    className="input-luxury pl-11 flex-1" />
+                  <button type="button" onClick={() => setData(d => ({ ...d, dropoff: SJD_AIRPORT }))}
+                    className="text-xs font-bold text-gold border-2 border-gold/30 rounded-xl px-4 hover:bg-gold/5 hover:border-gold/50 transition-all whitespace-nowrap">
+                    {t('book.locations.quickFill')}
+                  </button>
+                </div>
+              </InputField>
+            </div>
           </div>
         );
-      }
       case 'extras':
         const isAirportRoute = data.route === 'airport-hotel' || data.route === 'hotel-airport';
         return (
@@ -828,8 +961,8 @@ const Book = () => {
               </div>
             )}
 
-            {/* Upgrade kits (private only; shuttle does not allow personalized extras) */}
-            {upsellKits.length > 0 && data.serviceType !== 'shuttle' && (isAirportRoute || true) && (
+            {/* Upgrade kits */}
+            {upsellKits.length > 0 && (isAirportRoute || true) && (
               <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
                 <p className="text-xs font-semibold text-gold uppercase tracking-wider">{t('book.upsells.arrivalUpgrades', { en: 'Upgrade kits', es: 'Kits de upgrade' })}</p>
                 <div className="grid sm:grid-cols-2 gap-3">
@@ -867,21 +1000,17 @@ const Book = () => {
                 </div>
               </motion.div>
             )}
-          </div>
-        );
 
-      /* ===== UPGRADED UPSELL STEP ===== */
-      case 'upsell':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">
-                {lang === 'es' ? '¡Agrega Aventuras!' : 'Add Adventures!'}
-              </h2>
-              <p className="text-muted-foreground text-sm md:text-base mt-2 leading-relaxed">
-                {lang === 'es' ? 'Haz tu viaje inolvidable con experiencias exclusivas' : 'Make your trip unforgettable with exclusive experiences'}
-              </p>
-            </div>
+            {/* Activities upsell — merged into extras step */}
+            <div className="pt-4 border-t border-border space-y-4">
+              <div>
+                <p className="text-xs font-semibold text-gold uppercase tracking-wider">
+                  {lang === 'es' ? 'Actividades (opcional)' : 'Activities (optional)'}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {lang === 'es' ? 'Experiencias exclusivas en Los Cabos' : 'Exclusive experiences in Los Cabos'}
+                </p>
+              </div>
 
             {/* Crazy Combo CTA — primary upsell */}
             <motion.div
@@ -953,34 +1082,6 @@ const Book = () => {
               )}
             </div>
 
-            {/* Individual option */}
-            <div
-              className={cn(
-                "rounded-xl p-5 border cursor-pointer transition-all flex items-center justify-between",
-                data.comboMode === 'individual'
-                  ? "border-gold bg-gold/5"
-                  : "border-border hover:border-gold/30 glass-card"
-              )}
-              onClick={() => setData(d => ({ ...d, comboMode: 'individual' }))}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xl">✨</span>
-                <div>
-                  <p className="font-display font-bold text-foreground">
-                    {lang === 'es' ? 'Actividades Individuales' : 'Individual Activities'}
-                  </p>
-                  <p className="text-muted-foreground text-xs">
-                    {lang === 'es' ? 'Elige las que quieras al precio individual' : 'Pick any at individual pricing'}
-                  </p>
-                </div>
-              </div>
-              {data.comboMode === 'individual' && (
-                <div className="w-7 h-7 rounded-full gold-gradient flex items-center justify-center flex-shrink-0">
-                  <Check size={15} className="text-navy" />
-                </div>
-              )}
-            </div>
-
             {/* Skip option */}
             {!data.comboMode && (
               <p className="text-center text-sm text-muted-foreground">
@@ -1023,9 +1124,6 @@ const Book = () => {
                         <p className="text-muted-foreground text-[10px] mt-1 flex items-center justify-center gap-1">
                           <Clock size={9} /> {act.duration}
                         </p>
-                        {data.comboMode === 'individual' && (
-                          <p className="text-gold text-xs font-bold mt-1">${act.price}</p>
-                        )}
                         {selected && (
                           <div className="w-5 h-5 rounded-full gold-gradient flex items-center justify-center mx-auto mt-2">
                             <Check size={11} className="text-navy" />
@@ -1042,6 +1140,7 @@ const Book = () => {
                 </div>
               </motion.div>
             )}
+            </div>
           </div>
         );
 
@@ -1120,6 +1219,30 @@ const Book = () => {
               </div>
             </motion.div>
 
+            {/* Validation alert: incomplete section */}
+            {!reviewValidation.valid && reviewValidation.firstInvalidStepIndex !== null && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl border-2 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+              >
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" size={18} />
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    {t('book.validation.incomplete')}{' '}
+                    <span className="font-semibold">{stepLabels[steps[reviewValidation.firstInvalidStepIndex]]}</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCurrent(reviewValidation.firstInvalidStepIndex!)}
+                  className="shrink-0 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-4 py-2 inline-flex items-center gap-1.5"
+                >
+                  {t('book.validation.goTo')} <ArrowRight size={14} />
+                </button>
+              </motion.div>
+            )}
+
             {/* Trust + CTA */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
@@ -1131,10 +1254,7 @@ const Book = () => {
 
               <motion.button
                 onClick={handlePayPalCheckout}
-                disabled={
-                  creatingBooking ||
-                  (!!data.serviceType && !data.areaId)
-                }
+                disabled={creatingBooking || !reviewValidation.valid}
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
                 className={cn(
@@ -1157,7 +1277,14 @@ const Book = () => {
                 )}
               </motion.button>
               {bookingError && (
-                <p className="text-center text-sm text-destructive mt-2">{bookingError}</p>
+                <div className="text-center mt-2 space-y-2">
+                  <p className="text-sm text-destructive">{bookingError}</p>
+                  <a href="https://wa.me/5216241222174" target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-[#25D366] font-medium hover:underline">
+                    <MessageCircle size={14} />
+                    {lang === 'es' ? 'Reservar por WhatsApp' : 'Book via WhatsApp'}
+                  </a>
+                </div>
               )}
               {!bookingError && !creatingBooking && (
                 <p className="text-center text-sm text-muted-foreground">
@@ -1178,18 +1305,19 @@ const Book = () => {
   };
 
   const stepLabels: Record<string, string> = {
-    service: t('book.step.service'),
-    trip: t('book.step.trip'),
-    route: t('book.step.route'),
-    date: t('book.step.date'),
-    locations: t('book.step.locations'),
-    extras: t('book.step.extras'),
-    upsell: t('book.step.activities'),
-    review: t('book.step.review'),
+    route: lang === 'es' ? 'Traslado' : 'Transfer',
+    date: lang === 'es' ? 'Fecha' : 'Date',
+    extras: lang === 'es' ? 'Extras' : 'Extras',
+    review: lang === 'es' ? 'Resumen' : 'Review',
   };
 
   return (
     <div className="pt-28 pb-36 lg:pb-24 px-4 min-h-screen bg-gradient-to-b from-background to-muted/30">
+      <SEO
+        title="Book Your Transfer"
+        description="Book your private luxury airport transfer in Los Cabos in minutes. Choose your vehicle, route, date, and extras. Secure payment via PayPal."
+        keywords="book cabo transfer, reserve los cabos transportation, cabo airport pickup, private driver reservation los cabos"
+      />
       <div className="container mx-auto max-w-5xl">
         {/* Header */}
         <motion.div
@@ -1260,9 +1388,13 @@ const Book = () => {
               );
             })}
           </div>
-          {/* Mobile: compact progress */}
-          <div className="md:hidden flex items-center gap-2">
-            <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+          {/* Mobile: compact progress with step label */}
+          <div className="md:hidden space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-foreground">{stepLabels[steps[current]] || steps[current]}</span>
+              <span className="text-xs font-semibold text-gold tabular-nums">{current + 1}/{steps.length}</span>
+            </div>
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
               <motion.div
                 className="h-full gold-gradient rounded-full"
                 initial={false}
@@ -1271,7 +1403,6 @@ const Book = () => {
                 style={{ width: `${((current + 1) / steps.length) * 100}%` }}
               />
             </div>
-            <span className="text-xs font-semibold text-muted-foreground tabular-nums">{current + 1}/{steps.length}</span>
           </div>
         </motion.div>
 
@@ -1313,9 +1444,15 @@ const Book = () => {
               {current < steps.length - 1 && (
                 <motion.button
                   onClick={next}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="gold-gradient text-navy px-10 py-3.5 rounded-xl text-sm font-bold inline-flex items-center gap-2 shadow-lg shadow-gold/25 hover:shadow-xl hover:shadow-gold/30 transition-shadow active:scale-[0.98]"
+                  disabled={current === 1 && Object.values(dateStepErrors).some(Boolean)}
+                  whileHover={current !== 2 || !Object.values(dateStepErrors).some(Boolean) ? { scale: 1.02 } : {}}
+                  whileTap={current !== 2 || !Object.values(dateStepErrors).some(Boolean) ? { scale: 0.98 } : {}}
+                  className={cn(
+                    "gold-gradient text-navy px-10 py-3.5 rounded-xl text-sm font-bold inline-flex items-center gap-2 shadow-lg shadow-gold/25 transition-shadow",
+                    current === 1 && Object.values(dateStepErrors).some(Boolean)
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:shadow-xl hover:shadow-gold/30 active:scale-[0.98]"
+                  )}
                 >
                   {t('book.next')} <ArrowRight size={18} />
                 </motion.button>
@@ -1405,8 +1542,12 @@ const Book = () => {
             </motion.button>
             <motion.button
               onClick={next}
+              disabled={current === 1 && Object.values(dateStepErrors).some(Boolean)}
               whileTap={{ scale: 0.98 }}
-              className="gold-gradient text-navy px-6 py-3 rounded-xl text-sm font-bold inline-flex items-center gap-2 touch-manipulation min-h-[44px] shadow-lg shadow-gold/25"
+              className={cn(
+                "gold-gradient text-navy px-6 py-3 rounded-xl text-sm font-bold inline-flex items-center gap-2 touch-manipulation min-h-[44px] shadow-lg shadow-gold/25",
+                current === 1 && Object.values(dateStepErrors).some(Boolean) && "opacity-50 cursor-not-allowed pointer-events-none"
+              )}
             >
               {t('book.next')} <ArrowRight size={18} />
             </motion.button>
@@ -1461,13 +1602,19 @@ const Book = () => {
 };
 
 /* Reusable input field wrapper with icon */
-const InputField = ({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) => (
+const InputField = ({ label, icon, error, children }: { label: string; icon: React.ReactNode; error?: string; children: React.ReactNode }) => (
   <div>
     <label className="text-sm font-semibold text-foreground mb-2 block">{label}</label>
     <div className="relative">
       <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10">{icon}</div>
       {children}
     </div>
+    {error && (
+      <p className="mt-1.5 flex items-center gap-1.5 text-sm text-destructive">
+        <AlertCircle size={14} className="flex-shrink-0" />
+        {error}
+      </p>
+    )}
   </div>
 );
 

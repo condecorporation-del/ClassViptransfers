@@ -71,7 +71,8 @@ export default function CheckoutSuccess() {
       
       if (data.success) {
         // Fetch updated booking to show confirmation
-        const bookingResponse = await fetch(`${getApiBaseUrl()}/api/bookings/${bookingIdParam}`);
+        const bt = sessionStorage.getItem(`bt_${bookingIdParam}`) || '';
+        const bookingResponse = await fetch(`${getApiBaseUrl()}/api/bookings/${bookingIdParam}${bt ? `?token=${bt}` : ''}`);
         if (bookingResponse.ok) {
           const bookingData = await bookingResponse.json();
           setBooking(bookingData.data);

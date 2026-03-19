@@ -66,7 +66,16 @@ export default function AdminLogin() {
       }
     } catch (err: any) {
       console.error('[AdminLogin] Request error:', err);
-      setError(err.message || 'Network error');
+      if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError') || err.name === 'TypeError') {
+        const base = getApiBaseUrl();
+        setError(
+          lang === 'es'
+            ? `No se pudo conectar al servidor${base ? ` (${base})` : ''}. Verifica que el backend esté corriendo.`
+            : `Could not connect to server${base ? ` (${base})` : ''}. Verify backend is running.`
+        );
+      } else {
+        setError(err.message || 'Network error');
+      }
     } finally {
       setLoading(false);
     }

@@ -12,8 +12,8 @@ export const translations: Record<string, { en: string; es: string }> = {
   'hero.eyebrow': { en: 'Los Cabos, México', es: 'Los Cabos, México' },
   'hero.title': { en: 'Luxury Airport Transfers in Los Cabos', es: 'Transfers de Lujo al Aeropuerto en Los Cabos' },
   'hero.subtitle': {
-    en: 'Private & shuttle transfers. Book in under 2 minutes.',
-    es: 'Transfers privados y compartidos. Reserva en menos de 2 minutos.',
+    en: 'Private luxury transfers. Book in under 2 minutes.',
+    es: 'Transfers privados de lujo. Reserva en menos de 2 minutos.',
   },
   'hero.title2': { en: 'Your Private Concierge in Paradise', es: 'Tu Concierge Privado en el Paraíso' },
   'hero.subtitle2': { en: 'Curated experiences & VIP transportation across Los Cabos', es: 'Experiencias curadas y transportación VIP en Los Cabos' },
@@ -106,7 +106,7 @@ export const translations: Record<string, { en: string; es: string }> = {
 
   // Transfers page
   'transfers.hero.title': { en: 'Transfer Services', es: 'Servicios de Transfer' },
-  'transfers.hero.subtitle': { en: 'Choose the perfect ride for your Los Cabos journey', es: 'Elige el transporte perfecto para tu viaje a Los Cabos' },
+  'transfers.hero.subtitle': { en: 'Private luxury transfers. Door-to-door in Los Cabos.', es: 'Transfers privados de lujo. Puerta a puerta en Los Cabos.' },
   'transfers.private.title': { en: 'Private Transfer', es: 'Transfer Privado' },
   'transfers.private.badge': { en: 'MOST POPULAR', es: 'MÁS POPULAR' },
   'transfers.private.desc': { en: 'Exclusive vehicle just for your group. Direct, comfortable, and on your schedule.', es: 'Vehículo exclusivo para tu grupo. Directo, cómodo y a tu horario.' },
@@ -139,13 +139,17 @@ export const translations: Record<string, { en: string; es: string }> = {
   'checkout.secureStep2': { en: 'Pay with PayPal', es: 'Pagar con PayPal' },
   'checkout.secureStep3': { en: 'Confirmed', es: 'Confirmado' },
   'transfers.cta.title': { en: 'Luxury Airport Transfers in Los Cabos', es: 'Transfers de Lujo al Aeropuerto en Los Cabos' },
-  'transfers.cta.subtitle': { en: 'Private & shuttle transfers. Book in under 2 minutes.', es: 'Transfers privados y compartidos. Reserva en menos de 2 minutos.' },
+  'transfers.cta.subtitle': { en: 'Private luxury transfers. Book in under 2 minutes.', es: 'Transfers privados de lujo. Reserva en menos de 2 minutos.' },
   'transfers.cta.chat': { en: 'Chat on WhatsApp', es: 'Chatea por WhatsApp' },
   'transfers.pricing.title': { en: 'Pricing by zone', es: 'Precios por zona' },
   'transfers.pricing.subtitle': { en: 'Select your vehicle and view prices. All prices in USD, one-way.', es: 'Selecciona tu vehículo y consulta los precios. Todos los precios en USD, trayecto sencillo.' },
   'pricing.viewPrices': { en: 'View prices by route', es: 'Ver precios por ruta' },
   'pricing.hidePrices': { en: 'Hide prices', es: 'Ocultar precios' },
   'floatingWhatsApp.msg': { en: "Hello! I'd like to get a quote for a transfer.", es: '¡Hola! Me gustaría cotizar un transfer.' },
+  'chat.shortcut.transport': { en: 'Book transportation', es: 'Reservar transporte' },
+  'chat.shortcut.activities': { en: 'Book activities', es: 'Reservar actividades' },
+  'chat.shortcut.quote': { en: 'Get a quote', es: 'Cotizar' },
+  'chat.shortcut.human': { en: 'Talk to a human', es: 'Hablar con humano' },
 
   // Activities page
   'activities.hero.title': { en: 'Activities & Experiences', es: 'Actividades y Experiencias' },
@@ -172,6 +176,7 @@ export const translations: Record<string, { en: string; es: string }> = {
   'activities.vehicleInsurance': { en: 'Vehicle insurance: $500 USD hold required for ATV/RZR/Moto', es: 'Seguro vehicular: depósito de $500 USD requerido para ATV/RZR/Moto' },
   'activities.quoteOnRequest': { en: 'Quote on request', es: 'Cotización bajo solicitud' },
   'activities.contactWhatsApp': { en: 'Contact via WhatsApp', es: 'Contactar por WhatsApp' },
+  'activities.yatesMasajes': { en: 'Private yachts and in-villa massages — book directly via WhatsApp', es: 'Yates privados y masajes a domicilio en villas – reserva directa por WhatsApp' },
   'activities.cta.title': { en: 'Ready for Adventure?', es: '¿Listo para la Aventura?' },
   'activities.cta.subtitle': { en: 'Book your activities and make unforgettable memories in Los Cabos.', es: 'Reserva tus actividades y crea memorias inolvidables en Los Cabos.' },
 
@@ -199,11 +204,15 @@ export const translations: Record<string, { en: string; es: string }> = {
   'book.step.trip': { en: 'Trip Type', es: 'Tipo de Viaje' },
   'book.step.area': { en: 'Area', es: 'Área' },
   'book.step.route': { en: 'Route', es: 'Ruta' },
+  'book.step.hotel': { en: 'Route & Hotel', es: 'Ruta y Hotel' },
   'book.step.date': { en: 'Date & Passengers', es: 'Fecha y Pasajeros' },
   'book.step.locations': { en: 'Locations', es: 'Ubicaciones' },
   'book.step.extras': { en: 'Free Extras', es: 'Extras Gratis' },
   'book.step.activities': { en: 'Activities', es: 'Actividades' },
   'book.step.review': { en: 'Review & Pay', es: 'Revisar y Pagar' },
+
+  'book.validation.incomplete': { en: 'Please complete the following section:', es: 'Falta completar la siguiente sección:' },
+  'book.validation.goTo': { en: 'Go to section', es: 'Ir a la sección' },
 
   'book.service.title': { en: 'Service Type', es: 'Tipo de Servicio' },
   'book.service.subtitle': { en: 'Choose your preferred transfer style', es: 'Elige tu estilo de transfer preferido' },
@@ -238,6 +247,12 @@ export const translations: Record<string, { en: string; es: string }> = {
   'book.date.departureTime': { en: 'Departure Time', es: 'Hora de Salida' },
   'book.date.passengers': { en: 'Passengers', es: 'Pasajeros' },
   'book.date.pickupNote': { en: 'Pickup will be 3 hours before your flight', es: 'La recogida será 3 horas antes de tu vuelo' },
+  'book.date.errorPast': { en: 'Date cannot be in the past', es: 'La fecha no puede ser pasada' },
+  'book.date.errorDepartureBefore': { en: 'Departure must be on or after arrival', es: 'La salida debe ser igual o después de la llegada' },
+  'book.date.errorFlightFormat': { en: 'Use format: AA 1234', es: 'Usa formato: AA 1234' },
+  'book.date.pickupTime': { en: 'Pick up time', es: 'Hora de recogida' },
+  'book.date.errorPickupTooLate': { en: 'Pick up must be at least 3 hours before flight', es: 'La recogida debe ser al menos 3 horas antes del vuelo' },
+  'book.date.pickupSuggestion': { en: 'We suggest 3 hours before your flight', es: 'Sugerimos 3 horas antes de tu vuelo' },
 
   'book.locations.title': { en: 'Pickup & Dropoff', es: 'Recogida y Destino' },
   'book.locations.pickup': { en: 'Pickup Location', es: 'Lugar de Recogida' },

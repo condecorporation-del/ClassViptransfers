@@ -18,6 +18,28 @@
   # Node version
   NODE_VERSION = "18"
 
+# Redirect old zone URLs (Google indexed) to transfers page
+[[redirects]]
+  from = "/san-jose-del-cabo"
+  to = "/transfers"
+  status = 301
+  force = true
+[[redirects]]
+  from = "/san-jose-del-cabo/"
+  to = "/transfers"
+  status = 301
+  force = true
+[[redirects]]
+  from = "/cabo-san-lucas"
+  to = "/transfers"
+  status = 301
+  force = true
+[[redirects]]
+  from = "/cabo-san-lucas/"
+  to = "/transfers"
+  status = 301
+  force = true
+
 # Redirect rules for SPA routing
 [[redirects]]
   from = "/*"

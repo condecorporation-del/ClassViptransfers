@@ -19,29 +19,34 @@ async function main() {
   copyFileSync(logoSrc, join(publicDir, 'logo.png'));
   console.log('✓ Logo Class copiado a public/logo.png');
 
-  // 2. Resize Icono Class for app icons
-  const icono = sharp(iconoSrc);
+  // 2. Resize Icono Class for app icons - trim márgenes y cover para llenar todo
+  const iconOpts = { fit: 'cover', position: 'center' };
+  const trimOpts = { background: '#ffffff', threshold: 20 };
 
-  await icono
-    .resize(180, 180)
+  await sharp(iconoSrc)
+    .trim(trimOpts)
+    .resize(180, 180, iconOpts)
     .png()
     .toFile(join(iconsDir, 'apple-touch-icon.png'));
   console.log('✓ apple-touch-icon.png (180x180)');
 
   await sharp(iconoSrc)
-    .resize(192, 192)
+    .trim(trimOpts)
+    .resize(192, 192, iconOpts)
     .png()
     .toFile(join(iconsDir, 'icon-192x192.png'));
   console.log('✓ icon-192x192.png');
 
   await sharp(iconoSrc)
-    .resize(512, 512)
+    .trim(trimOpts)
+    .resize(512, 512, iconOpts)
     .png()
     .toFile(join(iconsDir, 'icon-512x512.png'));
   console.log('✓ icon-512x512.png');
 
   await sharp(iconoSrc)
-    .resize(48, 48)
+    .trim(trimOpts)
+    .resize(48, 48, iconOpts)
     .png()
     .toFile(join(publicDir, 'favicon.png'));
   console.log('✓ favicon.png (48x48)');

@@ -10,11 +10,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import heroImg1 from '@/assets/hero-luxury-1.jpg';
-import heroImg2 from '@/assets/hero-luxury-2.jpg';
-import heroImg3 from '@/assets/hero-luxury-3.jpg';
+import { cloudinaryAssets } from '@/lib/cloudinary-assets';
 
-const heroImages = [heroImg1, heroImg2, heroImg3];
+const heroImages = cloudinaryAssets.hero;
 
 const heroTexts = [
   { titleKey: 'hero.title', subtitleKey: 'hero.subtitle' },
@@ -72,7 +70,7 @@ const Index = () => {
     address: { '@type': 'PostalAddress', addressLocality: 'Los Cabos', addressRegion: 'Baja California Sur', addressCountry: 'MX' },
     geo: { '@type': 'GeoCoordinates', latitude: 22.8905, longitude: -109.9167 },
     priceRange: '$$',
-    image: 'https://classviptransfers.com/logo.png',
+    image: cloudinaryAssets.logo,
     sameAs: ['https://wa.me/5216241222174'],
     openingHoursSpecification: { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'], opens: '00:00', closes: '23:59' },
   };

@@ -7,16 +7,7 @@ import {
   Bed, Bath, Maximize2, MapPin, ArrowRight, ExternalLink,
 } from 'lucide-react';
 
-// Existing local assets
-import heroLuxury1 from '@/assets/hero-luxury-1.jpg';
-import heroLuxury2 from '@/assets/hero-luxury-2.jpg';
-import heroLuxury3 from '@/assets/hero-luxury-3.jpg';
-import activityAtv from '@/assets/activity-atv.jpg';
-import activityCamel from '@/assets/activity-camel.jpg';
-import activityHorseback from '@/assets/activity-horseback.jpg';
-import activityMoto from '@/assets/activity-moto.jpg';
-import activitySkybikes from '@/assets/activity-skybikes.jpg';
-import activityUtv from '@/assets/activity-utv.jpg';
+import { cloudinaryAssets } from '@/lib/cloudinary-assets';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,21 +37,18 @@ interface Property {
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 const fleetImages: GalleryImage[] = [
-  { src: heroLuxury1, alt: 'Class VIP SUV Premium', label: 'SUV Premium' },
-  { src: heroLuxury2, alt: 'Class VIP Luxury Transfer', label: 'Luxury Sedan' },
-  { src: heroLuxury3, alt: 'Class VIP VIP Experience', label: 'Sprinter Van' },
-  // Add Cloudinary URLs here:
-  // { src: 'https://res.cloudinary.com/tu-cuenta/image/upload/...', alt: 'Suburban', label: 'Suburban' },
+  { src: cloudinaryAssets.hero[0], alt: 'Class VIP SUV Premium', label: 'SUV Premium' },
+  { src: cloudinaryAssets.hero[1], alt: 'Class VIP Luxury Transfer', label: 'Luxury Sedan' },
+  { src: cloudinaryAssets.hero[2], alt: 'Class VIP VIP Experience', label: 'Sprinter Van' },
 ];
 
 const clientImages: GalleryImage[] = [
-  { src: activityCamel, alt: 'Camel Ride Los Cabos' },
-  { src: activityHorseback, alt: 'Horseback Riding Los Cabos' },
-  { src: activityAtv, alt: 'ATV Adventure Los Cabos' },
-  { src: activityMoto, alt: 'Moto Experience Los Cabos' },
-  { src: activitySkybikes, alt: 'Sky Bikes Los Cabos' },
-  { src: activityUtv, alt: 'UTV Adventure Los Cabos' },
-  // Add client/guest Cloudinary photos here
+  { src: cloudinaryAssets.activities.camel, alt: 'Camel Ride Los Cabos' },
+  { src: cloudinaryAssets.activities.horseback, alt: 'Horseback Riding Los Cabos' },
+  { src: cloudinaryAssets.activities.atv, alt: 'ATV Adventure Los Cabos' },
+  { src: cloudinaryAssets.activities.moto, alt: 'Moto Experience Los Cabos' },
+  { src: cloudinaryAssets.activities.skybikes, alt: 'Sky Bikes Los Cabos' },
+  { src: cloudinaryAssets.activities.utv, alt: 'UTV Adventure Los Cabos' },
 ];
 
 const rentalProperties: Property[] = [

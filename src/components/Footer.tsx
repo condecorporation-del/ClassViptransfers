@@ -10,7 +10,7 @@ const Footer = () => {
       <div className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           <div>
-            <img src="/logo.png" alt="Class VIP Transfers" className="h-16 mb-4 drop-shadow-[0_4px_16px_rgba(212,175,55,0.45)]" />
+            <img src="https://res.cloudinary.com/dt9iyiorn/image/upload/q_auto:good,f_auto/classvip/logo" alt="Class VIP Transfers" className="h-16 mb-4 drop-shadow-[0_4px_16px_rgba(212,175,55,0.45)]" />
             <p className="text-off-white/60 text-sm leading-relaxed">
               {t('footer.brand')}
             </p>

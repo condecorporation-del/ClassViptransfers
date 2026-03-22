@@ -1,9 +1,4 @@
-import camelHero from '@/assets/activity-camel.jpg';
-import horsebackHero from '@/assets/activity-horseback.jpg';
-import skyBikesHero from '@/assets/activity-skybikes.jpg';
-import utvHero from '@/assets/activity-utv.jpg';
-import atvHero from '@/assets/activity-atv.jpg';
-import motoHero from '@/assets/activity-moto.jpg';
+import { cloudinaryAssets } from '@/lib/cloudinary-assets';
 
 export interface ActivityInfo {
   slug: string;
@@ -32,7 +27,7 @@ export const activityData: ActivityInfo[] = [
       en: 'Traverse golden dunes where the desert meets the sea — an unforgettable Baja experience.',
       es: 'Atraviesa dunas doradas donde el desierto se encuentra con el mar — una experiencia inolvidable en Baja.',
     },
-    heroImage: camelHero,
+    heroImage: cloudinaryAssets.activities.camel,
     duration: '1 hour',
     price: '$120 USD',
     experienceType: { en: 'Family-Friendly Adventure', es: 'Aventura Familiar' },
@@ -90,7 +85,7 @@ export const activityData: ActivityInfo[] = [
       en: 'Gallop along pristine beaches with the Sierra de la Laguna as your backdrop — pure Baja magic.',
       es: 'Galopa por playas vírgenes con la Sierra de la Laguna como telón de fondo — pura magia de Baja.',
     },
-    heroImage: horsebackHero,
+    heroImage: cloudinaryAssets.activities.horseback,
     duration: '1 hour',
     price: '$120 USD',
     experienceType: { en: 'Scenic Adventure', es: 'Aventura Escénica' },
@@ -148,7 +143,7 @@ export const activityData: ActivityInfo[] = [
       en: 'Pedal through the sky on a world-class aerial trail — where adrenaline meets breathtaking views.',
       es: 'Pedalea por el cielo en una pista aérea de clase mundial — donde la adrenalina se encuentra con vistas impresionantes.',
     },
-    heroImage: skyBikesHero,
+    heroImage: cloudinaryAssets.activities.skybikes,
     duration: '2 hours',
     price: '$96 USD',
     experienceType: { en: 'Aerial Adventure', es: 'Aventura Aérea' },
@@ -205,7 +200,7 @@ export const activityData: ActivityInfo[] = [
       en: "Conquer Baja's untamed canyons in a powerful UTV — raw adrenaline, cinematic landscapes.",
       es: 'Conquista los cañones salvajes de Baja en un potente UTV — adrenalina pura, paisajes cinematográficos.',
     },
-    heroImage: utvHero,
+    heroImage: cloudinaryAssets.activities.utv,
     duration: '2 hours',
     price: null,
     pricingTable: [
@@ -270,7 +265,7 @@ export const activityData: ActivityInfo[] = [
       en: "Feel the rush of raw desert power — an adrenaline ride through Baja's most dramatic trails.",
       es: 'Siente la adrenalina pura del desierto — un recorrido emocionante por los senderos más espectaculares de Baja.',
     },
-    heroImage: atvHero,
+    heroImage: cloudinaryAssets.activities.atv,
     duration: '2 hours',
     price: '$120 USD',
     experienceType: { en: 'Off-Road Adrenaline', es: 'Adrenalina Off-Road' },
@@ -328,7 +323,7 @@ export const activityData: ActivityInfo[] = [
       en: "Share the adventure on a powerful double-seat motorcycle — raw Baja energy for two.",
       es: 'Comparte la aventura en una potente moto doble — energía pura de Baja para dos.',
     },
-    heroImage: motoHero,
+    heroImage: cloudinaryAssets.activities.moto,
     duration: '2 hours',
     price: '$200 USD',
     experienceType: { en: 'Duo Adventure', es: 'Aventura en Dúo' },

@@ -19,7 +19,7 @@ export const SEO = ({ title, description, keywords, image, url, jsonLd, canonica
   const baseUrl = getBaseUrl();
   const fullTitle = title.includes('|') ? title : `${title} | Class VIP Transfers`;
   const fullDescription = description ?? 'Premium luxury transportation and adventure experiences in Los Cabos, Mexico.';
-  const fullImage = image?.startsWith('http') ? image : `${baseUrl}${image ?? '/logo.png'}`;
+  const fullImage = image?.startsWith('http') ? image : (image ? `${baseUrl}${image}` : 'https://res.cloudinary.com/dt9iyiorn/image/upload/q_auto:good,f_auto/classvip/logo');
   const fullUrl = url ?? (typeof window !== 'undefined' ? window.location.href : baseUrl);
   const canonicalUrl = canonical ?? fullUrl;
 

@@ -4,26 +4,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { X } from 'lucide-react';
 
-import heroLuxury1 from '@/assets/hero-luxury-1.jpg';
-import heroLuxury2 from '@/assets/hero-luxury-2.jpg';
-import heroLuxury3 from '@/assets/hero-luxury-3.jpg';
-import activityAtv from '@/assets/activity-atv.jpg';
-import activityCamel from '@/assets/activity-camel.jpg';
-import activityHorseback from '@/assets/activity-horseback.jpg';
-import activityMoto from '@/assets/activity-moto.jpg';
-import activitySkybikes from '@/assets/activity-skybikes.jpg';
-import activityUtv from '@/assets/activity-utv.jpg';
+import { cloudinaryAssets } from '@/lib/cloudinary-assets';
 
 const images = [
-  { src: heroLuxury1, alt: 'Luxury Transfer Los Cabos' },
-  { src: heroLuxury2, alt: 'VIP Transportation' },
-  { src: heroLuxury3, alt: 'Premium Experience' },
-  { src: activityCamel, alt: 'Camel Ride' },
-  { src: activityHorseback, alt: 'Horseback Riding' },
-  { src: activityAtv, alt: 'ATV Adventure' },
-  { src: activityMoto, alt: 'Moto Adventure' },
-  { src: activitySkybikes, alt: 'Sky Bikes' },
-  { src: activityUtv, alt: 'UTV Experience' },
+  { src: cloudinaryAssets.hero[0], alt: 'Luxury Transfer Los Cabos' },
+  { src: cloudinaryAssets.hero[1], alt: 'VIP Transportation' },
+  { src: cloudinaryAssets.hero[2], alt: 'Premium Experience' },
+  { src: cloudinaryAssets.activities.camel, alt: 'Camel Ride' },
+  { src: cloudinaryAssets.activities.horseback, alt: 'Horseback Riding' },
+  { src: cloudinaryAssets.activities.atv, alt: 'ATV Adventure' },
+  { src: cloudinaryAssets.activities.moto, alt: 'Moto Adventure' },
+  { src: cloudinaryAssets.activities.skybikes, alt: 'Sky Bikes' },
+  { src: cloudinaryAssets.activities.utv, alt: 'UTV Experience' },
 ];
 
 const Gallery = () => {

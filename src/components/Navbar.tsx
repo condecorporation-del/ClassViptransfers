@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { cloudinaryAssets } from '@/lib/cloudinary-assets';
 import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -41,7 +42,7 @@ const Navbar = () => {
       <div className="container mx-auto px-4 h-16 md:h-20 flex items-center justify-between overflow-visible">
         <Link to="/" className="flex-shrink-0 overflow-visible flex items-center group">
           <img
-            src="/logo.png"
+            src={cloudinaryAssets.logo}
             alt="Class VIP Transfers"
             className="logo h-20 md:h-[120px] w-auto object-contain drop-shadow-[0_0_30px_rgba(212,175,55,0.6)] brightness-[1.1] transition-transform duration-300 group-hover:scale-[1.02]"
           />

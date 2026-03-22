@@ -35,30 +35,26 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:8080',
   'http://localhost:8081',
-  'http://localhost:8899', // Netlify Dev
+  'http://localhost:8899',
+  // Production domains
+  'https://classviptransfers.com',
+  'https://www.classviptransfers.com',
+  // Netlify previews
   'https://classvip.netlify.app',
-  'https://*.netlify.app', // Allow all Netlify previews
 ];
-
-// Log allowed origins in production
-if (process.env.NODE_ENV === 'production') {
-  console.log('[Server] Allowed CORS origins:', allowedOrigins);
-}
 
 app.use(cors({
   origin: (origin, callback) => {
+    // Allow server-to-server (no origin) and all listed origins
     if (!origin) return callback(null, true);
-
     if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Allow any Netlify preview deploy
+    if (origin.endsWith('.netlify.app')) return callback(null, true);
+    // In development allow everything
+    if (process.env.NODE_ENV !== 'production') return callback(null, true);
 
-    if (origin.includes('.netlify.app')) return callback(null, true);
-
-    if (process.env.NODE_ENV === 'production') {
-      console.warn(`[CORS] Blocked origin: ${origin}`);
-      return callback(new Error('Not allowed by CORS'));
-    }
-
-    callback(null, true);
+    console.warn(`[CORS] Blocked origin: ${origin}`);
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
 }));

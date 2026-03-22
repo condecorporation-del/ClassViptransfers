@@ -15,8 +15,8 @@
 # Netlify automatically provides COMMIT_REF and CONTEXT
 
 [build.environment]
-  # Node version
   NODE_VERSION = "18"
+  VITE_API_BASE_URL = "https://los-cabos-luxe-transfers.onrender.com"
 
 # Fix: Google indexed /transfers as home — redirect to canonical home
 [[redirects]]

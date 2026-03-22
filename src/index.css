@@ -97,13 +97,13 @@
 
 /* Logo Class - navbar, grande y llamativo */
 .logo {
-  max-height: 80px;
+  max-height: 96px;
   height: auto;
   width: auto;
 }
 @media (min-width: 768px) {
   .logo {
-    max-height: 140px;
+    max-height: 160px;
   }
 }
 

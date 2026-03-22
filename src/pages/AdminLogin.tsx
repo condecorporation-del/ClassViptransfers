@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, Lock, Mail } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getApiBaseUrl } from '@/lib/api';
+import { cloudinaryAssets } from '@/lib/cloudinary-assets';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -88,7 +89,7 @@ export default function AdminLogin() {
       <div className="min-h-screen flex items-center justify-center" style={navyBg}>
         <div className="text-center">
           <img
-            src="https://res.cloudinary.com/dt9iyiorn/image/upload/q_auto:good,f_auto/classvip/logo"
+            src={cloudinaryAssets.logo}
             alt="Class VIP Transfers"
             className="h-16 mx-auto mb-6 drop-shadow-[0_4px_20px_rgba(212,175,55,0.4)] opacity-80"
           />
@@ -109,7 +110,7 @@ export default function AdminLogin() {
         {/* Logo */}
         <div className="text-center mb-8">
           <img
-            src="https://res.cloudinary.com/dt9iyiorn/image/upload/q_auto:good,f_auto/classvip/logo"
+            src={cloudinaryAssets.logo}
             alt="Class VIP Transfers"
             className="h-20 mx-auto drop-shadow-[0_6px_24px_rgba(212,175,55,0.5)]"
           />

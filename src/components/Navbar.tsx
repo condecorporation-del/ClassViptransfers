@@ -44,7 +44,7 @@ const Navbar = () => {
           <img
             src={cloudinaryAssets.logo}
             alt="Class VIP Transfers"
-            className="logo h-20 md:h-[120px] w-auto object-contain drop-shadow-[0_0_30px_rgba(212,175,55,0.6)] brightness-[1.1] transition-transform duration-300 group-hover:scale-[1.02]"
+            className="logo h-24 md:h-[140px] w-auto object-contain drop-shadow-[0_0_30px_rgba(212,175,55,0.6)] brightness-[1.1] transition-transform duration-300 group-hover:scale-[1.02]"
           />
         </Link>
 

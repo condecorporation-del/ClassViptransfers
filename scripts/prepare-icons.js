@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
 
-const logoSrc = join(root, 'src', 'assets', 'Logo Class.png');
+const logoSrc = join(root, 'src', 'assets', 'logo class nuevo.png');
 const iconoSrc = join(root, 'src', 'assets', 'Icono Class.png');
 const publicDir = join(root, 'public');
 const iconsDir = join(publicDir, 'icons');

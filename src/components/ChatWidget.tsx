@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Send, Mic, MicOff, Loader2, Sparkles,
+  X, Send, Mic, MicOff, Loader2, Headphones,
   MessageCircle, Mail, Phone, ExternalLink, ChevronRight,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getApiBaseUrl } from '@/lib/api';
+const assistBg = 'https://res.cloudinary.com/dt9iyiorn/image/upload/v1774168334/Widget_futurista_de_sdx22e.png';
 
 const WHATSAPP_LINK = 'https://wa.me/5216241222174';
 const WHATSAPP_PHONE = '+52 624 122 2174';
@@ -181,62 +182,65 @@ export const ChatWidget = () => {
   return (
     <>
       {/* ── Floating Button ── */}
-      <div className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-[9999] flex flex-col items-end gap-3">
+      <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[9999] flex flex-col items-end gap-2">
         {/* Animated label */}
         <AnimatePresence>
           {!isOpen && showLabel && (
             <motion.div
-              initial={{ opacity: 0, x: 16, scale: 0.9 }}
+              initial={{ opacity: 0, x: 12, scale: 0.9 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 16, scale: 0.9 }}
+              exit={{ opacity: 0, x: 12, scale: 0.9 }}
               transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-              className="bg-navy text-gold text-sm font-bold px-4 py-2.5 rounded-xl shadow-xl border border-gold/40 whitespace-nowrap cursor-pointer select-none"
+              className="bg-navy text-gold text-xs font-bold px-3 py-2 rounded-lg shadow-xl border border-gold/40 whitespace-nowrap cursor-pointer select-none flex items-center gap-1.5"
               onClick={() => { setIsOpen(true); setShowLabel(false); }}
             >
-              {lang === 'es' ? '¿Necesitas ayuda? 🤖' : 'Need help? 🤖'}
+              <Headphones size={14} className="shrink-0" />
+              {lang === 'es' ? '¿Necesitas ayuda?' : 'Need assistance?'}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Main button */}
+        {/* Main button — compact combo-style with image bg + bold HELP */}
         <motion.button
           onClick={() => { setIsOpen(v => !v); setShowLabel(false); }}
-          className="relative w-[68px] h-[68px] md:w-20 md:h-20 rounded-2xl flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-gold/40 focus:ring-offset-2 focus:ring-offset-background"
-          style={{
-            background: 'linear-gradient(135deg, #D4AF37 0%, #F5C842 40%, #E8A020 80%, #C9930A 100%)',
-            boxShadow: '0 8px 32px rgba(212,175,55,0.55), 0 2px 8px rgba(0,0,0,0.25)',
-          }}
-          aria-label={lang === 'es' ? 'Abrir asistente' : 'Open assistant'}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.93 }}
+          className="relative w-[52px] h-[52px] sm:w-[58px] sm:h-[58px] md:w-[64px] md:h-[64px] rounded-xl flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-gold/50 focus:ring-offset-2 focus:ring-offset-background"
+          aria-label={lang === 'es' ? 'Abrir asistencia' : 'Open assistance'}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.6, type: 'spring', stiffness: 260, damping: 18 }}
         >
-          {/* Outer pulse ring */}
-          {!isOpen && (
-            <span className="absolute inset-0 rounded-2xl animate-ping opacity-30"
-              style={{ background: 'linear-gradient(135deg, #D4AF37, #F5C842)', animationDuration: '2s' }} />
-          )}
-          {/* Inner ring */}
-          {!isOpen && (
-            <span className="absolute inset-[-4px] rounded-[18px] border-2 border-gold/40 animate-pulse"
-              style={{ animationDuration: '3s' }} />
-          )}
+          {/* Background image + overlay — como los combos */}
+          <img
+            src={assistBg}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover scale-110"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-navy/95 via-navy/70 to-navy/50" />
+          <div className="absolute inset-0 shimmer opacity-30 pointer-events-none" />
+
+          {/* Border & shadow */}
+          <div className="absolute inset-0 rounded-xl border border-gold/50 shadow-[0_4px_16px_rgba(212,175,55,0.3),inset_0_0_0_1px_rgba(255,255,255,0.08)]" />
 
           {isOpen ? (
-            <X size={28} strokeWidth={2.5} className="text-navy" />
+            <X size={20} strokeWidth={2.5} className="text-gold relative z-10" />
           ) : (
-            <div className="flex flex-col items-center gap-0.5">
-              <Sparkles size={26} strokeWidth={2} className="text-navy" />
-              <span className="text-[9px] font-black text-navy tracking-widest uppercase leading-none">AI</span>
+            <div className="relative z-10 flex flex-col items-center gap-0.5">
+              <Headphones size={14} strokeWidth={2.5} className="text-gold drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]" />
+              <span
+                className="text-[9px] sm:text-[10px] md:text-[11px] font-black text-gold tracking-[0.2em] sm:tracking-[0.25em] uppercase leading-none"
+                style={{ textShadow: '0 0 8px rgba(212,175,55,0.5), 0 1px 3px rgba(0,0,0,0.5)' }}
+              >
+                Help
+              </span>
             </div>
           )}
 
           {/* Green online dot */}
           {!isOpen && (
-            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white flex items-center justify-center">
-              <span className="w-2 h-2 bg-emerald-600 rounded-full animate-pulse" />
+            <span className="absolute -top-0.5 -right-0.5 z-20 w-3.5 h-3.5 bg-emerald-400 rounded-full border border-navy flex items-center justify-center shadow-md">
+              <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-pulse" />
             </span>
           )}
         </motion.button>
@@ -250,7 +254,7 @@ export const ChatWidget = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 28, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-            className="fixed bottom-[100px] md:bottom-[110px] right-4 md:right-8 z-[9998] w-[calc(100vw-2rem)] max-w-[420px] h-[min(580px,82vh)] bg-card border border-gold/25 rounded-2xl shadow-[0_32px_72px_-8px_rgba(0,0,0,0.4),0_0_0_1px_rgba(212,175,55,0.15)] flex flex-col overflow-hidden"
+            className="fixed bottom-[72px] sm:bottom-[76px] md:bottom-[80px] right-4 md:right-6 z-[9998] w-[calc(100vw-2rem)] max-w-[420px] h-[min(580px,82vh)] bg-card border border-gold/25 rounded-2xl shadow-[0_32px_72px_-8px_rgba(0,0,0,0.4),0_0_0_1px_rgba(212,175,55,0.15)] flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div
@@ -260,15 +264,15 @@ export const ChatWidget = () => {
               <div className="flex items-center gap-3">
                 <div className="relative w-10 h-10 rounded-xl flex items-center justify-center"
                   style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.2), rgba(212,175,55,0.05))' }}>
-                  <Sparkles size={20} className="text-gold" />
+                  <Headphones size={20} className="text-gold" />
                   <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border border-navy" />
                 </div>
                 <div>
                   <h3 className="font-bold text-gold text-sm tracking-wide">
-                    {lang === 'es' ? 'Asistente Class VIP' : 'Class VIP Assistant'}
+                    {lang === 'es' ? 'Asistencia Class VIP' : 'Class VIP Assistance'}
                   </h3>
                   <p className="text-[11px] text-off-white/55 mt-0.5">
-                    {lang === 'es' ? 'IA · Los Cabos · Disponible ahora' : 'AI · Los Cabos · Available now'}
+                    {lang === 'es' ? 'Los Cabos · Disponible 24/7' : 'Los Cabos · Available 24/7'}
                   </p>
                 </div>
               </div>
@@ -290,10 +294,10 @@ export const ChatWidget = () => {
                 >
                   <div className="w-16 h-16 mx-auto mb-3 rounded-2xl flex items-center justify-center"
                     style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.05))' }}>
-                    <Sparkles size={30} className="text-gold/70" />
+                    <Headphones size={30} className="text-gold/70" />
                   </div>
                   <p className="text-sm font-semibold">
-                    {lang === 'es' ? '¡Hola! Soy tu asistente de Class VIP.' : "Hi! I'm your Class VIP assistant."}
+                    {lang === 'es' ? '¡Hola! ¿En qué puedo ayudarte?' : "Hi! How can I assist you today?"}
                   </p>
                   <p className="text-xs mt-1.5 text-muted-foreground leading-relaxed">
                     {lang === 'es'

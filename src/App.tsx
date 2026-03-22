@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import Layout from "@/components/Layout";
 import Index from "./pages/Index";
@@ -12,7 +12,7 @@ import ActivityDetail from "./pages/ActivityDetail";
 import Book from "./pages/Book";
 import BookActivities from "./pages/BookActivities";
 import Contact from "./pages/Contact";
-import Gallery from "./pages/Gallery";
+import Portfolio from "./pages/Portfolio";
 import Admin from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
 import Confirmation from "./pages/Confirmation";
@@ -42,7 +42,8 @@ const App = () => (
               <Route path="/book" element={<Book />} />
               <Route path="/book-activities" element={<BookActivities />} />
               <Route path="/contact" element={<Contact />} />
-              <Route path="/gallery" element={<Gallery />} />
+              <Route path="/portfolio" element={<Portfolio />} />
+              <Route path="/gallery" element={<Navigate to="/portfolio" replace />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route
                 path="/admin"

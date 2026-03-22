@@ -12,6 +12,7 @@ import {
   createDriverSchema,
   createVehicleSchema,
   manualBookingSchema,
+  updateBookingSchema,
 } from '../lib/validation';
 import { createAuditLog } from '../lib/audit';
 
@@ -529,7 +530,16 @@ export class AdminController {
         input.totalAmount
       );
 
-      // Send confirmation email if requested (manual/offline booking)
+      // Option A: send PayPal payment link (pending-payment email)
+      if (input.sendPaymentLink && !input.sendConfirmation) {
+        try {
+          await emailService.sendBookingReceived(booking);
+        } catch (emailError) {
+          console.error('Failed to send payment link email:', emailError);
+        }
+      }
+
+      // Option B: mark as paid in cash — send confirmation immediately
       if (input.sendConfirmation) {
         try {
           await emailService.sendConfirmationEmails(booking, false, { manualConfirm: true });
@@ -558,6 +568,42 @@ export class AdminController {
         success: false,
         error: error.message || 'Failed to create manual booking',
       });
+    }
+  }
+
+  /**
+   * PATCH /api/admin/bookings/:id
+   * Update booking fields
+   */
+  async updateBooking(req: Request, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    if (!id) return res.status(400).json({ error: 'Booking ID is required' });
+    try {
+      const data = updateBookingSchema.parse(req.body);
+      const userId = req.headers['x-user-id'] as string | undefined;
+      const userEmail = (req as any).adminEmail;
+      const booking = await bookingService.updateBooking(id, data, userId, userEmail);
+      res.json({ success: true, data: booking });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message || 'Failed to update booking' });
+    }
+  }
+
+  /**
+   * POST /api/admin/bookings/:id/cancel
+   * Cancel booking (admin)
+   */
+  async cancelBooking(req: Request, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    if (!id) return res.status(400).json({ error: 'Booking ID is required' });
+    try {
+      const { reason } = (req.body || {}) as { reason?: string };
+      const userId = req.headers['x-user-id'] as string | undefined;
+      const userEmail = (req as any).adminEmail;
+      const booking = await bookingService.cancelBooking(id, reason, userId, userEmail);
+      res.json({ success: true, data: booking });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message || 'Failed to cancel booking' });
     }
   }
 

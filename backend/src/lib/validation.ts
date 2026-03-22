@@ -31,6 +31,7 @@ export const createBookingSchema = z.object({
   arrivalTime: z.string().optional(),
   departureFlightNumber: z.string().optional(),
   departureTime: z.string().optional(),
+  pickupTime: z.string().optional(),
   passengers: z.number().int().min(1).default(1),
   serviceType: z.enum(['private', 'shuttle']).optional(),
   tripType: z.enum(['oneway', 'roundtrip']).optional(),
@@ -98,12 +99,28 @@ export const updateCustomerSchema = z.object({
 
 export const listBookingsSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional(),
+  dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'dateFrom must be YYYY-MM-DD').optional(),
+  dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'dateTo must be YYYY-MM-DD').optional(),
   status: z.enum(['DRAFT', 'PENDING_PAYMENT', 'PAID', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'OFFLINE_HOLD']).optional(),
   type: z.enum(['TRANSPORTATION', 'ACTIVITY', 'COMBO', 'CRAZY_COMBO']).optional(),
   q: z.string().optional(), // Search query
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   groupedByTime: z.coerce.boolean().optional(),
+});
+
+export const updateBookingSchema = z.object({
+  bookingDate: z.string().optional(),
+  bookingTime: z.string().optional().nullable(),
+  passengers: z.coerce.number().int().min(1).optional(),
+  notes: z.string().optional().nullable(),
+  internalNotes: z.string().optional().nullable(),
+  flightNumber: z.string().optional().nullable(),
+  arrivalTime: z.string().optional().nullable(),
+  departureFlightNumber: z.string().optional().nullable(),
+  departureTime: z.string().optional().nullable(),
+  pickupLocation: z.string().optional().nullable(),
+  dropoffLocation: z.string().optional().nullable(),
 });
 
 export const priceOverrideSchema = z.object({
@@ -172,6 +189,7 @@ export const manualBookingSchema = z.object({
   status: z.enum(['OFFLINE_HOLD', 'CONFIRMED']).default('OFFLINE_HOLD'),
   notes: z.string().optional(),
   sendConfirmation: z.boolean().default(false),
+  sendPaymentLink: z.boolean().default(false),
 });
 
 export const exportBookingsSchema = z.object({
@@ -190,6 +208,7 @@ export type AssignBookingExtendedInput = z.infer<typeof assignBookingSchemaExten
 export type CreateDriverInput = z.infer<typeof createDriverSchema>;
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
 export type ManualBookingInput = z.infer<typeof manualBookingSchema>;
+export type UpdateBookingInput = z.infer<typeof updateBookingSchema>;
 
 export const aiChatSchema = z.object({
   message: z.string().transform((s) => (s && typeof s === 'string' ? s.trim() : '')).pipe(z.string().min(1, 'Message is required')),

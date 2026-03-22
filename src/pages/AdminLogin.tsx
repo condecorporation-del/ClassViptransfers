@@ -81,71 +81,112 @@ export default function AdminLogin() {
     }
   };
 
+  const navyBg = { background: 'linear-gradient(135deg, #080f1e 0%, #0d1f3c 60%, #080f1e 100%)' };
+
   if (checkingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 size={48} className="animate-spin text-gold" />
+      <div className="min-h-screen flex items-center justify-center" style={navyBg}>
+        <div className="text-center">
+          <img
+            src="/logo.png"
+            alt="Class VIP Transfers"
+            className="h-16 mx-auto mb-6 drop-shadow-[0_4px_20px_rgba(212,175,55,0.4)] opacity-80"
+          />
+          <Loader2 size={32} className="animate-spin text-gold mx-auto" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-card border border-gold/20 rounded-xl shadow-2xl p-8 space-y-6">
-          {/* Header */}
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gold/10 rounded-full mb-4">
-              <Lock size={32} className="text-gold" />
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden p-4" style={navyBg}>
+      {/* Ambient glow accents */}
+      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-gold/5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gold/5 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.03)_0%,transparent_70%)] pointer-events-none" />
+
+      <div className="w-full max-w-md relative z-10">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <img
+            src="/logo.png"
+            alt="Class VIP Transfers"
+            className="h-20 mx-auto drop-shadow-[0_6px_24px_rgba(212,175,55,0.5)]"
+          />
+        </div>
+
+        {/* Card */}
+        <div
+          className="rounded-2xl p-8 shadow-2xl"
+          style={{
+            background: 'rgba(255,255,255,0.04)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(212,175,55,0.15)',
+          }}
+        >
+          {/* Badge */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-5"
+              style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.2)' }}>
+              <Lock size={11} className="text-gold" />
+              <span className="text-gold text-[10px] font-bold uppercase tracking-[0.2em]">
+                {lang === 'es' ? 'Panel de Control' : 'Control Panel'}
+              </span>
             </div>
-            <h1 className="text-3xl font-display text-foreground mb-2">
-              {lang === 'es' ? 'Acceso Admin' : 'Admin Access'}
+            <h1 className="text-2xl font-display text-white mb-1">
+              {lang === 'es' ? 'Bienvenido' : 'Welcome Back'}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-white/40 text-sm">
               {lang === 'es'
-                ? 'Ingresa tus credenciales para continuar'
-                : 'Enter your credentials to continue'}
+                ? 'Ingresa tus credenciales para acceder'
+                : 'Enter your credentials to access'}
             </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">
-                {lang === 'es' ? 'Email' : 'Email'}
+              <label className="block text-[11px] font-bold text-white/50 uppercase tracking-widest mb-2">
+                {lang === 'es' ? 'Correo Electrónico' : 'Email Address'}
               </label>
               <div className="relative">
-                <Mail
-                  size={20}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                />
+                <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gold/50" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full pl-10 pr-4 py-2 bg-background border border-gold/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
-                  placeholder={lang === 'es' ? 'admin@ejemplo.com' : 'admin@example.com'}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl text-white text-sm placeholder-white/25 focus:outline-none transition-all"
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.border = '1px solid rgba(212,175,55,0.5)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(212,175,55,0.08)'; }}
+                  onBlur={(e) => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.1)'; e.currentTarget.style.boxShadow = 'none'; }}
+                  placeholder="admin@classviptransfers.com"
                   disabled={loading}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-[11px] font-bold text-white/50 uppercase tracking-widest mb-2">
                 {lang === 'es' ? 'Contraseña' : 'Password'}
               </label>
               <div className="relative">
-                <Lock
-                  size={20}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                />
+                <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gold/50" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full pl-10 pr-4 py-2 bg-background border border-gold/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl text-white text-sm placeholder-white/25 focus:outline-none transition-all"
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.border = '1px solid rgba(212,175,55,0.5)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(212,175,55,0.08)'; }}
+                  onBlur={(e) => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.1)'; e.currentTarget.style.boxShadow = 'none'; }}
                   placeholder="••••••••"
                   disabled={loading}
                 />
@@ -153,33 +194,32 @@ export default function AdminLogin() {
             </div>
 
             {error && (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-                <p className="text-sm text-destructive">{error}</p>
+              <div className="rounded-xl p-3" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                <p className="text-sm text-red-400">{error}</p>
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gold text-navy px-6 py-3 rounded-lg font-semibold hover:bg-gold-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full gold-gradient text-secondary-foreground py-3.5 rounded-xl text-sm font-bold tracking-wide hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2 gold-glow"
             >
               {loading ? (
                 <>
-                  <Loader2 size={20} className="animate-spin" />
-                  {lang === 'es' ? 'Iniciando sesión...' : 'Signing in...'}
+                  <Loader2 size={16} className="animate-spin" />
+                  {lang === 'es' ? 'Verificando...' : 'Verifying...'}
                 </>
               ) : (
-                lang === 'es' ? 'Iniciar Sesión' : 'Sign In'
+                lang === 'es' ? 'Acceder al Panel' : 'Access Panel'
               )}
             </button>
           </form>
 
-          {/* Footer */}
-          <div className="text-center pt-4 border-t border-gold/20">
-            <p className="text-xs text-muted-foreground">
+          <div className="mt-6 pt-5 border-t text-center" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+            <p className="text-[11px] text-white/25">
               {lang === 'es'
-                ? 'Solo personal autorizado'
-                : 'Authorized personnel only'}
+                ? 'Solo personal autorizado · Class VIP Transfers'
+                : 'Authorized personnel only · Class VIP Transfers'}
             </p>
           </div>
         </div>

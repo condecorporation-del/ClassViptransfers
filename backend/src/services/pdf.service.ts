@@ -6,7 +6,12 @@ import { BookingService } from './booking.service';
 import { EmailService } from './email.service';
 import type { Booking, Customer, BookingItem } from '@prisma/client';
 
-const BOOKING_PDF_TOKEN_SECRET = process.env.BOOKING_PDF_SECRET || process.env.JWT_SECRET || 'pdf-booking-secret-change-in-production';
+const BOOKING_PDF_TOKEN_SECRET = process.env.BOOKING_PDF_SECRET || process.env.JWT_SECRET || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[PDF] BOOKING_PDF_SECRET and JWT_SECRET not set — PDF links will fail in production.');
+  }
+  return 'dev-only-pdf-secret';
+})();
 const TOKEN_EXPIRY = '7d';
 
 interface BookingWithRelations extends Booking {
@@ -87,16 +92,24 @@ export class PdfService {
       throw new Error('puppeteer is not installed. Run: npm install puppeteer');
     }
 
-    const browser = await puppeteer.default.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    });
-
+    let browser: import('puppeteer').Browser | null = null;
     try {
+      browser = await puppeteer.default.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--single-process',
+        ],
+        timeout: 30000,
+      });
+
       const page = await browser.newPage();
       await page.setContent(html, {
         waitUntil: 'networkidle0',
-        timeout: 15000,
+        timeout: 20000,
       });
       const pdfBuffer = await page.pdf({
         format: 'A4',
@@ -105,7 +118,12 @@ export class PdfService {
       });
       return Buffer.from(pdfBuffer);
     } finally {
-      await browser.close();
+      // Swallow close errors to prevent unhandled rejections from crashing the server
+      if (browser) {
+        browser.close().catch(err =>
+          console.warn('[PDF] Browser close warning (non-fatal):', err?.code || err?.message)
+        );
+      }
     }
   }
 }

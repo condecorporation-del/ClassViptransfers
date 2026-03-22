@@ -4,61 +4,154 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>Booking Cancelled</title>
+  <meta name="color-scheme" content="light">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>Booking Cancelled | {{brandName}}</title>
+  <style type="text/css">
+    @media only screen and (max-width: 620px) {
+      .ep  { padding-left: 16px !important; padding-right: 16px !important; }
+      .col { display: block !important; width: 100% !important; }
+    }
+  </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: {{bgColor}}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: {{bgColor}};">
+<body style="margin:0;padding:0;background-color:#f0f2f5;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;line-height:1.55;color:#1e293b;">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#f0f2f5;">
+<tr><td align="center" style="padding:24px 12px 36px;">
+
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="620" style="max-width:620px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 32px rgba(7,26,43,0.10);">
+
+    <!-- Letterhead -->
     <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="640" style="max-width: 640px; background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+      <td style="padding:0;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
           <tr>
-            <td align="center" style="padding: 24px;">
-              {{#if logoUrl}}
-              <img src="{{logoUrl}}" alt="{{brandName}}" width="180" style="max-width: 180px; height: auto; margin: 0 auto; border-radius: 12px;" />
-              {{/if}}
-              <h2 style="margin: 20px 0 0; color: {{primaryColor}}; font-size: 24px; font-weight: 600;">Booking Cancelled</h2>
-              <p style="margin: 8px 0 0; color: #6B7280; font-size: 14px;">Booking ID: {{bookingIdShort}}</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 0 24px 24px;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 12px;">
+            <td style="padding:22px 28px;background-color:#071A2B;" class="ep">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
-                  <td style="padding: 24px;">
-                    <p style="margin: 0; font-size: 16px; color: #991B1B;">Dear {{customerName}},</p>
-                    <p style="margin: 12px 0 0; font-size: 15px; color: #374151; line-height: 1.6;">Your reservation for {{formattedDate}} has been cancelled.</p>
-                    {{#if cancellationReason}}
-                    <p style="margin: 12px 0 0; font-size: 14px; color: #6B7280;">Reason: {{cancellationReason}}</p>
+                  <td style="vertical-align:middle;">
+                    {{#if logoUrl}}
+                    <img src="{{logoUrl}}" alt="{{brandName}}" height="52" style="height:52px;width:auto;display:block;max-width:180px;" />
+                    {{else}}
+                    <p style="margin:0;font-size:20px;font-weight:800;color:#fff;">{{brandName}}</p>
                     {{/if}}
                   </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 0 24px 24px;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #FFFFFF; border: 1px solid #E8EEF7; border-radius: 12px;">
-                <tr>
-                  <td style="padding: 24px;">
-                    <span style="font-size: 16px; font-weight: 600; color: {{primaryColor}};">Need to rebook?</span>
-                    <p style="margin: 8px 0 0; font-size: 14px; color: #6B7280;">Contact us to schedule a new transfer.</p>
-                    <a href="https://wa.me/5216241222174" style="display: inline-block; margin-top: 12px; color: {{accentColor}}; text-decoration: none; font-size: 14px; font-weight: 600;">WhatsApp</a>
-                    <span style="color: #9CA3AF;"> | </span>
-                    <a href="tel:+526241222174" style="color: {{accentColor}}; text-decoration: none; font-size: 14px; font-weight: 600;">+52 624 122 2174</a>
+                  <td align="right" style="vertical-align:middle;">
+                    <p style="margin:0;font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:#D9AE5F;font-weight:700;">Luxury Transportation</p>
+                    <p style="margin:3px 0 0;font-size:12px;color:rgba(255,255,255,0.65);">Los Cabos, México</p>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
+          <tr><td style="height:3px;background:linear-gradient(90deg,#D9AE5F,#f5d78a,#D9AE5F);"></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Status badge -->
+    <tr>
+      <td align="center" style="padding:28px 28px 20px;" class="ep">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0">
           <tr>
-            <td style="padding: 24px; background-color: {{primaryColor}}; border-radius: 0 0 12px 12px; text-align: center;">
-              <span style="font-size: 14px; color: #FFFFFF;">Thank you for considering {{brandName}}</span><br>
-              <a href="{{frontendUrl}}" style="color: {{accentColor}}; text-decoration: none; font-size: 13px;">Visit Our Website</a>
+            <td style="background:#fff5f5;border:1.5px solid #ef4444;border-radius:10px;padding:16px 28px;text-align:center;">
+              <p style="margin:0 0 3px;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#dc2626;font-weight:700;">✕ Booking Cancelled · Reservación Cancelada</p>
+              <p style="margin:0;font-size:26px;font-weight:900;color:#071A2B;letter-spacing:3px;font-family:monospace;">{{bookingIdShort}}</p>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:14px 0 0;font-size:15px;font-weight:600;color:#071A2B;">Hello, {{customerName}}</p>
+        <p style="margin:4px 0 0;font-size:13px;color:#64748b;">Your reservation has been cancelled. If this was a mistake, please contact us right away.</p>
+        <p style="margin:2px 0 0;font-size:12px;color:#94a3b8;">Tu reservación ha sido cancelada. Si fue un error, contáctanos de inmediato.</p>
+      </td>
+    </tr>
+
+    {{#if cancellationReason}}
+    <!-- Reason -->
+    <tr>
+      <td style="padding:0 24px 20px;" class="ep">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-radius:10px;border:1px solid #fecaca;background:#fff5f5;">
+          <tr>
+            <td style="padding:14px 18px;">
+              <p style="margin:0 0 4px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#dc2626;font-weight:700;">Reason · Motivo</p>
+              <p style="margin:0;font-size:13px;color:#7f1d1d;">{{cancellationReason}}</p>
             </td>
           </tr>
         </table>
       </td>
     </tr>
+    {{/if}}
+
+    <!-- Booking Summary -->
+    <tr>
+      <td style="padding:0 24px 20px;" class="ep">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;">
+          <tr><td style="padding:11px 18px;background:#071A2B;"><p style="margin:0;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#D9AE5F;font-weight:700;">Cancelled Booking · Reservación Cancelada</p></td></tr>
+          <tr>
+            <td style="padding:14px 18px 10px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td width="50%" style="padding:0 12px 10px 0;vertical-align:top;" class="col">
+                    <p style="margin:0 0 2px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Booking Ref</p>
+                    <p style="margin:0;font-size:14px;font-weight:700;color:#1e293b;font-family:monospace;">{{bookingIdShort}}</p>
+                  </td>
+                  <td width="50%" style="padding:0 0 10px;vertical-align:top;" class="col">
+                    <p style="margin:0 0 2px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Date · Fecha</p>
+                    <p style="margin:0;font-size:14px;color:#1e293b;">{{formattedDate}}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td width="50%" style="padding:0 12px 10px 0;vertical-align:top;" class="col">
+                    <p style="margin:0 0 2px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Service</p>
+                    <p style="margin:0;font-size:14px;color:#1e293b;">{{bookingType}}</p>
+                  </td>
+                  <td width="50%" style="padding:0 0 10px;vertical-align:top;" class="col">
+                    <p style="margin:0 0 2px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Amount</p>
+                    <p style="margin:0;font-size:14px;font-weight:600;color:#1e293b;text-decoration:line-through;">{{totalPaidText}}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Contact us CTA -->
+    <tr>
+      <td style="padding:0 24px 24px;" class="ep">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#071A2B;border-radius:12px;">
+          <tr>
+            <td align="center" style="padding:20px 24px;">
+              <p style="margin:0 0 4px;font-size:13px;color:rgba(255,255,255,0.85);font-weight:600;">Need help? Contact us directly</p>
+              <p style="margin:0 0 14px;font-size:12px;color:rgba(255,255,255,0.5);">¿Necesitas ayuda? Contáctanos directamente</p>
+              <a href="https://wa.me/5216241222174" style="display:inline-block;padding:12px 32px;background:#25D366;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;border-radius:9px;">📱 WhatsApp</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td style="padding:0;">
+        <div style="height:3px;background:linear-gradient(90deg,#D9AE5F,#f5d78a,#D9AE5F);"></div>
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+          <tr>
+            <td align="center" style="padding:18px 24px;background:#071A2B;">
+              <p style="margin:0 0 3px;">
+                <a href="tel:+526241222174" style="color:rgba(255,255,255,0.8);text-decoration:none;font-size:12px;">+52 624 122 2174</a>
+                &nbsp;·&nbsp;
+                <a href="mailto:Armando@classviptransfers.com" style="color:rgba(255,255,255,0.6);text-decoration:none;font-size:12px;">Armando@classviptransfers.com</a>
+              </p>
+              <p style="margin:8px 0 0;font-size:11px;color:rgba(255,255,255,0.35);">© {{brandName}} · <a href="{{frontendUrl}}" style="color:#D9AE5F;text-decoration:none;">{{frontendUrl}}</a></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
   </table>
+</td></tr>
+</table>
 </body>
 </html>

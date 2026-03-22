@@ -108,6 +108,9 @@ model Booking {
   tripType        String?      // oneway, roundtrip
   route           String?      // airport-hotel, hotel-airport
   
+  // Short confirmation code (e.g. CLASS2026001)
+  confirmationCode String?     @unique
+
   // Notes and metadata
   notes           String?
   internalNotes   String?      // Admin-only notes
@@ -133,6 +136,7 @@ model Booking {
   @@index([bookingDate])
   @@index([createdAt])
   @@index([type, status])
+  @@index([confirmationCode])
 }
 
 enum BookingItemType {

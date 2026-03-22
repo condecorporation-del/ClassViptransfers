@@ -39,6 +39,7 @@ const Transfers = () => {
         title="Private Airport Transfers"
         description="Private luxury SUV & Sprinter transfers from SJD airport to your hotel. Flight tracking, meet & greet, cold beverages included. Book your Los Cabos airport transfer now."
         keywords="SJD airport transfer, cabo san lucas private transfer, los cabos luxury van, cabo airport shuttle, tourist corridor transfer, private driver cabo, san jose del cabo transportation"
+        canonical="https://classviptransfers.com/transfers"
         jsonLd={serviceLd}
       />
       {/* Hero - dark */}

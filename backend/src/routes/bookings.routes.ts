@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { BookingController } from '../controllers/booking.controller';
 import { validate, asyncHandler } from '../middleware/validation';
+import { optionalAdminAuth } from '../middleware/auth';
 import {
   createBookingSchema,
   confirmBookingSchema,
@@ -54,9 +55,10 @@ router.get(
   asyncHandler((req, res) => bookingController.getConfirmationPdf(req, res))
 );
 
-// GET /api/bookings/:id - Get booking details (must be last)
+// GET /api/bookings/:id?token=xxx - Get booking details (requires HMAC token or admin auth)
 router.get(
   '/:id',
+  optionalAdminAuth,
   asyncHandler((req, res) => bookingController.getBooking(req, res))
 );
 

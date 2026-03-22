@@ -33,3 +33,11 @@ dist-ssr
 backend/.env
 backend/.env.bak
 backend/.env.bak2
+
+# Other package manager lock files (project uses npm)
+bun.lockb
+deno.lock
+
+# macOS system files
+.DS_Store
+**/.DS_Store

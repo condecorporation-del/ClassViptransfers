@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { createAuditLog } from '../lib/audit';
-import { moneyToCents, CreateBookingInput } from '../lib/validation';
+import { moneyToCents, CreateBookingInput, UpdateBookingInput } from '../lib/validation';
 import { BookingStatus, BookingType, BookingSource } from '@prisma/client';
 import { PricingService } from './pricing.service';
 
@@ -18,6 +18,18 @@ const SHUTTLE_BLOCKED_EXTRA_CODES = new Set([
 ]);
 
 export class BookingService {
+  /**
+   * Generate a short confirmation code like CLASS2026001
+   */
+  async generateConfirmationCode(): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `CLASS${year}`;
+    const count = await prisma.booking.count({
+      where: { confirmationCode: { startsWith: prefix } },
+    });
+    return `${prefix}${String(count + 1).padStart(3, '0')}`;
+  }
+
   /**
    * Create a draft booking
    */
@@ -218,6 +230,8 @@ export class BookingService {
       }
     }
 
+    const confirmationCode = await this.generateConfirmationCode();
+
     // Create booking with items (totalAmount and item prices stored in cents)
     const booking = await prisma.booking.create({
       data: {
@@ -225,6 +239,7 @@ export class BookingService {
         status: BookingStatus.DRAFT,
         source,
         customerId: customer.id,
+        confirmationCode,
         bookingDate,
         bookingTime: input.bookingTime,
         pickupLocation: input.pickupLocation,
@@ -233,6 +248,7 @@ export class BookingService {
         arrivalTime: input.arrivalTime,
         departureFlightNumber: input.departureFlightNumber,
         departureTime: input.departureTime,
+        pickupTime: input.pickupTime,
         passengers: pax,
         serviceType: input.serviceType,
         tripType: input.tripType,
@@ -292,7 +308,10 @@ export class BookingService {
           orderBy: { createdAt: 'desc' },
         },
         assignments: {
-          include: {},
+          include: {
+            driver: true,
+            vehicle: true,
+          },
         },
         ...(options?.includeEmailLogs && {
           emailLogs: {
@@ -544,9 +563,11 @@ export class BookingService {
    */
   async listBookings(filters: {
     date?: string;
+    dateFrom?: string;
+    dateTo?: string;
     status?: string;
     type?: string;
-    q?: string; // Search query
+    q?: string;
     page?: number;
     limit?: number;
     groupedByTime?: boolean;
@@ -557,16 +578,24 @@ export class BookingService {
 
     const where: any = {};
 
-    if (filters.date) {
+    if (filters.dateFrom || filters.dateTo) {
+      where.bookingDate = {};
+      if (filters.dateFrom) {
+        const d = new Date(filters.dateFrom);
+        d.setHours(0, 0, 0, 0);
+        where.bookingDate.gte = d;
+      }
+      if (filters.dateTo) {
+        const d = new Date(filters.dateTo);
+        d.setHours(23, 59, 59, 999);
+        where.bookingDate.lte = d;
+      }
+    } else if (filters.date) {
       const startDate = new Date(filters.date);
       startDate.setHours(0, 0, 0, 0);
       const endDate = new Date(filters.date);
       endDate.setHours(23, 59, 59, 999);
-
-      where.bookingDate = {
-        gte: startDate,
-        lte: endDate,
-      };
+      where.bookingDate = { gte: startDate, lte: endDate };
     }
 
     if (filters.status) {
@@ -577,11 +606,12 @@ export class BookingService {
       where.type = filters.type;
     }
 
-    // Search query (name, email, phone, bookingId)
+    // Search query (name, email, phone, bookingId, confirmationCode)
     if (filters.q) {
       const searchTerm = filters.q.trim();
       where.OR = [
         { id: { contains: searchTerm, mode: 'insensitive' } },
+        { confirmationCode: { contains: searchTerm, mode: 'insensitive' } },
         { customer: { name: { contains: searchTerm, mode: 'insensitive' } } },
         { customer: { email: { contains: searchTerm, mode: 'insensitive' } } },
         { customer: { phone: { contains: searchTerm, mode: 'insensitive' } } },
@@ -920,6 +950,8 @@ export class BookingService {
       }
     }
 
+    const confirmationCode = await this.generateConfirmationCode();
+
     // Create booking
     const booking = await prisma.booking.create({
       data: {
@@ -927,6 +959,7 @@ export class BookingService {
         status: status as BookingStatus,
         source: 'ADMIN',
         customerId: customer.id,
+        confirmationCode,
         bookingDate,
         bookingTime: input.bookingTime,
         pickupLocation: input.pickupLocation,
@@ -971,6 +1004,55 @@ export class BookingService {
     });
 
     return booking;
+  }
+
+  /**
+   * Update booking fields (admin action)
+   */
+  async updateBooking(bookingId: string, data: UpdateBookingInput, userId?: string, userEmail?: string) {
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    if (!booking) throw new Error('Booking not found');
+
+    const update: Record<string, any> = {};
+
+    if (data.bookingDate !== undefined) {
+      const d = new Date(data.bookingDate);
+      if (isNaN(d.getTime())) throw new Error('Invalid booking date');
+      update.bookingDate = d;
+    }
+
+    const directFields = [
+      'bookingTime', 'passengers', 'notes', 'internalNotes',
+      'flightNumber', 'arrivalTime', 'departureFlightNumber',
+      'departureTime', 'pickupLocation', 'dropoffLocation',
+    ] as const;
+    for (const key of directFields) {
+      if (data[key] !== undefined) update[key] = data[key];
+    }
+
+    const updated = await prisma.booking.update({
+      where: { id: bookingId },
+      data: update,
+      include: {
+        customer: true,
+        items: true,
+        payments: { orderBy: { createdAt: 'desc' }, take: 1 },
+        assignments: { include: { driver: true, vehicle: true } },
+        emailLogs: { orderBy: { createdAt: 'desc' } },
+      },
+    });
+
+    await createAuditLog({
+      action: 'UPDATE',
+      entityType: 'Booking',
+      entityId: bookingId,
+      userId,
+      userEmail,
+      description: `Booking updated by admin`,
+      changes: update,
+    });
+
+    return updated;
   }
 
   /**

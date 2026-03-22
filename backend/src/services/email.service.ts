@@ -31,7 +31,10 @@ export class EmailService {
   private bgColor: string;
 
   constructor() {
-    const companyEmailRaw = process.env.COMPANY_BOOKINGS_EMAIL || process.env.EMAIL_COMPANY_TO || 'condecorporation@gmail.com';
+    const companyEmailRaw = process.env.COMPANY_BOOKINGS_EMAIL || process.env.EMAIL_COMPANY_TO || '';
+    if (!companyEmailRaw) {
+      console.warn('[Email] COMPANY_BOOKINGS_EMAIL is not set. Company notifications will be skipped.');
+    }
     this.companyEmails = companyEmailRaw.split(',').map(e => e.trim()).filter(Boolean);
 
     const gmailUser = process.env.GMAIL_USER;

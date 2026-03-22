@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { prisma } from './lib/prisma';
 import { errorHandler } from './middleware/errorHandler';
@@ -14,6 +15,16 @@ import previewRoutes from './routes/preview.routes';
 import { EmailService } from './services/email.service';
 
 dotenv.config();
+
+// Prevent unhandled promise rejections (e.g. Puppeteer cleanup errors) from crashing the server
+process.on('unhandledRejection', (reason: unknown) => {
+  console.error('[Server] Unhandled promise rejection (non-fatal):', reason);
+});
+process.on('uncaughtException', (err: Error) => {
+  console.error('[Server] Uncaught exception:', err?.message || err);
+  // Only exit for truly unrecoverable errors
+  if ((err as any)?.code === 'EADDRINUSE') process.exit(1);
+});
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -36,27 +47,17 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
-    
-    // Check exact match
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-      return;
-    }
-    
-    // Check Netlify preview pattern
-    if (origin.includes('.netlify.app')) {
-      callback(null, true);
-      return;
-    }
-    
-    // Log blocked origins in production
+
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+
+    if (origin.includes('.netlify.app')) return callback(null, true);
+
     if (process.env.NODE_ENV === 'production') {
       console.warn(`[CORS] Blocked origin: ${origin}`);
+      return callback(new Error('Not allowed by CORS'));
     }
-    
-    // Allow anyway for development, but log
+
     callback(null, true);
   },
   credentials: true,
@@ -65,19 +66,27 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Rate limiters
+const bookingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'Too many booking requests, please try again later.' }, standardHeaders: true, legacyHeaders: false });
+const paypalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many payment requests, please try again later.' }, standardHeaders: true, legacyHeaders: false });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { error: 'Too many login attempts, please try again later.' }, standardHeaders: true, legacyHeaders: false });
+const aiLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, message: { error: 'Too many requests, please slow down.' }, standardHeaders: true, legacyHeaders: false });
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // API routes
-app.use('/api/bookings', bookingsRoutes);
-app.use('/api/admin/auth', authRoutes); // Auth routes (no protection)
-app.use('/api/admin', adminRoutes); // Admin routes (protected)
-app.use('/api/paypal', paypalRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/pricing', pricingRoutes); // Pricing routes (public quote + admin routes)
-app.use('/api/preview', previewRoutes); // Email preview (no auth, for design workflow)
+app.use('/api/bookings', bookingLimiter, bookingsRoutes);
+app.use('/api/admin/auth', authLimiter, authRoutes);
+app.use('/api/admin', adminRoutes); // Admin routes (protected by auth middleware)
+app.use('/api/paypal', paypalLimiter, paypalRoutes);
+app.use('/api/ai', aiLimiter, aiRoutes);
+app.use('/api/pricing', pricingRoutes);
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api/preview', previewRoutes);
+}
 
 // Error handling
 app.use(errorHandler);

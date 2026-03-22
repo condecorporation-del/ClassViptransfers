@@ -608,5 +608,76 @@ export class PricingController {
       });
     }
   }
+
+  // ── Hotel CRUD (admin) ──
+
+  async listHotels(req: Request, res: Response) {
+    try {
+      const hotels = await prisma.hotel.findMany({
+        orderBy: [{ zone: 'asc' }, { name: 'asc' }],
+      });
+      res.json({ success: true, data: hotels });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message || 'Failed to fetch hotels' });
+    }
+  }
+
+  async createHotel(req: Request, res: Response) {
+    try {
+      const { name, zone, isActive } = req.body;
+      if (!name || !zone) return res.status(400).json({ success: false, error: 'name and zone are required' });
+      const hotel = await prisma.hotel.create({ data: { name, zone, isActive: isActive ?? true } });
+      await createAuditLog({
+        action: 'CREATE',
+        entityType: 'Hotel',
+        entityId: hotel.id,
+        userEmail: (req as any).adminEmail,
+        description: `Created hotel: ${hotel.name} (${hotel.zone})`,
+      });
+      res.status(201).json({ success: true, data: hotel });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message || 'Failed to create hotel' });
+    }
+  }
+
+  async updateHotel(req: Request, res: Response) {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      if (!id) return res.status(400).json({ success: false, error: 'Hotel ID is required' });
+      const { name, zone, isActive } = req.body;
+      const hotel = await prisma.hotel.update({
+        where: { id },
+        data: { ...(name !== undefined && { name }), ...(zone !== undefined && { zone }), ...(isActive !== undefined && { isActive }) },
+      });
+      await createAuditLog({
+        action: 'UPDATE',
+        entityType: 'Hotel',
+        entityId: id,
+        userEmail: (req as any).adminEmail,
+        description: `Updated hotel: ${hotel.name}`,
+      });
+      res.json({ success: true, data: hotel });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message || 'Failed to update hotel' });
+    }
+  }
+
+  async deleteHotel(req: Request, res: Response) {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      if (!id) return res.status(400).json({ success: false, error: 'Hotel ID is required' });
+      const hotel = await prisma.hotel.update({ where: { id }, data: { isActive: false } });
+      await createAuditLog({
+        action: 'DELETE',
+        entityType: 'Hotel',
+        entityId: id,
+        userEmail: (req as any).adminEmail,
+        description: `Deactivated hotel: ${hotel.name}`,
+      });
+      res.json({ success: true, data: hotel });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message || 'Failed to deactivate hotel' });
+    }
+  }
 }
 

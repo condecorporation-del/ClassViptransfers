@@ -18,25 +18,32 @@
   # Node version
   NODE_VERSION = "18"
 
-# Redirect old zone URLs (Google indexed) to transfers page
+# Fix: Google indexed /transfers as home — redirect to canonical home
+[[redirects]]
+  from = "/transfers/"
+  to = "/"
+  status = 301
+  force = false
+
+# Redirect old zone URLs (Google indexed) to home
 [[redirects]]
   from = "/san-jose-del-cabo"
-  to = "/transfers"
+  to = "/"
   status = 301
   force = true
 [[redirects]]
   from = "/san-jose-del-cabo/"
-  to = "/transfers"
+  to = "/"
   status = 301
   force = true
 [[redirects]]
   from = "/cabo-san-lucas"
-  to = "/transfers"
+  to = "/"
   status = 301
   force = true
 [[redirects]]
   from = "/cabo-san-lucas/"
-  to = "/transfers"
+  to = "/"
   status = 301
   force = true
 
@@ -45,6 +52,22 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Cache headers for static assets
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
 
 # Netlify Dev configuration
 [dev]

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Shield, MapPin, Headphones, ArrowRight, Star, ChevronDown, Trophy, Car, Quote, Plane, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Star, ChevronDown, Trophy, Quote, Plane, Sparkles, CheckCircle2 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
 import {
   Accordion,
@@ -61,14 +61,6 @@ const Index = () => {
     { name: 'Carlos G.', location: t('testimonial.3.location'), key: 'testimonial.3.text', rating: 5 },
   ];
 
-  const includes = [
-    t('transfers.included.flight'),
-    t('transfers.included.water'),
-    t('transfers.included.bilingual'),
-    t('transfers.included.wifi'),
-    t('transfers.included.door'),
-  ];
-
   const localBusinessLd = {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
@@ -99,9 +91,10 @@ const Index = () => {
   return (
     <div className="overflow-hidden">
       <SEO
-        title="Luxury Airport Transfers & Adventures in Los Cabos"
-        description="Book private luxury airport transfers in Los Cabos. SUV & Sprinter service from SJD airport to hotels in Cabo San Lucas, San Jose del Cabo & the Tourist Corridor. Adventure tours available."
-        keywords="Los Cabos airport transfer, cabo san lucas transportation, luxury transfer cabo, private transportation los cabos, SJD airport shuttle, cabo airport taxi, cabo luxury van, tourist corridor transfer"
+        title="Class VIP Transfers | Luxury Airport Transfers & Adventures in Los Cabos"
+        description="Class VIP Transfers — 30+ years of private luxury airport transfers in Los Cabos. SUV & Sprinter from SJD Airport. Adventure combos: ATV, camels, sky bikes & more."
+        keywords="Class VIP Transfers, Los Cabos airport transfer, cabo san lucas transportation, luxury transfer cabo, private transportation los cabos, SJD airport shuttle, cabo adventure tours, ATV cabo, camel safari los cabos"
+        canonical="https://classviptransfers.com/"
         jsonLd={[localBusinessLd, faqLd]}
       />
       {/* ===== HERO (dark cinematic) ===== */}
@@ -217,88 +210,149 @@ const Index = () => {
         </motion.div>
       </section>
 
-      {/* ===== TRANSFERS (bright) ===== */}
+      {/* ===== COMPANY STORY ===== */}
       <section className="py-24 px-4">
         <div className="container mx-auto max-w-6xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-16">
-            <span className="font-accent text-gold text-sm tracking-[0.3em] uppercase mb-3 block">{t('hero.eyebrow')}</span>
-            <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-bold mb-5 text-foreground">{t('home.transfers.title')}</h2>
-            <p className="text-muted-foreground max-w-xl mx-auto text-lg font-light">{t('home.transfers.subtitle')}</p>
-          </motion.div>
-
-          <div className="max-w-xl mx-auto">
-            {/* Private only */}
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-              className="glass-card rounded-2xl p-8 premium-card border-2 border-gold/20 group relative overflow-hidden">
-              <div className="absolute top-0 right-0 gold-gradient text-secondary-foreground text-[10px] font-bold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider">
-                {t('transfers.private.badge')}
-              </div>
-              <div className="flex items-center gap-4 mb-5">
-                <div className="w-14 h-14 rounded-2xl gold-gradient flex items-center justify-center">
-                  <Car size={24} className="text-secondary-foreground" />
-                </div>
-                <div>
-                  <h3 className="font-display text-2xl font-bold text-foreground">{t('home.transfers.private')}</h3>
-                  <p className="text-muted-foreground text-sm">{t('home.transfers.privateDesc')}</p>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground mb-6">
-                {t('home.transfers.privatePricingNote', { en: 'SUV, Sprinter. Pricing by zone on Transfers page.', es: 'SUV, Sprinter. Precios por zona en página Transfers.' })}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={stagger}
+            className="grid md:grid-cols-2 gap-14 items-center"
+          >
+            {/* Text */}
+            <motion.div variants={fadeUp}>
+              <span className="font-accent text-gold text-sm tracking-[0.3em] uppercase mb-4 block">
+                {t('home.story.eyebrow')}
+              </span>
+              <h2 className="font-display text-3xl md:text-5xl font-bold mb-6 text-foreground leading-tight whitespace-pre-line">
+                {t('home.story.title')}
+              </h2>
+              <p className="text-muted-foreground text-lg leading-relaxed mb-10 font-light">
+                {t('home.story.text')}
               </p>
-              <div className="flex flex-wrap gap-2 mb-6">
-                {includes.slice(0, 4).map((inc, i) => (
-                  <span key={i} className="text-[11px] text-muted-foreground bg-sand-light px-3 py-1 rounded-full flex items-center gap-1">
-                    <CheckCircle2 size={10} className="text-gold" /> {inc}
-                  </span>
+              <div className="grid grid-cols-3 gap-6 pt-6 border-t border-border">
+                {[
+                  { value: '30+', label: t('home.story.stat1Label') },
+                  { value: t('home.story.stat2Label'), label: '' },
+                  { value: 'VIP', label: t('home.story.stat3Label') },
+                ].map((stat, i) => (
+                  <div key={i} className="text-center">
+                    <div className="font-display text-2xl md:text-3xl font-bold text-gold mb-1">{stat.value}</div>
+                    {stat.label && <div className="text-xs text-muted-foreground uppercase tracking-wider">{stat.label}</div>}
+                  </div>
                 ))}
               </div>
-              <Link to="/book" className="gold-gradient text-secondary-foreground px-8 py-3.5 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow group">
-                {t('home.transfers.bookThis')} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
             </motion.div>
-          </div>
+
+            {/* Quote card */}
+            <motion.div variants={fadeUp}>
+              <div className="glass-card rounded-3xl p-10 premium-card border-2 border-gold/20 text-center relative overflow-hidden">
+                <div className="absolute inset-0 shimmer pointer-events-none" />
+                <div className="w-20 h-20 rounded-2xl gold-gradient flex items-center justify-center mx-auto mb-6">
+                  <Trophy size={32} className="text-secondary-foreground" />
+                </div>
+                <blockquote className="text-foreground/80 italic text-lg leading-relaxed font-accent mb-6">
+                  "{t('home.story.quote')}"
+                </blockquote>
+                <div className="text-gold font-semibold text-sm">— Armando Álvarez H.</div>
+                <div className="text-muted-foreground text-xs mt-1">{t('home.story.founderTitle')}</div>
+              </div>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
       <div className="section-divider mx-auto max-w-3xl" />
 
-      {/* ===== ACTIVITIES (warm sand bg) ===== */}
-      <section className="py-24 px-4 section-light">
-        <div className="container mx-auto max-w-6xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-12">
-            <span className="font-accent text-gold text-sm tracking-[0.3em] uppercase mb-3 block">{t('home.activities.eyebrow')}</span>
-            <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-bold mb-5 text-foreground">{t('home.activities.title')}</h2>
-            <p className="text-muted-foreground max-w-xl mx-auto text-lg font-light">{t('home.activities.subtitle')}</p>
-          </motion.div>
+      {/* ===== ACTIVITIES (dark bg — solid navy gradient) ===== */}
+      <section className="py-0 relative overflow-hidden navy-gradient">
 
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid sm:grid-cols-2 gap-6 mb-8">
-            <motion.div variants={fadeUp} className="glass-card rounded-2xl p-8 premium-card border border-border text-center">
-              <p className="text-3xl mb-3">🎯</p>
-              <p className="font-display text-2xl font-bold mb-2 text-foreground">{t('home.activities.combo')}</p>
-              <p className="text-muted-foreground text-sm mb-3">{t('home.activities.comboActivities')}</p>
-              <p className="text-gold text-3xl font-bold mb-4">{t('home.activities.comboPrice')}</p>
-              <Link to="/book-activities" className="gold-gradient text-secondary-foreground px-8 py-3 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
-                {t('home.activities.bookCombo')} <ArrowRight size={14} />
+        <div className="relative z-10 py-24 px-4">
+          <div className="container mx-auto max-w-6xl">
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-14">
+              <span className="font-accent text-gold text-sm tracking-[0.3em] uppercase mb-3 block">{t('home.activities.eyebrow')}</span>
+              <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-bold mb-5 text-off-white">{t('home.activities.title')}</h2>
+              <p className="text-off-white/60 max-w-xl mx-auto text-lg font-light">{t('home.activities.subtitle')}</p>
+            </motion.div>
+
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid sm:grid-cols-2 gap-6 mb-10 max-w-3xl mx-auto">
+              {/* Combo 2 — photo collage card */}
+              {([
+                {
+                  collage: [
+                    'https://cactustours.com.mx/wp-content/uploads/2024/03/3_Beach-and-Dunes-ATV.webp',
+                    'https://cactustours.com.mx/wp-content/uploads/2024/03/Cactus-tours-camel-ride-miniatura.webp',
+                    'https://cactustours.com.mx/wp-content/uploads/2025/01/357A7620.webp',
+                    'https://cactustours.com.mx/wp-content/uploads/2024/11/DJI_0065.webp',
+                  ],
+                  badge: null,
+                  titleKey: 'home.activities.combo',
+                  subtitleKey: 'home.activities.comboActivities',
+                  priceKey: 'home.activities.comboPrice',
+                  noteKey: 'home.activities.includesNote',
+                  ctaKey: 'home.activities.bookCombo',
+                  highlight: false,
+                },
+                {
+                  collage: [
+                    'https://cactustours.com.mx/wp-content/uploads/2024/08/2_Side-by-side-Adventure--scaled.webp',
+                    'https://cactustours.com.mx/wp-content/uploads/2024/03/3_Beach-and-Dunes-ATV.webp',
+                    'https://cactustours.com.mx/wp-content/uploads/2024/03/Cactus-tours-camel-ride-miniatura.webp',
+                    'https://cactustours.com.mx/wp-content/uploads/2024/11/DJI_0065.webp',
+                  ],
+                  badge: 'home.activities.bestValue',
+                  titleKey: 'home.activities.crazyCombo',
+                  subtitleKey: 'home.activities.crazyActivities',
+                  priceKey: 'home.activities.crazyPrice',
+                  noteKey: 'home.activities.includesNote',
+                  ctaKey: 'home.activities.bookCrazyCombo',
+                  highlight: true,
+                },
+              ] as const).map((card, i) => (
+                <motion.div key={i} variants={fadeUp} className={`rounded-3xl flex flex-col relative overflow-hidden ${card.highlight ? 'border-2 border-gold/50' : 'border border-white/10'}`}>
+                  {card.highlight && <div className="absolute inset-0 shimmer pointer-events-none z-10" />}
+                  {card.badge && (
+                    <div className="absolute top-0 right-0 z-20 gold-gradient text-secondary-foreground text-[10px] font-bold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider">
+                      {t(card.badge)}
+                    </div>
+                  )}
+                  {/* 2×2 photo collage */}
+                  <div className="relative h-44 grid grid-cols-2 grid-rows-2 shrink-0">
+                    {card.collage.map((src, j) => (
+                      <div key={j} className="overflow-hidden relative">
+                        <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
+                        {(j === 0 || j === 2) && <div className="absolute right-0 inset-y-0 w-px bg-black/40" />}
+                        {(j === 0 || j === 1) && <div className="absolute bottom-0 inset-x-0 h-px bg-black/40" />}
+                      </div>
+                    ))}
+                    <div className="absolute inset-0 bg-gradient-to-t from-navy/60 to-transparent" />
+                  </div>
+                  {/* Card content */}
+                  <div className="p-6 flex flex-col flex-1" style={{ background: card.highlight ? 'rgba(212,175,55,0.08)' : 'rgba(255,255,255,0.06)', backdropFilter: 'blur(16px)' }}>
+                    <p className="font-display text-xl font-bold text-off-white mb-0.5">{t(card.titleKey)}</p>
+                    <p className="text-off-white/50 text-sm mb-4">{t(card.subtitleKey)}</p>
+                    <p className="text-gold text-4xl font-bold font-display mb-1">{t(card.priceKey)}</p>
+                    <p className="text-off-white/40 text-xs mb-5">{t(card.noteKey)}</p>
+                    <div className="mt-auto">
+                      <Link to="/activities#combos" className="gold-gradient text-secondary-foreground px-7 py-3 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow group w-full justify-center">
+                        {t(card.ctaKey)} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                      </Link>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
+              <p className="text-off-white/30 text-sm mb-5">{t('home.activities.parkFeeNote')}</p>
+              <Link
+                to="/activities"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-gold border border-gold/30 px-6 py-2.5 rounded-full hover:bg-gold/10 transition-all"
+              >
+                {t('home.activities.exploreAll')} <ArrowRight size={14} />
               </Link>
             </motion.div>
-            <motion.div variants={fadeUp} className="glass-card rounded-2xl p-8 premium-card border-2 border-gold/30 text-center relative overflow-hidden">
-              <div className="absolute inset-0 shimmer pointer-events-none" />
-              <span className="absolute -top-0 left-1/2 -translate-x-1/2 gold-gradient text-secondary-foreground text-[10px] font-bold px-4 py-1.5 rounded-b-lg uppercase tracking-wider">
-                {t('home.activities.bestValue')}
-              </span>
-              <p className="text-3xl mb-3 mt-2">🔥</p>
-              <p className="font-display text-2xl font-bold mb-2 text-foreground">{t('home.activities.crazyCombo')}</p>
-              <p className="text-muted-foreground text-sm mb-3">{t('home.activities.crazyActivities')}</p>
-              <p className="text-gold text-3xl font-bold mb-4">{t('home.activities.crazyPrice')}</p>
-              <Link to="/book-activities" className="gold-gradient text-secondary-foreground px-8 py-3 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
-                {t('home.activities.bookCrazyCombo')} <ArrowRight size={14} />
-              </Link>
-            </motion.div>
-          </motion.div>
-
-          <div className="text-center space-y-1 text-sm text-muted-foreground">
-            <p>{t('home.activities.includesNote')}</p>
-            <p>{t('home.activities.parkFeeNote')}</p>
           </div>
         </div>
       </section>

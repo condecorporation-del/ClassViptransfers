@@ -20,7 +20,7 @@ const Navbar = () => {
   const links = [
     { to: '/transfers', label: t('nav.transfers') },
     { to: '/activities', label: t('nav.activities') },
-    { to: '/gallery', label: t('nav.gallery') },
+    { to: '/portfolio', label: t('nav.portfolio') },
     { to: '/contact', label: t('nav.contact') },
   ];
 
@@ -36,15 +36,15 @@ const Navbar = () => {
   const textColor = isDarkHero ? 'text-off-white' : 'text-foreground';
   const mutedText = isDarkHero ? 'text-off-white/70' : 'text-foreground/60';
   const activeText = 'text-gold';
-
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${navBg}`}>
-      <div className="container mx-auto px-4 h-20 md:h-24 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 group">
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 overflow-visible ${navBg}`}>
+      <div className="container mx-auto px-4 h-20 md:h-28 flex items-center justify-between overflow-visible">
+        <Link to="/" className="flex-shrink-0 overflow-visible flex items-center group">
           <img
             src="/logo.png"
             alt="Class VIP Transfers"
-            className="h-14 md:h-20 drop-shadow-[0_2px_8px_rgba(212,175,55,0.3)] transition-transform duration-300 group-hover:scale-105"
+            style={{ height: 'clamp(80px, 10vw, 144px)' }}
+            className="w-auto drop-shadow-[0_0_40px_rgba(212,175,55,0.9)] brightness-[1.15] transition-transform duration-300 group-hover:scale-[1.03]"
           />
         </Link>
 

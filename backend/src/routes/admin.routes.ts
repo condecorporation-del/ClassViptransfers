@@ -95,6 +95,18 @@ router.delete(
   asyncHandler((req, res) => adminController.removePriceOverride(req, res))
 );
 
+// PATCH /api/admin/bookings/:id - Update booking fields
+router.patch(
+  '/bookings/:id',
+  asyncHandler((req, res) => adminController.updateBooking(req, res))
+);
+
+// POST /api/admin/bookings/:id/cancel - Cancel booking
+router.post(
+  '/bookings/:id/cancel',
+  asyncHandler((req, res) => adminController.cancelBooking(req, res))
+);
+
 // POST /api/admin/bookings/:id/assign - Assign driver/vehicle (extended)
 router.post(
   '/bookings/:id/assign',
@@ -193,6 +205,24 @@ router.put(
 router.delete(
   '/pricing/areas/:id',
   asyncHandler((req, res) => pricingController.deactivateArea(req, res))
+);
+
+// Hotels (admin CRUD)
+router.get(
+  '/pricing/hotels',
+  asyncHandler((req, res) => pricingController.listHotels(req, res))
+);
+router.post(
+  '/pricing/hotels',
+  asyncHandler((req, res) => pricingController.createHotel(req, res))
+);
+router.put(
+  '/pricing/hotels/:id',
+  asyncHandler((req, res) => pricingController.updateHotel(req, res))
+);
+router.delete(
+  '/pricing/hotels/:id',
+  asyncHandler((req, res) => pricingController.deleteHotel(req, res))
 );
 
 export default router;

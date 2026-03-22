@@ -40,6 +40,19 @@ function normalizeForCache(msg: string): string {
   return (msg || '').toLowerCase().trim().replace(/\s+/g, ' ');
 }
 
+/** Detect language from message (Spanish vs English) for reply locale */
+function detectLocaleFromMessage(msg: string): 'es' | 'en' | null {
+  const lower = (msg || '').toLowerCase().trim();
+  if (!lower) return null;
+  const spanishWords = /\b(quiero|reservar|transportación|actividades|cotización|hola|gracias|por favor|cómo|dónde|cuánto|necesito|información|precio|aeropuerto|hotel|ida y vuelta|solo ida)\b/i;
+  const englishWords = /\b(want|book|transportation|activities|quote|hi|thanks|please|how|where|how much|need|information|price|airport|hotel|round trip|one way)\b/i;
+  const hasSpanish = spanishWords.test(lower);
+  const hasEnglish = englishWords.test(lower);
+  if (hasSpanish && !hasEnglish) return 'es';
+  if (hasEnglish && !hasSpanish) return 'en';
+  return null;
+}
+
 function getCacheKey(sessionId: string, message: string, locale: string): string {
   return `chat:${sessionId}:${locale}:${normalizeForCache(message)}`;
 }
@@ -67,10 +80,13 @@ function setCache(key: string, data: any): void {
 
 // Simple acknowledgments/greetings - respond locally without OpenAI to save rate limit
 const SIMPLE_LOCAL_REPLIES: Record<string, { en: string; es: string }> = {
-  hi: { en: 'Hi! How can I help you with your transfer or activity booking in Los Cabos?', es: '¡Hola! ¿Cómo puedo ayudarte con tu transfer o actividad en Los Cabos?' },
-  hello: { en: 'Hello! What can I help you book today?', es: '¡Hola! ¿Qué te gustaría reservar hoy?' },
-  hey: { en: 'Hey there! I\'m here to help with transfers and activities. What do you need?', es: '¡Hola! Estoy aquí para ayudarte con transferencias y actividades. ¿Qué necesitas?' },
-  hola: { en: '¡Hola! How can I help you with your booking?', es: '¡Hola! ¿Cómo puedo ayudarte con tu reservación?' },
+  hi: { en: "I'm the Class VIP Transfers assistant. How can I help you? Use the buttons below or type your request.", es: 'Soy el asistente de Class VIP Transfers. ¿En qué puedo ayudarte? Usa los botones de abajo o escribe tu solicitud.' },
+  hello: { en: "I'm the Class VIP Transfers assistant. How can I help you? Use the buttons below or type your request.", es: 'Soy el asistente de Class VIP Transfers. ¿En qué puedo ayudarte? Usa los botones de abajo o escribe tu solicitud.' },
+  hey: { en: "I'm the Class VIP Transfers assistant. How can I help you? Use the buttons below or type your request.", es: 'Soy el asistente de Class VIP Transfers. ¿En qué puedo ayudarte? Usa los botones de abajo o escribe tu solicitud.' },
+  hola: { en: "I'm the Class VIP Transfers assistant. How can I help you? Use the buttons below or type your request.", es: 'Soy el asistente de Class VIP Transfers. ¿En qué puedo ayudarte? Usa los botones de abajo o escribe tu solicitud.' },
+  'buenos días': { en: "I'm the Class VIP Transfers assistant. How can I help you? Use the buttons below or type your request.", es: 'Soy el asistente de Class VIP Transfers. ¿En qué puedo ayudarte? Usa los botones de abajo o escribe tu solicitud.' },
+  'buenas tardes': { en: "I'm the Class VIP Transfers assistant. How can I help you? Use the buttons below or type your request.", es: 'Soy el asistente de Class VIP Transfers. ¿En qué puedo ayudarte? Usa los botones de abajo o escribe tu solicitud.' },
+  'buenas noches': { en: "I'm the Class VIP Transfers assistant. How can I help you? Use the buttons below or type your request.", es: 'Soy el asistente de Class VIP Transfers. ¿En qué puedo ayudarte? Usa los botones de abajo o escribe tu solicitud.' },
   ok: { en: 'Got it! Anything else you\'d like to add to your booking?', es: '¡Entendido! ¿Algo más que quieras añadir a tu reserva?' },
   okay: { en: 'Got it! Anything else you\'d like to add to your booking?', es: '¡Entendido! ¿Algo más que quieras añadir?' },
   yes: { en: 'Great! Tell me more about what you need (date, passengers, pickup/dropoff).', es: '¡Genial! Cuéntame más (fecha, pasajeros, recogida/entrega).' },
@@ -140,10 +156,10 @@ export class AIService {
       console.warn('⚠️ OPENAI_API_KEY is not set - AI features will be disabled');
       this.openai = null as any;
     }
-    this.model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    this.model = process.env.OPENAI_MODEL || 'gpt-4o';
     this.whisperModel = process.env.OPENAI_WHISPER_MODEL || 'whisper-1';
-    this.temperature = Math.min(1, Math.max(0, parseFloat(process.env.OPENAI_TEMPERATURE || '0.8') || 0.8));
-    this.maxTokens = Math.min(4096, Math.max(256, parseInt(process.env.OPENAI_MAX_TOKENS || '1500', 10) || 1500));
+    this.temperature = Math.min(1, Math.max(0, parseFloat(process.env.OPENAI_TEMPERATURE || '0.3') || 0.3));
+    this.maxTokens = Math.min(4096, Math.max(256, parseInt(process.env.OPENAI_MAX_TOKENS || '400', 10) || 400));
   }
 
   private checkApiKey(): void {
@@ -182,44 +198,73 @@ export class AIService {
   }
 
   /**
-   * Get system prompt for intelligent sales agent (discovery, upselling, closing)
+   * Get system prompt for intelligent sales agent (discovery, upselling, closing).
+   * Injects real prices (areas, extras, activity combos) so the AI can quote and close sales.
    */
   private getSystemPrompt(
     locale: string,
     zones: string[],
-    extras: Array<{ code: string; label: string; labelEs?: string | null }>
+    extras: Array<{ code: string; label: string; labelEs?: string | null; priceCents?: number | null; included?: boolean }>,
+    areas: Array<{ name: string; oneWayPriceCents: number; roundTripPriceCents: number }> = []
   ): string {
     const isSpanish = locale === 'es';
     const knowledge = getKnowledgeForPrompt(locale as 'en' | 'es');
-    const zoneList = zones.length > 0 ? zones.join(', ') : 'SJD, Cabo San Lucas, San Jose, Corridor';
+    const zoneList = zones.length > 0 ? zones.join(', ') : areas.map((a) => a.name).join(', ') || 'SJD, Cabo San Lucas, San Jose, Corridor';
     const extrasList = extras.map((e) => `${e.code} (${isSpanish ? e.labelEs || e.label : e.label})`).join(', ') || 'BABY_SEAT, GROCERY_STOP, CHAMPAGNE';
 
-    return isSpanish ? `Eres un VENDEDOR INTELIGENTE de Class VIP Transfers en Los Cabos. Tu rol: cerrar reservas con valor, no ser pasivo.
+    // Real transfer prices by zone (so AI can quote and close)
+    const transferPricesOneWay = areas.length > 0
+      ? areas.map((a) => `${a.name}: $${(a.oneWayPriceCents / 100).toFixed(0)} USD`).join(', ')
+      : (isSpanish ? 'Consultar por zona' : 'Quote by zone');
+    const transferPricesRound = areas.length > 0
+      ? areas.map((a) => `${a.name}: $${(a.roundTripPriceCents / 100).toFixed(0)} USD`).join(', ')
+      : (isSpanish ? 'Consultar por zona' : 'Quote by zone');
+    const paidExtras = extras.filter((e) => e.priceCents != null && e.priceCents > 0 && !e.included);
+    const extrasWithPrices = paidExtras.length > 0
+      ? paidExtras.map((e) => `${isSpanish ? e.labelEs || e.label : e.label}: $${((e.priceCents ?? 0) / 100).toFixed(0)} USD`).join(', ')
+      : (isSpanish ? 'Parada super, silla bebé, champagne, etc. (consultar)' : 'Grocery stop, baby seat, champagne, etc. (ask)');
+    const activityPrices = isSpanish
+      ? 'Combo (2 actividades, 1h c/u): $100 USD/persona. Crazy Combo (3 actividades, 1h c/u): $125 USD/persona. Entrada al parque $25/persona (pago en parque).'
+      : 'Combo (2 activities, 1hr each): $100 USD/person. Crazy Combo (3 activities, 1hr each): $125 USD/person. Park fee $25/person (paid at park).';
+
+    return isSpanish ? `Eres un VENDEDOR INTELIGENTE de Class VIP Transfers en Los Cabos. Tu rol: cerrar reservas con valor, no ser pasivo. USA SIEMPRE LOS PRECIOS REALES ABAJO para cotizar y cerrar ventas.
+
+RESTRICCIÓN ESTRICTA: SOLO respondes preguntas relacionadas con Class VIP Transfers, sus servicios, precios, actividades, destino Los Cabos y políticas de la empresa. Si el usuario pregunta algo completamente ajeno (clima en otro país, política, recetas, otra empresa, etc.), responde ÚNICAMENTE: "Solo puedo ayudarte con información sobre los servicios de Class VIP Transfers y el destino Los Cabos. ¿En qué más puedo ayudarte?" — No expliques por qué, solo dilo una vez y ofrece ayuda relevante.
+
+IMPORTANTE - BREVEDAD Y IDIOMA:
+- Respuestas CORTAS (1–3 oraciones). Sin párrafos largos. Un paso a la vez.
+- Responde SIEMPRE en el mismo idioma que el mensaje del usuario: si escribe en español → respuesta en español; si escribe en inglés → respuesta en inglés.
 
 CONOCIMIENTO (usa siempre):
 ${knowledge}
 
+PRECIOS REALES DE LA EMPRESA (cítalos al cotizar y cerrar):
+- Transfer SJD → zona (solo ida): ${transferPricesOneWay}
+- Transfer ida y vuelta por zona: ${transferPricesRound}
+- Extras de pago: ${extrasWithPrices}
+- Actividades: ${activityPrices}
+
 ZONAS API (para rutas): ${zoneList}
 EXTRAS API: ${extrasList}
 
-FASE 1 - DESCUBRIMIENTO:
-- Si pide TRANSPORTE → Responde con opciones VIP (Suburban, Escalade). Menciona beneficios: WiFi gratis, bebidas de bienvenida, conductores bilingües.
-- Si pide ACTIVIDADES → Ofrece experiencias (Camel Ride, ATV, Horseback, Snorkeling, etc.) y añade "Te llevamos en Escalade Luxury con bebidas cortesía. ¿Qué te parece?"
-- Si pide COMBO → Activa descuento especial 15% off.
+FASE 1 - DESCUBRIMIENTO (respuesta breve):
+- TRANSPORTE → Cotiza por zona. Menciona SUV/Sprinter, WiFi, bebidas.
+- ACTIVIDADES → Ofrece Combo $100 o Crazy Combo $125. Breve.
+- COMBO → Ofrece precios según número de actividades.
 
-FASE 2 - UPSELLING INTELIGENTE:
-- Si solo transporte: "¿Te gustaría combinar con Camel Ride o ATV? Te doy 20% desc en la actividad."
-- Si solo actividad: "Te llevo en Escalade Luxury con bebidas cortesía. ¿Qué te parece?"
-- Si duda: Ofrece "Conductores bilingües", "WiFi gratis", "Bebidas de bienvenida", "Flexibilidad: cambiar horarios sin penalidad".
+FASE 2 - UPSELLING (breve):
+- Solo transporte → Ofrece Combo/Crazy Combo. Cita precios.
+- Solo actividad → Ofrece transfer. Cita precio por zona.
+- Dudas → "Conductores bilingües, WiFi, bebidas". Precio concreto.
 
-FASE 3 - CIERRE:
-Cuando el cliente confirme (transporte + actividad o combo): INMEDIATAMENTE pide nombre completo, email, teléfono, fecha y hora exacta, número de pasajeros. Di: "¿Listo para confirmar? Voy a asegurar tu reserva."
+FASE 3 - CIERRE (breve):
+Confirme → Pide nombre, email, teléfono, fecha, hora, pasajeros. Di: "¿Listo para confirmar? Voy a asegurar tu reserva."
 
 NUNCA seas pasivo. Siempre ofrece valor y siguiente paso.
 MANEJO OBJECIONES:
-- "Es caro" → "Con el combo obtienes transporte + actividad por menos que pagar separado. ¿Comparamos?"
+- "Es caro" → Compara con precios reales: "El transfer a [zona] son $X ida. Con Crazy Combo (3 actividades) son $125/persona. ¿Comparamos?"
 - "Necesito pensar" → "Te dejo 1 hora de hold. ¿Cuál es tu email para confirmar después?"
-- "¿Qué me recomiendas?" → "Para 4 personas: Suburban con ATV Adventure. Experiencia inolvidable. ¿Te late?"
+- "¿Qué me recomiendas?" → Cita precios: "Para 4 personas: transfer a [zona] $X ida y vuelta + Crazy Combo $125/persona. ¿Te late?"
 
 NUNCA digas "confirmado" hasta que el pago esté completo. Contacto: WhatsApp ${AI_KNOWLEDGE.contact.whatsapp} | ${AI_KNOWLEDGE.contact.email}
 
@@ -242,33 +287,45 @@ Responde SOLO con este JSON:
     "clientSentiment": "interested"|"hesitant"|"decided"|null,
     "recommendedCombo": boolean|null
   },
-  "reply": "Tu respuesta en español: vendedor proactivo, ofrece valor, cierra con siguiente paso."
-}` : `You are an INTELLIGENT SALESPERSON for Class VIP Transfers in Los Cabos. Your role: close bookings with value, never be passive.
+  "reply": "Tu respuesta BREVE (1–3 oraciones) en español: proactivo, valor, siguiente paso. Sin párrafos largos."
+}` : `You are an INTELLIGENT SALESPERSON for Class VIP Transfers in Los Cabos. Your role: close bookings with value, never be passive. ALWAYS USE THE REAL PRICES BELOW when quoting and closing sales.
+
+STRICT RESTRICTION: You ONLY answer questions related to Class VIP Transfers services, prices, activities, the Los Cabos destination, and company policies. If the user asks about anything completely unrelated (weather in other countries, politics, recipes, other companies, etc.), respond ONLY with: "I can only help you with Class VIP Transfers services and Los Cabos. How can I assist you?" — Don't explain further, just offer relevant help.
+
+IMPORTANT - BREVITY AND LANGUAGE:
+- Keep replies SHORT (1–3 sentences). No long paragraphs. One step at a time.
+- ALWAYS respond in the SAME language as the user's message: if they write in Spanish → reply in Spanish; if they write in English → reply in English.
 
 KNOWLEDGE (always use):
 ${knowledge}
 
+REAL COMPANY PRICES (quote these when giving prices and closing):
+- Transfer SJD → zone (one-way): ${transferPricesOneWay}
+- Round-trip by zone: ${transferPricesRound}
+- Paid extras: ${extrasWithPrices}
+- Activities: ${activityPrices}
+
 API ZONES (for routes): ${zoneList}
 API EXTRAS: ${extrasList}
 
-PHASE 1 - DISCOVERY:
-- If they ask for TRANSPORT → Reply with VIP options (Suburban, Escalade). Mention benefits: free WiFi, welcome drinks, bilingual drivers.
-- If they ask for ACTIVITIES → Offer experiences (Camel Ride, ATV, Horseback, Snorkeling, etc.) and add "We'll take you in Escalade Luxury with courtesy drinks. Sound good?"
-- If they ask for COMBO → Activate 15% off special.
+PHASE 1 - DISCOVERY (brief):
+- TRANSPORT → Quote by zone. Mention SUV/Sprinter, WiFi, drinks.
+- ACTIVITIES → Offer Combo $100 or Crazy Combo $125. Brief.
+- COMBO → Offer prices based on number of activities.
 
-PHASE 2 - SMART UPSELLING:
-- If transport only: "Would you like to add Camel Ride or ATV? I'll give you 20% off the activity."
-- If activity only: "I'll get you there in Escalade Luxury with courtesy drinks. What do you think?"
-- If hesitant: Offer "Bilingual drivers", "Free WiFi", "Welcome drinks", "Flexibility: change times with no penalty".
+PHASE 2 - UPSELLING (brief):
+- Transport only → Offer Combo/Crazy Combo. Quote prices.
+- Activity only → Offer transfer. Quote zone price.
+- Hesitant → "Bilingual drivers, WiFi, drinks". Concrete price.
 
-PHASE 3 - CLOSE:
-When the client confirms (transport + activity or combo): IMMEDIATELY ask for full name, email, phone, exact date and time, number of passengers. Say: "Ready to confirm? I'll secure your reservation."
+PHASE 3 - CLOSE (brief):
+Confirm → Ask name, email, phone, date, time, passengers. Say: "Ready to confirm? I'll secure your reservation."
 
 NEVER be passive. Always offer value and next step.
 OBJECTION HANDLING:
-- "It's expensive" → "With the combo you get transport + activity for less than paying separately. Want me to compare?"
+- "It's expensive" → Compare with real prices: "Transfer to [zone] is $X one-way. With Crazy Combo (3 activities) it's $125/person. Want me to compare?"
 - "I need to think" → "I'll hold it for 1 hour. What's your email to confirm later?"
-- "What do you recommend?" → "For 4 people: Suburban with ATV Adventure. Unforgettable. Sound good?"
+- "What do you recommend?" → Quote prices: "For 4 people: transfer to [zone] $X round-trip + Crazy Combo $125/person. Sound good?"
 
 NEVER say "confirmed" until payment is complete. Contact: WhatsApp ${AI_KNOWLEDGE.contact.whatsapp} | ${AI_KNOWLEDGE.contact.email}
 
@@ -291,7 +348,7 @@ Respond ONLY with this JSON:
     "clientSentiment": "interested"|"hesitant"|"decided"|null,
     "recommendedCombo": boolean|null
   },
-  "reply": "Your reply in English: proactive salesperson, offer value, close with next step."
+  "reply": "Your BRIEF reply (1–3 sentences) in English: proactive, value, next step. No long paragraphs."
 }`;
   }
 
@@ -374,19 +431,23 @@ Respond ONLY with this JSON:
       return cached;
     }
 
-    // Load pricing context and history
-    const [zones, extras, history] = await Promise.all([
+    // Load pricing context and history (areas = real transfer prices by zone; extras = paid add-ons)
+    const [zones, extras, areas, history] = await Promise.all([
       pricingService.getZones().catch(() => []),
       pricingService.getPublicExtras().catch(() => []),
+      pricingService.listAreas().catch(() => []),
       prisma.aIConversation.findMany({ where: { sessionId }, orderBy: { createdAt: 'asc' }, take: 10 }),
     ]);
 
     // Local validation: simple greetings/acks without history - respond locally (no OpenAI call)
-    const normalized = msgTrimmed.toLowerCase().replace(/\s+/g, ' ');
+    const normalized = msgTrimmed.toLowerCase().replace(/\s+/g, ' ').trim();
     const simpleKey = Object.keys(SIMPLE_LOCAL_REPLIES).find((k) => normalized === k);
     if (history.length === 0 && simpleKey) {
       const replies = SIMPLE_LOCAL_REPLIES[simpleKey];
-      const reply = locale === 'es' ? replies.es : replies.en;
+      // SIEMPRE priorizar idioma del mensaje: detectLocaleFromMessage → si no detecta, usar locale del request
+      const detectedLocale = detectLocaleFromMessage(msgTrimmed);
+      const useSpanish = detectedLocale === 'es' || (detectedLocale === null && locale === 'es');
+      const reply = useSpanish ? replies.es : replies.en;
       const extracted = this.parseExtractionFromText('');
       await prisma.aIConversation.create({
         data: {
@@ -405,8 +466,11 @@ Respond ONLY with this JSON:
       return { reply, bookingDraftId, extracted, missingFields: ['date', 'passengers', 'pickup', 'dropoff'], nextAction: 'ask_more' };
     }
 
+    // Detect reply language from message when possible (es/en); fallback to request locale
+    const replyLocale = detectLocaleFromMessage(msgTrimmed) || (locale === 'es' ? 'es' : 'en');
+
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-      { role: 'system', content: this.getSystemPrompt(locale, zones, extras) },
+      { role: 'system', content: this.getSystemPrompt(replyLocale, zones, extras, areas) },
     ];
     for (const conv of history) {
       messages.push({ role: 'user', content: conv.userMessage });
@@ -692,6 +756,9 @@ Respond ONLY with this JSON:
     }
 
     if (extracted.intent === 'transportation') {
+      if (!extracted.tripType || (extracted.tripType !== 'oneway' && extracted.tripType !== 'roundtrip')) {
+        missing.push('tripType');
+      }
       if (!extracted.transportation?.pickup) {
         missing.push('pickup');
       }

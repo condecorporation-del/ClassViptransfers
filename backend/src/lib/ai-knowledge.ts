@@ -52,11 +52,16 @@ export const AI_KNOWLEDGE = {
     'Mayan Hotel',
   ],
   pricing: {
-    transportSjdToCabo: 85,
-    roundTrip: 150,
-    activitiesRange: '120-400',
-    comboDiscountPercent: 15,
-    activityUpsellDiscountPercent: 20,
+    transportSjdToSanJose: 90,
+    transportSjdToPortLosCabos: 95,
+    transportSjdToCorridor: 100,
+    transportSjdToCabo: 110,
+    transportSjdToPacific: 130,
+    transportSjdToEastCape: 150,
+    comboPrice: 100,
+    crazyComboPrice: 125,
+    parkFeePerPerson: 25,
+    roundTripMultiplier: 1.8,
   },
   extras: [
     'Free WiFi',
@@ -100,23 +105,28 @@ export function getKnowledgeForPrompt(locale: 'en' | 'es'): string {
   const extras = isEs ? k.extrasEs.join(', ') : k.extras.join(', ');
   const benefits = isEs ? k.benefitsEs : k.benefits;
 
+  const p = k.pricing;
+  const priceTable = `San José $${p.transportSjdToSanJose}, Port Los Cabos $${p.transportSjdToPortLosCabos}, Corridor $${p.transportSjdToCorridor}, Cabo San Lucas $${p.transportSjdToCabo}, Pacific $${p.transportSjdToPacific}, East Cape $${p.transportSjdToEastCape}`;
+
   return isEs
     ? `CATÁLOGO VEHÍCULOS: ${vehicles}
 ACTIVIDADES: ${activities}
 UBICACIONES: ${locations}
 HOTELES PRINCIPALES: ${hotels}
 EXTRAS INCLUIDOS: ${extras}
-PRECIOS BASE: Transport SJD→Cabo $${k.pricing.transportSjdToCabo}, Round-trip $${k.pricing.roundTrip}, Actividades $${k.pricing.activitiesRange} USD.
-COMBO: ${k.pricing.comboDiscountPercent}% descuento. Actividad + transporte: ${k.pricing.activityUpsellDiscountPercent}% desc en actividad.
+PRECIOS TRANSPORTE (SUV solo ida desde SJD): ${priceTable}. Ida y vuelta = precio x${p.roundTripMultiplier}. Sprinter (6-14 pax) tiene precio diferente.
+ACTIVIDADES COMBO: Combo (2 actividades) $${p.comboPrice} USD/persona, Crazy Combo (3 actividades) $${p.crazyComboPrice} USD/persona. Entrada parque $${p.parkFeePerPerson}/persona.
 BENEFICIOS (menciona siempre): ${benefits.join(' ')}
-CONTACTO: WhatsApp ${k.contact.whatsapp} | ${k.contact.email}`
+CONTACTO: WhatsApp ${k.contact.whatsapp} | ${k.contact.email}
+IMPORTANTE: Eres un asistente informativo. NO hagas reservaciones. Cuando el cliente quiera reservar, indícale que contacte por WhatsApp o email.`
     : `VEHICLE CATALOG: ${vehicles}
 ACTIVITIES: ${activities}
 KEY LOCATIONS: ${locations}
 MAIN HOTELS: ${hotels}
 INCLUDED EXTRAS: ${extras}
-BASE PRICES: Transport SJD→Cabo $${k.pricing.transportSjdToCabo}, Round-trip $${k.pricing.roundTrip}, Activities $${k.pricing.activitiesRange} USD.
-COMBO: ${k.pricing.comboDiscountPercent}% off. Activity + transport: ${k.pricing.activityUpsellDiscountPercent}% off activity.
+TRANSPORT PRICES (SUV one-way from SJD): ${priceTable}. Round trip = price x${p.roundTripMultiplier}. Sprinter (6-14 pax) has different pricing.
+ACTIVITY COMBOS: Combo (2 activities) $${p.comboPrice} USD/person, Crazy Combo (3 activities) $${p.crazyComboPrice} USD/person. Park fee $${p.parkFeePerPerson}/person.
 BENEFITS (always mention): ${benefits.join(' ')}
-CONTACT: WhatsApp ${k.contact.whatsapp} | ${k.contact.email}`;
+CONTACT: WhatsApp ${k.contact.whatsapp} | ${k.contact.email}
+IMPORTANT: You are an informational assistant. Do NOT make bookings. When the client wants to book, direct them to contact via WhatsApp or email.`;
 }

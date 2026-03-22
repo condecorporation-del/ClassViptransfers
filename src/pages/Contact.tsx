@@ -7,6 +7,36 @@ import { useState } from 'react';
 
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 
+const contactLd = {
+  '@context': 'https://schema.org',
+  '@type': 'LocalBusiness',
+  name: 'Class VIP Transfers',
+  description: 'Private luxury airport transfers and adventure activities in Los Cabos, Mexico. 30+ years of service.',
+  url: 'https://classviptransfers.com',
+  telephone: '+526241222174',
+  email: 'Armando@classviptransfers.com',
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: 'Los Cabos',
+    addressRegion: 'Baja California Sur',
+    addressCountry: 'MX',
+  },
+  geo: { '@type': 'GeoCoordinates', latitude: 22.8905, longitude: -109.9167 },
+  openingHoursSpecification: {
+    '@type': 'OpeningHoursSpecification',
+    dayOfWeek: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+    opens: '00:00',
+    closes: '23:59',
+  },
+  sameAs: ['https://wa.me/5216241222174'],
+  contactPoint: {
+    '@type': 'ContactPoint',
+    telephone: '+526241222174',
+    contactType: 'customer service',
+    availableLanguage: ['English', 'Spanish'],
+  },
+};
+
 const Contact = () => {
   const { t, lang } = useLanguage();
   const [form, setForm] = useState({ name: '', email: '', message: '' });
@@ -45,6 +75,13 @@ const Contact = () => {
 
   return (
     <div>
+      <SEO
+        title="Contact Us"
+        description="Contact Class VIP Transfers in Los Cabos. WhatsApp, iMessage or email. Available 24/7 for airport transfers and activity bookings."
+        keywords="contact class vip transfers, los cabos transfer contact, cabo whatsapp transfer, cabo airport contact"
+        canonical="https://classviptransfers.com/contact"
+        jsonLd={contactLd}
+      />
       {/* Hero - dark */}
       <section className="navy-gradient pt-36 pb-20 px-4">
         <div className="container mx-auto max-w-4xl text-center">
@@ -119,7 +156,7 @@ const Contact = () => {
                 </div>
                 <div>
                   <p className="font-semibold text-sm text-foreground">{t('contact.emailLabel')}</p>
-                  <a href="mailto:Armando@caboviptransfers.com" className="text-muted-foreground text-sm hover:text-foreground transition-colors">Armando@caboviptransfers.com</a>
+                  <a href="mailto:Armando@classviptransfers.com" className="text-muted-foreground text-sm hover:text-foreground transition-colors">Armando@classviptransfers.com</a>
                 </div>
               </div>
               <div className="flex items-start gap-3">

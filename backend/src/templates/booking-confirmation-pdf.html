@@ -2,240 +2,356 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reservation Confirmed | {{brandName}}</title>
+  <title>Reservation Voucher | {{brandName}}</title>
   <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #1a1a1a; }
-    .watermark { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-image: url('{{logoUrl}}'); background-repeat: no-repeat; background-position: center; background-size: 320px; opacity: 0.06; pointer-events: none; z-index: 0; }
-    .content { position: relative; z-index: 1; max-width: 600px; margin: 0 auto; background: #fff; }
-    table { border-collapse: collapse; width: 100%; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #1e293b;
+      background: #fff;
+    }
+
+    /* Watermark */
+    .watermark {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: url('{{logoUrl}}');
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 280px;
+      opacity: 0.05;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 0 24px;
+    }
+
+    /* Header */
+    .header {
+      background: #071A2B;
+      padding: 22px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header-logo img { height: 48px; width: auto; }
+    .header-right { text-align: right; }
+    .header-right .label {
+      font-size: 8px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: #D9AE5F;
+      font-weight: 700;
+    }
+    .header-right .sub {
+      font-size: 11px;
+      color: rgba(255,255,255,0.6);
+      margin-top: 2px;
+    }
+
+    .gold-rule { height: 3px; background: linear-gradient(90deg, #D9AE5F, #f5d78a, #D9AE5F); }
+
+    /* Voucher hero */
+    .voucher-hero {
+      padding: 20px 32px 16px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .voucher-title { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #64748b; }
+    .voucher-id { font-size: 28px; font-weight: 900; color: #071A2B; letter-spacing: 3px; font-family: monospace; }
+    .voucher-status {
+      display: inline-block;
+      background: #f0fdf4;
+      border: 1.5px solid #22c55e;
+      border-radius: 6px;
+      padding: 8px 18px;
+      text-align: center;
+    }
+    .voucher-status .status-label { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: #15803d; font-weight: 700; }
+    .voucher-status .status-value { font-size: 13px; font-weight: 800; color: #166534; display: block; margin-top: 2px; }
+
+    /* Section */
+    .section {
+      margin: 16px 32px 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .section-header {
+      background: #071A2B;
+      padding: 8px 16px;
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #D9AE5F;
+      font-weight: 700;
+    }
+    .section-body { padding: 12px 16px; }
+
+    /* Grid */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
+    .field-label {
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #94a3b8;
+      margin-bottom: 2px;
+    }
+    .field-value { font-size: 12px; font-weight: 600; color: #1e293b; }
+    .field-value.lg { font-size: 15px; font-weight: 800; color: #071A2B; }
+    .field-value.gold { color: #D9AE5F; }
+
+    /* Divider */
+    .divider { border: none; border-top: 1px dashed #e2e8f0; margin: 10px 0; }
+
+    /* Items table */
+    .items-table { width: 100%; border-collapse: collapse; }
+    .items-table thead td {
+      padding: 6px 8px;
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #94a3b8;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .items-table tbody td {
+      padding: 7px 8px;
+      font-size: 12px;
+      color: #1e293b;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .items-table tfoot td {
+      padding: 8px 8px 4px;
+      border-top: 2px solid #071A2B;
+    }
+    .total-row .label { font-size: 13px; font-weight: 700; color: #071A2B; }
+    .total-row .amount { font-size: 18px; font-weight: 900; color: #071A2B; text-align: right; }
+
+    /* Payment */
+    .payment-box {
+      background: #f8fafc;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      padding: 10px 14px;
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .payment-label { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; }
+    .payment-value { font-size: 13px; font-weight: 700; color: #003087; margin-top: 2px; }
+
+    /* Included bullets */
+    .included-list { list-style: none; }
+    .included-list li { font-size: 12px; color: #1e293b; padding: 2px 0; }
+    .included-list li::before { content: "✓ "; color: #16a34a; font-weight: 700; }
+
+    /* Policy */
+    .policy-list { list-style: none; }
+    .policy-list li { font-size: 11px; color: #475569; padding: 2px 0; }
+    .policy-list li::before { content: "• "; }
+
+    /* Footer */
+    .footer {
+      margin-top: 20px;
+      padding: 16px 32px;
+      background: #071A2B;
+      text-align: center;
+    }
+    .footer p { font-size: 11px; color: rgba(255,255,255,0.55); margin: 2px 0; }
+    .footer .contact { color: rgba(255,255,255,0.80); font-weight: 600; }
+    .footer .gold { color: #D9AE5F; }
+
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .watermark { opacity: 0.08; }
-      .content { box-shadow: none; }
     }
   </style>
 </head>
 <body>
   <div class="watermark" aria-hidden="true"></div>
-  <div class="content">
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-      <!-- Header: full-width banner -->
-      {{#if logoUrl}}
-      <tr>
-        <td style="padding: 0; line-height: 0;">
-          <img src="{{logoUrl}}" alt="{{brandName}}" width="600" style="width: 100%; max-width: 100%; height: auto; display: block;" />
-        </td>
-      </tr>
-      {{/if}}
-      <!-- Header text -->
-      <tr>
-        <td style="padding: 24px 32px 32px; background-color: {{primaryColor}}; text-align: center;">
-          <div style="display: inline-block; background-color: rgba(217, 174, 95, 0.25); border: 2px solid {{accentColor}}; border-radius: 50px; padding: 10px 24px; margin-bottom: 16px;">
-            <p style="margin: 0; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: {{accentColor}}; font-weight: 700;">✓ RESERVATION CONFIRMED</p>
+  <div class="page">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-logo">
+        {{#if logoUrl}}
+        <img src="{{logoUrl}}" alt="{{brandName}}" />
+        {{else}}
+        <span style="font-size:20px;font-weight:800;color:#fff;">{{brandName}}</span>
+        {{/if}}
+      </div>
+      <div class="header-right">
+        <div class="label">Reservation Voucher</div>
+        <div class="sub">Los Cabos, México</div>
+      </div>
+    </div>
+    <div class="gold-rule"></div>
+
+    <!-- Voucher Hero -->
+    <div class="voucher-hero">
+      <div>
+        <div class="voucher-title">Confirmation Number · Número de Confirmación</div>
+        <div class="voucher-id">{{bookingIdShort}}</div>
+      </div>
+      <div class="voucher-status">
+        <div class="status-label">Status · Estado</div>
+        <span class="status-value">✓ Confirmed</span>
+      </div>
+    </div>
+
+    <!-- Customer + Trip (2-col) -->
+    <div style="margin:16px 32px 0;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+      <!-- Customer -->
+      <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+        <div class="section-header">👤 Guest · Huésped</div>
+        <div class="section-body">
+          <div class="field-label">Name · Nombre</div>
+          <div class="field-value" style="margin-bottom:8px;">{{customerName}}</div>
+          <div class="field-label">Email</div>
+          <div class="field-value" style="margin-bottom:8px;font-weight:400;font-size:11px;">{{customerEmail}}</div>
+          <div class="field-label">Phone · Teléfono</div>
+          <div class="field-value" style="margin-bottom:8px;">{{#if customerPhone}}{{customerPhone}}{{else}}—{{/if}}</div>
+          <div class="field-label">Passengers · Pasajeros</div>
+          <div class="field-value">{{passengersLabel}}</div>
+        </div>
+      </div>
+
+      <!-- Trip Summary -->
+      <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+        <div class="section-header">🚗 Trip · Viaje</div>
+        <div class="section-body">
+          <div class="field-label">Date · Fecha</div>
+          <div class="field-value" style="margin-bottom:8px;">{{formattedDate}}</div>
+          <div class="field-label">Pickup Time · Hora de Recogida</div>
+          <div class="field-value lg gold" style="margin-bottom:8px;">{{pickupTime}}</div>
+          <div class="field-label">Pickup · Recogida</div>
+          <div class="field-value" style="margin-bottom:8px;font-size:11px;">{{#if pickupLocation}}{{pickupLocation}}{{else}}—{{/if}}</div>
+          <div class="field-label">Drop-off · Entrega</div>
+          <div class="field-value" style="font-size:11px;">{{#if dropoffLocation}}{{dropoffLocation}}{{else}}—{{/if}}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flight Info -->
+    {{#if hasArrivalFlight}}
+    <div class="section">
+      <div class="section-header">✈ Flight Information · Información de Vuelo</div>
+      <div class="section-body">
+        <div class="grid-2">
+          {{#if hasArrivalFlight}}
+          <div>
+            <div class="field-label">Arrival Flight · Vuelo de Llegada</div>
+            <div class="field-value">{{flightDetails.arrival.displayText}}</div>
           </div>
-          <p style="margin: 0; font-size: 20px; font-weight: 600; color: #fff;">Thank you, {{customerName}}</p>
-          <p style="margin: 6px 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">Your luxury transfer has been confirmed</p>
-        </td>
-      </tr>
-
-      <!-- Booking Details -->
-      <tr>
-        <td style="padding: 24px;">
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #e8eaed; border-radius: 6px;">
-            <tr>
-              <td style="padding: 14px 20px; background-color: {{primaryColor}}; border-radius: 6px 6px 0 0;">
-                <p style="margin: 0; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: {{accentColor}}; font-weight: 700;">ARRIVAL INFORMATION</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 0;">
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                  <tr>
-                    <td width="50%" style="padding: 16px 20px; border-bottom: 1px solid #e8eaed; border-right: 1px solid #e8eaed;">
-                      <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Booking ID</p>
-                      <p style="margin: 0; font-size: 15px; font-weight: 700; color: {{primaryColor}}; font-family: monospace;">{{bookingIdShort}}</p>
-                    </td>
-                    <td width="50%" style="padding: 16px 20px; border-bottom: 1px solid #e8eaed;">
-                      <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Date</p>
-                      <p style="margin: 0; font-size: 14px; font-weight: 600; color: {{primaryColor}};">{{formattedDate}}</p>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td width="50%" style="padding: 16px 20px; border-bottom: 1px solid #e8eaed; border-right: 1px solid #e8eaed;">
-                      <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Pickup Time</p>
-                      <p style="margin: 0; font-size: 14px; font-weight: 600; color: {{primaryColor}};">{{pickupTime}}</p>
-                    </td>
-                    <td width="50%" style="padding: 16px 20px; border-bottom: 1px solid #e8eaed;">
-                      <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Passengers</p>
-                      <p style="margin: 0; font-size: 14px; font-weight: 600; color: {{primaryColor}};">{{passengers}}</p>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td width="50%" style="padding: 16px 20px; border-right: 1px solid #e8eaed;">
-                      <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Payment Method</p>
-                      <p style="margin: 0; font-size: 13px; font-weight: 600; color: #10B981;">{{paymentMethodText}}</p>
-                    </td>
-                    <td width="50%" style="padding: 16px 20px; background-color: #FAFBFB;">
-                      <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Amount Paid</p>
-                      <p style="margin: 0; font-size: 18px; font-weight: 700; color: {{accentColor}};">{{totalPaidText}}</p>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-
-      <!-- Extras -->
-      {{#if extrasWithPrices}}
-      {{#if extrasWithPrices.length}}
-      <tr>
-        <td style="padding: 0 24px 20px;">
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #e8eaed; border-radius: 6px;">
-            <tr>
-              <td style="padding: 12px 20px; background-color: {{primaryColor}}; border-bottom: 1px solid #e8eaed;">
-                <p style="margin: 0; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: {{accentColor}}; font-weight: 700;">EXTRAS</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 0;">
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                  {{#each extrasWithPrices}}
-                  <tr>
-                    <td width="70%" style="padding: 12px 20px; border-bottom: 1px solid #f0f0f0; font-size: 13px; color: {{../primaryColor}};">{{label}}</td>
-                    <td width="30%" align="right" style="padding: 12px 20px; border-bottom: 1px solid #f0f0f0; font-size: 13px; font-weight: 700; color: {{../accentColor}};">{{priceText}}</td>
-                  </tr>
-                  {{/each}}
-                </table>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-      {{/if}}
-      {{/if}}
-
-      <!-- Services -->
-      {{#if items}}
-      {{#if items.length}}
-      <tr>
-        <td style="padding: 0 24px 20px;">
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #e8eaed; border-radius: 6px;">
-            <tr>
-              <td style="padding: 12px 20px; background-color: {{primaryColor}}; border-bottom: 1px solid #e8eaed;">
-                <p style="margin: 0; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: {{accentColor}}; font-weight: 700;">ACTIVITIES</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 0;">
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                  {{#each items}}
-                  <tr>
-                    <td style="padding: 12px 20px; border-bottom: 1px solid #f0f0f0;">
-                      <p style="margin: 0; font-size: 13px; font-weight: 600; color: {{../primaryColor}};">{{name}}</p>
-                      {{#if metaText}}
-                      <p style="margin: 4px 0 0; font-size: 12px; color: #666;">{{metaText}}</p>
-                      {{/if}}
-                    </td>
-                    <td align="right" style="padding: 12px 20px; border-bottom: 1px solid #f0f0f0; font-size: 13px; font-weight: 700; color: {{../accentColor}}; vertical-align: top;">{{priceText}}</td>
-                  </tr>
-                  {{/each}}
-                </table>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-      {{/if}}
-      {{/if}}
-
-      <!-- Pickup & Flight -->
-      {{#if pickupLocation}}
-      <tr>
-        <td style="padding: 0 24px 20px;">
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #e8eaed; border-radius: 6px;">
-            <tr>
-              <td style="padding: 12px 20px; background-color: {{primaryColor}}; border-bottom: 1px solid #e8eaed;">
-                <p style="margin: 0; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: {{accentColor}}; font-weight: 700;">DEPARTURE</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 16px 20px;">
-                <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Pickup</p>
-                <p style="margin: 0 0 10px; font-size: 13px; font-weight: 600; color: {{primaryColor}};">{{pickupLocation}}</p>
-                {{#if dropoffLocation}}
-                <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Dropoff</p>
-                <p style="margin: 0 0 10px; font-size: 13px; font-weight: 600; color: {{primaryColor}};">{{dropoffLocation}}</p>
-                {{/if}}
-                {{#if flightDetails}}
-                {{#if flightDetails.arrival}}
-                <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Arrival Flight</p>
-                <p style="margin: 0 0 10px; font-size: 12px; font-weight: 600; color: {{primaryColor}};">{{flightDetails.arrival.displayText}}</p>
-                {{/if}}
-                {{#if flightDetails.departure}}
-                <p style="margin: 0 0 2px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #888;">Departure Flight</p>
-                <p style="margin: 0; font-size: 12px; font-weight: 600; color: {{primaryColor}};">{{flightDetails.departure.displayText}}</p>
-                {{/if}}
-                {{/if}}
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-      {{/if}}
-
-      <!-- Included -->
-      {{#if includedItems}}
-      {{#if includedItems.length}}
-      <tr>
-        <td style="padding: 0 24px 20px;">
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #BBF7D0; background-color: #F0FDF4; border-radius: 6px;">
-            <tr>
-              <td style="padding: 16px 20px;">
-                <p style="margin: 0 0 8px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #166534; font-weight: 700;">✓ Included</p>
-                {{#each includedItems}}
-                <p style="margin: 0 0 2px; font-size: 12px; color: #166534;">• {{this}}</p>
-                {{/each}}
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-      {{/if}}
-      {{/if}}
-
-      <!-- Cancellation Policy -->
-      <tr>
-        <td style="padding: 0 24px 24px;">
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #e8eaed; border-radius: 6px;">
-            <tr>
-              <td style="padding: 16px 20px;">
-                <p style="margin: 0 0 8px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #888; font-weight: 600;">Cancellation Policy</p>
-                {{#each cancellationPolicy}}
-                <p style="margin: 0 0 4px; font-size: 12px; color: #5a5a5a;">• {{this}}</p>
-                {{/each}}
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-
-      <!-- Footer -->
-      <tr>
-        <td style="padding: 20px 24px; background-color: {{primaryColor}}; text-align: center;">
-          {{#if logoUrl}}
-          <img src="{{logoUrl}}" alt="{{brandName}}" width="64" style="max-width: 64px; height: auto; margin: 0 auto 12px; opacity: 0.9;" />
           {{/if}}
-          <p style="margin: 0 0 8px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.6);">Contact</p>
-          <p style="margin: 0 0 4px; font-size: 12px; color: {{accentColor}};">+52 624 122 2174</p>
-          <p style="margin: 0 0 4px; font-size: 12px; color: {{accentColor}};">Armando@caboviptransfers.com</p>
-          <p style="margin: 12px 0 0; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.2); font-size: 11px; color: rgba(255,255,255,0.8);">© {{brandName}}</p>
-        </td>
-      </tr>
-    </table>
+          {{#if hasDepartureFlight}}
+          <div>
+            <div class="field-label">Departure Flight · Vuelo de Salida</div>
+            <div class="field-value">{{flightDetails.departure.displayText}}</div>
+          </div>
+          {{/if}}
+          {{#if hasDepartureFlight}}
+          <div>
+            <div class="field-label">Return Pickup Time (3h before flight)</div>
+            <div class="field-value lg gold">{{#if departurePickupTime}}{{departurePickupTime}}{{else}}TBD{{/if}}</div>
+          </div>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+    {{/if}}
+
+    <!-- Price Breakdown -->
+    <div class="section">
+      <div class="section-header">$ Price Breakdown · Desglose de Precios</div>
+      <div class="section-body">
+        <table class="items-table">
+          <thead>
+            <tr>
+              <td>Service / Item</td>
+              <td style="text-align:right;">Amount</td>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each reservationBreakdown}}
+            <tr>
+              <td>{{label}}</td>
+              <td style="text-align:right;font-weight:600;color:#0c4a6e;">{{priceText}}</td>
+            </tr>
+            {{/each}}
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td class="label">Total</td>
+              <td class="amount">{{totalPaidText}}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="payment-box">
+          <div>
+            <div class="payment-label">Payment Method · Método de Pago</div>
+            <div class="payment-value">{{paymentMethodText}}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="payment-label">Total Paid</div>
+            <div style="font-size:16px;font-weight:900;color:#003087;">{{totalPaidText}}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Included + Policy (2-col) -->
+    <div style="margin:16px 32px 0;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      {{#if includedItems}}{{#if includedItems.length}}
+      <div style="border:1px solid #dcfce7;background:#f0fdf4;border-radius:8px;overflow:hidden;">
+        <div style="background:#166534;padding:8px 16px;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#dcfce7;font-weight:700;">✓ Included · Incluido</div>
+        <div style="padding:12px 16px;">
+          <ul class="included-list">
+            {{#each includedItems}}
+            <li>{{this}}</li>
+            {{/each}}
+          </ul>
+        </div>
+      </div>
+      {{/if}}{{/if}}
+
+      <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+        <div class="section-header">Cancellation Policy · Cancelación</div>
+        <div style="padding:12px 16px;">
+          <ul class="policy-list">
+            {{#each cancellationPolicy}}
+            <li>{{this}}</li>
+            {{/each}}
+          </ul>
+          {{#if parkFeeText}}
+          <hr class="divider" />
+          <p style="font-size:11px;color:#0c4a6e;">{{parkFeeText}}</p>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="gold-rule" style="margin-top:20px;"></div>
+    <div class="footer">
+      <p class="contact">+52 624 122 2174 &nbsp;·&nbsp; Armando@classviptransfers.com &nbsp;·&nbsp; WhatsApp</p>
+      <p style="margin-top:6px;"><span class="gold">{{brandName}}</span> &nbsp;·&nbsp; Los Cabos, México</p>
+      <p style="margin-top:4px;font-size:10px;">This voucher is valid for the date and time specified. Present upon pickup.</p>
+    </div>
+
   </div>
 </body>
 </html>

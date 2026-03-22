@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
 import { BookingService } from '../services/booking.service';
 import { EmailService } from '../services/email.service';
 import { PdfService } from '../services/pdf.service';
@@ -11,6 +12,17 @@ import {
   listBookingsSchema,
   exportBookingsSchema,
 } from '../lib/validation';
+
+const BOOKING_HMAC_SECRET = process.env.BOOKING_LOOKUP_SECRET || process.env.JWT_SECRET || 'change-me-in-production';
+
+export function generateBookingToken(bookingId: string): string {
+  return crypto.createHmac('sha256', BOOKING_HMAC_SECRET).update(bookingId).digest('hex').slice(0, 32);
+}
+
+function verifyBookingToken(bookingId: string, token: string): boolean {
+  const expected = generateBookingToken(bookingId);
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(token));
+}
 
 const bookingService = new BookingService();
 const emailService = new EmailService();
@@ -36,6 +48,7 @@ export class BookingController {
     res.status(201).json({
       success: true,
       data: booking,
+      lookupToken: generateBookingToken(booking.id),
     });
   }
 
@@ -69,15 +82,22 @@ export class BookingController {
   }
 
   /**
-   * GET /api/bookings/:id
-   * Get booking details
+   * GET /api/bookings/:id?token=xxx
+   * Get booking details — requires valid HMAC token or admin cookie
    */
   async getBooking(req: Request, res: Response) {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     if (!id) {
       return res.status(400).json({ error: 'Booking ID is required' });
     }
-    
+
+    const token = typeof req.query.token === 'string' ? req.query.token : null;
+    const isAdmin = !!(req as any).adminEmail;
+
+    if (!isAdmin && (!token || token.length !== 32 || !verifyBookingToken(id, token))) {
+      return res.status(403).json({ error: 'Invalid or missing booking token.' });
+    }
+
     const booking = await bookingService.getBookingById(id);
     
     res.json({

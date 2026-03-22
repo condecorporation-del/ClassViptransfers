@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Car, Minus, Plus, Plane, MessageCircle, CalendarDays, Clock, MapPin, Sparkles, Shield, ChevronUp, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Car, Minus, Plus, Plane, MessageCircle, CalendarDays, Clock, MapPin, Sparkles, Shield, ChevronUp, AlertCircle, User, Mail, Phone as PhoneIcon } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
@@ -13,7 +13,7 @@ import { TrustBadges } from '@/components/trust/TrustBadges';
 import { getApiBaseUrl } from '@/lib/api';
 import { SEO } from '@/components/SEO';
 
-const steps = ['route', 'date', 'extras', 'review'] as const;
+const steps = ['info', 'details', 'extras', 'review'] as const;
 
 // Mapeo área → zona de hoteles (areas y hotels usan nombres distintos en algunos casos)
 const AREA_TO_HOTEL_ZONE: Record<string, string> = {
@@ -24,14 +24,66 @@ const AREA_TO_HOTEL_ZONE: Record<string, string> = {
 };
 
 const upsellActivities = [
-  { id: 'camel', key: 'activity.camel', emoji: '🐫', duration: '1h', price: 120 },
-  { id: 'horseback', key: 'activity.horseback', emoji: '🐎', duration: '1h', price: 120 },
-  { id: 'atv', key: 'activity.atv', emoji: '🏍️', duration: '1h', price: 120 },
-  { id: 'skyBikes', key: 'activity.skyBikes', emoji: '🚲', duration: '1h', price: 96 },
-  { id: 'rzr', key: 'activity.rzr', emoji: '🏎️', duration: '1h', price: 205 },
-  { id: 'doubleMoto', key: 'activity.doubleMoto', emoji: '🏍️', duration: '1h', price: 200 },
-  { id: 'camelKids', key: 'activity.camelKids', emoji: '🐫', duration: '1h', price: 120 },
+  { id: 'camel',      key: 'activity.camel',      emoji: '🐫', duration: '2h', price: 120, photo: 'https://cactustours.com.mx/wp-content/uploads/2024/03/Cactus-tours-camel-ride-miniatura.webp' },
+  { id: 'horseback',  key: 'activity.horseback',  emoji: '🐎', duration: '2h', price: 120, photo: 'https://cactustours.com.mx/wp-content/uploads/2025/01/357A7620.webp' },
+  { id: 'atv',        key: 'activity.atv',        emoji: '🏍️', duration: '2h', price: 120, photo: 'https://cactustours.com.mx/wp-content/uploads/2024/03/3_Beach-and-Dunes-ATV.webp' },
+  { id: 'skyBikes',   key: 'activity.skyBikes',   emoji: '🚲', duration: '2h', price: 96,  photo: 'https://cactustours.com.mx/wp-content/uploads/2024/11/DJI_0065.webp' },
+  { id: 'rzr',        key: 'activity.rzr',        emoji: '🏎️', duration: '2h', price: 205, photo: 'https://cactustours.com.mx/wp-content/uploads/2024/08/2_Side-by-side-Adventure--scaled.webp' },
 ];
+
+// 4-photo collage used in activity CTA and combo cards
+const ACTIVITY_COLLAGE = [
+  'https://cactustours.com.mx/wp-content/uploads/2024/03/3_Beach-and-Dunes-ATV.webp',
+  'https://cactustours.com.mx/wp-content/uploads/2024/08/2_Side-by-side-Adventure--scaled.webp',
+  'https://cactustours.com.mx/wp-content/uploads/2024/03/Cactus-tours-camel-ride-miniatura.webp',
+  'https://cactustours.com.mx/wp-content/uploads/2024/11/DJI_0065.webp',
+];
+
+// Backend codes: BOOSTER, OVERSIZE_LUGGAGE, LUXURY_WELCOME, etc.
+const ADDON_META: Record<string, { emoji: string; en: string; es: string; detailEn?: string; detailEs?: string; photo?: string }> = {
+  GROCERY_STOP: {
+    emoji: '🛒',
+    en: 'Grocery Stop', es: 'Parada en Supermercado',
+    detailEn: 'Quick stop at Walmart, Costco or Fresko on the way to your hotel.',
+    detailEs: 'Parada en Walmart, Costco o Fresko camino a tu hotel.',
+    photo: 'https://res.cloudinary.com/dt9iyiorn/image/upload/v1774146253/Logos_de_Costco_Fre_zjdvpj.png',
+  },
+  BABY_SEAT: {
+    emoji: '',
+    en: 'Baby Seat', es: 'Asiento de Bebé',
+    detailEn: 'Certified infant safety seat, properly installed.',
+    detailEs: 'Silla de seguridad certificada para bebé, correctamente instalada.',
+    photo: 'https://res.cloudinary.com/dt9iyiorn/image/upload/v1774146122/Asiento_de_beb%C3%A9_qcngcw.png',
+  },
+  BOOSTER: {
+    emoji: '',
+    en: 'Booster Seat', es: 'Asiento Elevador (Booster)',
+    detailEn: 'Certified booster safety seat for toddlers, properly installed.',
+    detailEs: 'Silla elevadora certificada para niños, correctamente instalada.',
+    photo: 'https://res.cloudinary.com/dt9iyiorn/image/upload/v1774146402/Booster_seat_para_ni_fe3ctx.png',
+  },
+  OVERSIZE_LUGGAGE: {
+    emoji: '',
+    en: 'Oversize / Large Luggage', es: 'Equipaje Grande / Sobredimensionado',
+    detailEn: 'Golf clubs, surfboards, extra bags or oversized items.',
+    detailEs: 'Palos de golf, tablas de surf, maletas extra o artículos sobredimensionados.',
+    photo: 'https://res.cloudinary.com/dt9iyiorn/image/upload/v1774146748/Maleta_profesional_d_rrzjez.png',
+  },
+  LUXURY_WELCOME: {
+    emoji: '🥂',
+    en: 'Premium Welcome Kit — $100', es: 'Kit de Bienvenida Premium — $100',
+    detailEn: 'Champagne · Artisan cheese board · Celebration detail (birthday: balloon & cake for 2; anniversary: decoration).',
+    detailEs: 'Champagne · Tabla de quesos · Detalle personalizado (cumpleaños: globo y pastelito para 2; aniversario: decoración).',
+    photo: 'https://res.cloudinary.com/dt9iyiorn/image/upload/v1774148344/Combo_luxury_welcome_bcewtn.png',
+  },
+  CHAMPAGNE: {
+    emoji: '🍾',
+    en: 'Champagne Welcome', es: 'Bienvenida con Champagne',
+    detailEn: 'Chilled bottle of champagne waiting on arrival.',
+    detailEs: 'Botella de champagne fría lista a tu llegada.',
+    photo: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=160&h=110&fit=crop&auto=format&q=80',
+  },
+};
 
 const Book = () => {
   const { t, lang } = useLanguage();
@@ -41,6 +93,10 @@ const Book = () => {
   const [creatingBooking, setCreatingBooking] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [data, setData] = useState({
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    specialNote: '',
     serviceType: 'private' as const,
     tripType: '' as '' | 'oneway' | 'roundtrip',
     areaId: '' as string,
@@ -70,6 +126,8 @@ const Book = () => {
   const [hotels, setHotels] = useState<Array<{ id: string; name: string; zone: string }>>([]);
   const [hotelSearch, setHotelSearch] = useState('');
   const [selectedZoneForHotel, setSelectedZoneForHotel] = useState<string | null>(null);
+  const [showActivityOptions, setShowActivityOptions] = useState(false);
+  const [celebrationType, setCelebrationType] = useState<'' | 'birthday' | 'anniversary' | 'other'>('');
 
   const FLIGHT_REGEX = /^[A-Za-z]{2,3}\s?\d{1,4}$/;
   const timeToMinutes = (hhmm: string): number | null => {
@@ -129,8 +187,8 @@ const Book = () => {
     { id: 'f-1', name: 'Hyatt Ziva Los Cabos', zone: 'San Jose del Cabo' },
     { id: 'f-2', name: 'JW Marriott Los Cabos', zone: 'San Jose del Cabo' },
     { id: 'f-3', name: 'Hilton Los Cabos', zone: 'San Jose del Cabo' },
-    { id: 'f-4', name: 'Grand Velas Los Cabos', zone: 'Port Los Cabos' },
-    { id: 'f-5', name: 'Secrets Puerto Los Cabos', zone: 'Port Los Cabos' },
+    { id: 'f-4', name: 'Grand Velas Los Cabos', zone: 'Puerto Los Cabos' },
+    { id: 'f-5', name: 'Secrets Puerto Los Cabos', zone: 'Puerto Los Cabos' },
     { id: 'f-6', name: 'Le Blanc Spa Resort', zone: 'Tourist Corridor' },
     { id: 'f-7', name: 'Chileno Bay Resort', zone: 'Tourist Corridor' },
     { id: 'f-8', name: 'Grand Fiesta Americana', zone: 'Tourist Corridor' },
@@ -336,9 +394,9 @@ const Book = () => {
       const bookingPayload: Record<string, unknown> = {
         type: bookingType,
         customer: {
-          name: 'Guest',
-          email: 'guest@example.com',
-          phone: '+1234567890',
+          name: data.customerName || 'Guest',
+          email: data.customerEmail || 'guest@example.com',
+          phone: data.customerPhone || '+1234567890',
           country: 'US',
           language: lang,
         },
@@ -361,7 +419,14 @@ const Book = () => {
       if (data.departureFlightNumber) bookingPayload.departureFlightNumber = data.departureFlightNumber;
       if (data.departureTime) bookingPayload.departureTime = data.departureTime;
       if (data.tripType === 'roundtrip' && data.pickupTime) bookingPayload.pickupTime = data.pickupTime;
-      if (data.extras.length > 0) bookingPayload.notes = `Extras: ${data.extras.map(getExtraLabel).join(', ')}`;
+      const notesParts: string[] = [];
+      if (data.extras.length > 0) notesParts.push(`Extras: ${data.extras.map(getExtraLabel).join(', ')}`);
+      if (celebrationType) {
+        const celebrationLabels: Record<string, string> = { birthday: 'Birthday', anniversary: 'Anniversary', other: 'Special occasion' };
+        notesParts.push(`Celebration: ${celebrationLabels[celebrationType] ?? celebrationType}`);
+      }
+      if (data.specialNote.trim()) notesParts.push(`Note: ${data.specialNote.trim()}`);
+      if (notesParts.length > 0) bookingPayload.notes = notesParts.join(' | ');
 
       // Create booking
       const apiUrl = `${getApiBaseUrl()}/api/bookings`;
@@ -424,18 +489,15 @@ const Book = () => {
   const includedExtras = pricingExtras.filter((e) => e.included);
   const excludedExtras = ['EXTRA_STOP', 'WAIT_TIME', 'LATE_NIGHT', 'EARLY_MORNING', 'SPECIAL_ASSISTANCE'];
   const arrivalUpgradeCodes = ['CHAMPAGNE', 'CHAMPAGNE_UPGRADE', 'BIRTHDAY_KIT', 'ROMANTIC_KIT', 'DELUXE_ARRIVAL_KIT'];
-  const paidExtrasRaw = pricingExtras.filter((e) => !e.included && !arrivalUpgradeCodes.includes(e.code) && !excludedExtras.includes(e.code));
-  const paidExtras = paidExtrasRaw;
-  const upsellKits = pricingExtras.filter((e) => !e.included && arrivalUpgradeCodes.includes(e.code));
-  const roundTripSuggestedCodes = ['GROCERY_STOP', 'BABY_SEAT'];
+  const paidExtras = pricingExtras.filter((e) => !e.included && !arrivalUpgradeCodes.includes(e.code) && !excludedExtras.includes(e.code));
   const getExtraLabel = (code: string) => {
     const e = pricingExtras.find((x) => x.code === code);
     if (!e) return code;
     return (lang === 'es' && e.labelEs ? e.labelEs : e.label) || code;
   };
 
-  // Checkout validation — mapped to new 4-step indices: 0=route, 1=date+locations, 2=extras, 3=review
   const reviewValidation = useMemo(() => {
+    if (!data.customerName.trim() || !data.customerEmail.trim() || !data.customerPhone.trim()) return { valid: false, firstInvalidStepIndex: 0 };
     if (!data.tripType || !data.route || !data.areaId) return { valid: false, firstInvalidStepIndex: 0 };
     if (!data.arrivalDate || Object.values(dateStepErrors).some(Boolean)) return { valid: false, firstInvalidStepIndex: 1 };
     if (data.tripType === 'roundtrip') {
@@ -444,6 +506,9 @@ const Book = () => {
     if (!data.pickup?.trim() || !data.dropoff?.trim()) return { valid: false, firstInvalidStepIndex: 1 };
     return { valid: true, firstInvalidStepIndex: null as number | null };
   }, [
+    data.customerName,
+    data.customerEmail,
+    data.customerPhone,
     data.tripType,
     data.serviceType,
     data.route,
@@ -459,7 +524,7 @@ const Book = () => {
 
   const renderStep = () => {
     switch (steps[current]) {
-      case 'route': {
+      case 'info': {
         const zonesOrdered = areas.length > 0 ? areas.map((a) => a.name) : [...new Set(hotels.map((h) => h.zone))].sort();
         const zoneSelected = selectedZoneForHotel ?? data.selectedHotel?.zone ?? null;
         const hotelZone = zoneSelected ? (AREA_TO_HOTEL_ZONE[zoneSelected] || zoneSelected) : '';
@@ -469,826 +534,1154 @@ const Book = () => {
           (h) => h.name.toLowerCase().includes(searchLower)
         );
         return (
-          <div className="space-y-6">
+          <div className="space-y-7">
+            {/* Header */}
             <div>
               <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">
-                {lang === 'es' ? 'Tu Traslado' : 'Your Transfer'}
+                {lang === 'es' ? 'Reserva Tu Transfer' : 'Book Your Transfer'}
               </h2>
               <p className="text-muted-foreground text-sm mt-1">
-                {lang === 'es' ? 'Tipo de viaje, dirección y hotel' : 'Trip type, direction & hotel'}
+                {lang === 'es' ? 'Paso 1 de 4 — Información y ruta' : 'Step 1 of 4 — Info & route'}
               </p>
             </div>
 
-            {/* Trip type */}
-            <div>
-              <p className="text-xs font-semibold text-gold uppercase tracking-wider mb-3">{t('book.trip.title')}</p>
-              <div className="flex gap-3">
-                {[
-                  { id: 'oneway' as const, label: t('book.trip.oneWay') },
-                  { id: 'roundtrip' as const, label: t('book.trip.roundTrip') },
-                ].map(s => (
-                  <motion.button
-                    key={s.id}
-                    onClick={() => setData({ ...data, tripType: s.id })}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={cn('flex-1 booking-card rounded-xl p-4 text-center', data.tripType === s.id ? 'selected border-gold' : '')}
-                  >
-                    <p className="font-semibold text-sm text-foreground">{s.label}</p>
-                    {data.tripType === s.id && (
-                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-5 h-5 rounded-full gold-gradient flex items-center justify-center mx-auto mt-2">
-                        <Check size={11} className="text-navy" />
-                      </motion.div>
-                    )}
-                  </motion.button>
-                ))}
+            {/* Contact Information — clean labels above inputs */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-foreground border-b border-border pb-2">
+                {lang === 'es' ? 'Tus datos de contacto' : 'Your contact details'}
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground/70 mb-1.5 uppercase tracking-wide">
+                    {lang === 'es' ? 'Nombre completo *' : 'Full name *'}
+                  </label>
+                  <input type="text"
+                    placeholder={lang === 'es' ? 'Ej: John Smith' : 'E.g.: John Smith'}
+                    value={data.customerName}
+                    onChange={e => setData({ ...data, customerName: e.target.value })}
+                    className="w-full bg-background border-2 border-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-gold/60 focus:ring-2 focus:ring-gold/20 transition-all placeholder:text-muted-foreground/50"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground/70 mb-1.5 uppercase tracking-wide">Email *</label>
+                    <input type="email"
+                      placeholder="your@email.com"
+                      value={data.customerEmail}
+                      onChange={e => setData({ ...data, customerEmail: e.target.value })}
+                      className="w-full bg-background border-2 border-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-gold/60 focus:ring-2 focus:ring-gold/20 transition-all placeholder:text-muted-foreground/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground/70 mb-1.5 uppercase tracking-wide">
+                      {lang === 'es' ? 'Teléfono / WhatsApp *' : 'Phone / WhatsApp *'}
+                    </label>
+                    <input type="tel"
+                      placeholder="+1 (555) 000-0000"
+                      value={data.customerPhone}
+                      onChange={e => setData({ ...data, customerPhone: e.target.value })}
+                      className="w-full bg-background border-2 border-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-gold/60 focus:ring-2 focus:ring-gold/20 transition-all placeholder:text-muted-foreground/50"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Route direction */}
-            {data.tripType && (
-              <div>
-                <p className="text-xs font-semibold text-gold uppercase tracking-wider mb-3">{t('book.route.title')}</p>
-                <div className="flex gap-3">
-                  {[
-                    { id: 'airport-hotel' as const, label: t('book.route.airportToHotel') },
-                    { id: 'hotel-airport' as const, label: t('book.route.hotelToAirport') },
-                  ].map(s => (
-                    <motion.button
-                      key={s.id}
-                      onClick={() => { setData({ ...data, route: s.id }); setSelectedZoneForHotel(null); }}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className={cn('flex-1 booking-card rounded-xl p-4 text-center', data.route === s.id ? 'selected border-gold' : '')}
-                    >
-                      <p className="font-semibold text-sm text-foreground">{s.label}</p>
-                      {data.route === s.id && (
-                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-5 h-5 rounded-full gold-gradient flex items-center justify-center mx-auto mt-2">
+            {/* Trip type + Route — side by side */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-foreground border-b border-border pb-2">
+                {lang === 'es' ? 'Tipo de servicio' : 'Service type'}
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { id: 'oneway' as const, label: lang === 'es' ? 'Solo Ida' : 'One Way', sub: lang === 'es' ? 'Un solo trayecto' : 'Single trip' },
+                  { id: 'roundtrip' as const, label: lang === 'es' ? 'Ida y Vuelta' : 'Round Trip', sub: lang === 'es' ? 'Aeropuerto ↔ Hotel' : 'Airport ↔ Hotel' },
+                ].map(s => (
+                  <button key={s.id} type="button"
+                    onClick={() => setData({ ...data, tripType: s.id })}
+                    className={cn(
+                      'rounded-xl p-4 text-left border-2 transition-all',
+                      data.tripType === s.id
+                        ? 'border-gold bg-gold/5'
+                        : 'border-border hover:border-gold/40 bg-background'
+                    )}>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-bold text-sm text-foreground">{s.label}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{s.sub}</p>
+                      </div>
+                      {data.tripType === s.id && (
+                        <div className="w-5 h-5 rounded-full gold-gradient flex items-center justify-center shrink-0 mt-0.5">
                           <Check size={11} className="text-navy" />
-                        </motion.div>
+                        </div>
                       )}
-                    </motion.button>
-                  ))}
-                </div>
+                    </div>
+                  </button>
+                ))}
               </div>
-            )}
 
-            {/* Area + Hotel — shown when route is set */}
+              {/* Route direction */}
+              {data.tripType && (
+                <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 gap-3">
+                  {[
+                    { id: 'airport-hotel' as const, label: lang === 'es' ? 'Aeropuerto → Hotel' : 'Airport → Hotel', icon: '✈️' },
+                    { id: 'hotel-airport' as const, label: lang === 'es' ? 'Hotel → Aeropuerto' : 'Hotel → Airport', icon: '🏨' },
+                  ].map(s => (
+                    <button key={s.id} type="button"
+                      onClick={() => { setData({ ...data, route: s.id }); setSelectedZoneForHotel(null); }}
+                      className={cn(
+                        'rounded-xl p-4 text-left border-2 transition-all',
+                        data.route === s.id
+                          ? 'border-gold bg-gold/5'
+                          : 'border-border hover:border-gold/40 bg-background'
+                      )}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{s.icon}</span>
+                          <p className="font-semibold text-sm text-foreground leading-tight">{s.label}</p>
+                        </div>
+                        {data.route === s.id && (
+                          <div className="w-5 h-5 rounded-full gold-gradient flex items-center justify-center shrink-0">
+                            <Check size={11} className="text-navy" />
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </div>
+
+            {/* Hotel Selection */}
             {data.route && (
-              <div className="space-y-4 p-4 rounded-xl border border-border bg-muted/20">
+              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                <h3 className="text-sm font-bold text-foreground border-b border-border pb-2">
+                  {lang === 'es' ? 'Tu hotel' : 'Your hotel'}
+                </h3>
+
                 {!zoneSelected ? (
-                  <>
-                    <p className="text-sm font-semibold text-foreground">
-                      {lang === 'es' ? 'Selecciona tu área' : 'Select your area'}
+                  /* Zone selection */
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      {lang === 'es' ? 'Selecciona la zona donde está tu hotel:' : 'Select the zone where your hotel is:'}
                     </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       {zonesOrdered.map((zone) => {
                         const hz = AREA_TO_HOTEL_ZONE[zone] || zone;
                         const count = hotels.filter((h) => h.zone === hz).length;
                         return (
-                          <button
-                            key={zone}
-                            type="button"
+                          <button key={zone} type="button"
                             onClick={() => setSelectedZoneForHotel(zone)}
-                            className="booking-card rounded-xl p-4 text-left border border-border hover:border-gold/40 transition-all"
-                          >
-                            <p className="font-semibold text-sm text-foreground">{zone} · {count} {lang === 'es' ? 'hoteles' : 'hotels'}</p>
+                            className="flex items-center justify-between px-4 py-3 rounded-xl border-2 border-border hover:border-gold/60 bg-background hover:bg-gold/5 transition-all text-left group">
+                            <span className="font-semibold text-sm text-foreground group-hover:text-gold transition-colors">{zone}</span>
+                            <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">{count}</span>
                           </button>
                         );
                       })}
                     </div>
-                  </>
+                    {hotelsLoading && (
+                      <p className="text-sm text-muted-foreground text-center py-2">{t('book.locations.loadingHotels')}</p>
+                    )}
+                  </div>
                 ) : (
-                  <>
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <p className="text-sm font-semibold text-foreground">
-                        {lang === 'es' ? 'Hotel en' : 'Hotel in'} <span className="text-gold">{zoneSelected}</span>
-                      </p>
-                      <button
-                        type="button"
+                  /* Hotel list inside selected zone */
+                  <div className="space-y-3">
+                    {/* Zone header + change button */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          {lang === 'es' ? 'Zona' : 'Zone'}
+                        </p>
+                        <p className="font-bold text-base text-foreground mt-0.5">{zoneSelected}</p>
+                      </div>
+                      <button type="button"
                         onClick={() => { setSelectedZoneForHotel(null); setData((d) => ({ ...d, selectedHotel: null })); }}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold border-2 border-gold text-gold bg-gold/10 hover:bg-gold/20 hover:border-gold transition-all focus:outline-none focus:ring-2 focus:ring-gold/40"
-                      >
-                        {lang === 'es' ? '← Cambiar área' : '← Change area'}
+                        className="inline-flex items-center gap-2 text-sm font-bold text-navy bg-gold hover:bg-gold/90 rounded-xl px-4 py-2 shadow-sm shadow-gold/30 transition-all active:scale-95">
+                        <ArrowLeft size={14} />
+                        {lang === 'es' ? 'Cambiar zona' : 'Change zone'}
                       </button>
                     </div>
-                    <input
-                      type="text"
-                      placeholder={t('book.locations.searchHotel')}
+
+                    {/* Search */}
+                    <input type="text"
+                      placeholder={lang === 'es' ? 'Buscar hotel...' : 'Search hotel...'}
                       value={hotelSearch}
                       onChange={(e) => setHotelSearch(e.target.value)}
-                      className="input-luxury w-full"
+                      className="w-full bg-background border-2 border-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-gold/60 focus:ring-2 focus:ring-gold/20 transition-all placeholder:text-muted-foreground/50"
                     />
-                    <div className="max-h-52 overflow-y-auto space-y-1 pr-1">
-                      {filteredHotels.map((h) => {
+
+                    {/* Hotel list */}
+                    <div className="max-h-48 overflow-y-auto rounded-xl border border-border divide-y divide-border">
+                      {filteredHotels.length === 0 ? (
+                        <p className="text-sm text-muted-foreground px-4 py-3">{t('book.locations.noHotel')}</p>
+                      ) : filteredHotels.map((h) => {
                         const isSelected = data.selectedHotel?.id === h.id;
                         return (
-                          <button
-                            key={h.id}
-                            type="button"
+                          <button key={h.id} type="button"
                             onClick={() => selectHotel(h)}
                             className={cn(
-                              'w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all',
-                              isSelected ? 'bg-gold/20 border border-gold' : 'border border-transparent hover:bg-muted/50'
-                            )}
-                          >
-                            {h.name}
+                              'w-full text-left px-4 py-3 text-sm transition-all flex items-center justify-between',
+                              isSelected
+                                ? 'bg-gold/10 text-foreground font-semibold'
+                                : 'text-foreground hover:bg-muted/40'
+                            )}>
+                            <span>{h.name}</span>
+                            {isSelected && <Check size={14} className="text-gold shrink-0" />}
                           </button>
                         );
                       })}
                     </div>
-                    {filteredHotels.length === 0 && hotelsInZone.length > 0 && (
-                      <p className="text-sm text-muted-foreground">{t('book.locations.noHotel')}</p>
-                    )}
-                    {/* Hotel not listed → WhatsApp */}
-                    <a
-                      href={`https://wa.me/5216241222174?text=${encodeURIComponent(lang === 'es' ? 'Hola, mi hotel no aparece en la lista. ¿Pueden ayudarme con una cotización?' : 'Hi, my hotel is not listed. Can you help me with a quote?')}`}
+
+                    {/* WhatsApp if hotel not listed */}
+                    <a href={`https://wa.me/5216241222174?text=${encodeURIComponent(lang === 'es' ? 'Hola, mi hotel no aparece en la lista. ¿Me pueden ayudar?' : 'Hi, my hotel is not listed. Can you help me?')}`}
                       target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-[#25D366] hover:underline mt-2 font-medium"
-                    >
-                      <MessageCircle size={14} />
-                      {lang === 'es' ? '¿Tu hotel no está en la lista? Contáctanos' : "Hotel not listed? Contact us"}
-                    </a>
-                  </>
-                )}
-                {hotelsLoading && <p className="text-sm text-muted-foreground">{t('book.locations.loadingHotels')}</p>}
-                {!hotelsLoading && hotelsError && (
-                  <div className="space-y-2">
-                    <p className="text-sm text-amber-600">
-                      {lang === 'es' ? 'No pudimos cargar la lista de hoteles.' : 'Could not load hotel list.'}
-                    </p>
-                    <a href="https://wa.me/5216241222174" target="_blank" rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 text-sm text-[#25D366] font-medium hover:underline">
                       <MessageCircle size={14} />
-                      {lang === 'es' ? 'Cotiza por WhatsApp' : 'Get a quote via WhatsApp'}
+                      {lang === 'es' ? '¿No ves tu hotel? Contáctanos' : "Don't see your hotel? Contact us"}
                     </a>
                   </div>
                 )}
-                {!hotelsLoading && !hotelsError && hotels.length === 0 && <p className="text-sm text-muted-foreground">{t('book.locations.noHotels')}</p>}
-              </div>
+
+                {!hotelsLoading && hotelsError && (
+                  <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 rounded-xl px-4 py-3">
+                    <AlertCircle size={16} className="text-amber-600 shrink-0" />
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                      {lang === 'es' ? 'No pudimos cargar hoteles. ' : 'Could not load hotels. '}
+                      <a href="https://wa.me/5216241222174" target="_blank" rel="noopener noreferrer" className="text-[#25D366] font-medium hover:underline">WhatsApp</a>
+                    </p>
+                  </div>
+                )}
+
+                {/* Confirmation chip when hotel selected */}
+                {data.selectedHotel && (
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                    className="flex items-center gap-3 bg-gold/5 border border-gold/30 rounded-xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-full gold-gradient flex items-center justify-center shrink-0">
+                      <Check size={14} className="text-navy" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                        {lang === 'es' ? 'Hotel seleccionado' : 'Selected hotel'}
+                      </p>
+                      <p className="font-semibold text-foreground text-sm">{data.selectedHotel.name}</p>
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
             )}
           </div>
         );
       }
-      case 'date':
+      case 'details':
         return (
-          <div className="space-y-6">
-            <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">
-              {lang === 'es' ? 'Fecha & Detalles' : 'Date & Details'}
-            </h2>
-            <div className="grid sm:grid-cols-2 gap-5">
-              <div>
-                <label className="text-sm font-semibold text-foreground mb-2 block">{t('book.date.arrival')}</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className={cn(
-                      "input-luxury w-full flex items-center gap-3 text-left",
-                      !data.arrivalDate && "text-muted-foreground",
-                      dateStepErrors.arrivalDate && "border-destructive ring-1 ring-destructive"
-                    )}>
-                      <CalendarDays size={18} className="text-gold flex-shrink-0" />
-                      {data.arrivalDate ? format(data.arrivalDate, 'PPP') : 'Select date'}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={data.arrivalDate ?? undefined}
-                      onSelect={(d) => d && setData({ ...data, arrivalDate: d })}
-                      disabled={(d) => d < new Date()}
-                      initialFocus className={cn("p-3 pointer-events-auto")} />
-                  </PopoverContent>
-                </Popover>
-                {dateStepErrors.arrivalDate && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-sm text-destructive">
-                    <AlertCircle size={14} className="flex-shrink-0" />
-                    {dateStepErrors.arrivalDate}
-                  </p>
-                )}
-              </div>
-              <InputField label={t('book.date.flightNumber')} icon={<Plane size={18} className="text-gold" />} error={dateStepErrors.flightNumber}>
-                <input type="text" placeholder="AA 1234" value={data.flightNumber} onChange={e => setData({ ...data, flightNumber: e.target.value })}
-                  className={cn("input-luxury pl-11", dateStepErrors.flightNumber && "border-destructive ring-1 ring-destructive")} />
-              </InputField>
-              <div>
-                <label className="text-sm font-semibold text-foreground mb-2 block">{t('book.date.arrivalTime')}</label>
-                <div className="relative">
-                  <Clock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gold pointer-events-none z-10" />
-                  <select value={data.arrivalTime} onChange={e => setData({ ...data, arrivalTime: e.target.value })}
-                    className="input-luxury pl-11 w-full appearance-none cursor-pointer">
-                    <option value="">Select time</option>
-                    {Array.from({ length: 24 }, (_, h) => [0, 30].map(m => {
-                      const val = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                      const label = `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
-                      return <option key={val} value={val}>{label}</option>;
-                    })).flat()}
-                  </select>
-                </div>
-              </div>
+          <div className="space-y-7">
+            {/* Header */}
+            <div>
+              <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">
+                {lang === 'es' ? 'Fecha & Detalles' : 'Date & Details'}
+              </h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                {lang === 'es' ? 'Paso 2 de 4 — Fecha, hora y pasajeros' : 'Step 2 of 4 — Date, time & passengers'}
+              </p>
             </div>
 
-            {data.tripType === 'roundtrip' && (
-              <div className="grid sm:grid-cols-2 gap-5 pt-4 border-t border-border">
-                <div>
-                  <label className="text-sm font-semibold text-foreground mb-2 block">{t('book.date.departure')}</label>
+            {/* Arrival section */}
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+              className="rounded-2xl border-2 border-border bg-background p-5 space-y-4">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-full bg-gold/15 flex items-center justify-center">
+                  <Plane size={14} className="text-gold" />
+                </div>
+                <h3 className="font-bold text-sm text-foreground uppercase tracking-wide">
+                  {lang === 'es' ? 'Llegada' : 'Arrival'}
+                </h3>
+              </div>
+
+              <div className="grid sm:grid-cols-3 gap-3">
+                {/* Arrival date */}
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-semibold text-foreground/60 mb-2 uppercase tracking-wide">
+                    {lang === 'es' ? 'Fecha' : 'Date'}
+                  </label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <button className={cn(
-                        "input-luxury w-full flex items-center gap-3 text-left",
-                        !data.departureDate && "text-muted-foreground",
-                        dateStepErrors.departureDate && "border-destructive ring-1 ring-destructive"
+                        "w-full flex items-center gap-2 bg-muted/40 border-2 border-border rounded-xl px-3 py-3 text-sm text-left transition-all hover:border-gold/50 focus:outline-none focus:border-gold/60",
+                        !data.arrivalDate && "text-muted-foreground",
+                        dateStepErrors.arrivalDate && "border-destructive"
                       )}>
-                        <CalendarDays size={18} className="text-gold flex-shrink-0" />
-                        {data.departureDate ? format(data.departureDate, 'PPP') : 'Select date'}
+                        <CalendarDays size={16} className="text-gold shrink-0" />
+                        <span className={data.arrivalDate ? 'text-foreground font-medium' : ''}>
+                          {data.arrivalDate ? format(data.arrivalDate, 'MMM d, yyyy') : (lang === 'es' ? 'Selecciona' : 'Select')}
+                        </span>
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={data.departureDate ?? undefined}
-                        onSelect={(d) => d && setData({ ...data, departureDate: d })}
-                        disabled={(d) => d < (data.arrivalDate ?? new Date())}
-                        initialFocus className={cn("p-3 pointer-events-auto")} />
+                      <Calendar mode="single" selected={data.arrivalDate ?? undefined}
+                        onSelect={(d) => d && setData({ ...data, arrivalDate: d })}
+                        disabled={(d) => d < new Date()}
+                        initialFocus className="p-3 pointer-events-auto" />
                     </PopoverContent>
                   </Popover>
-                  {dateStepErrors.departureDate && (
-                    <p className="mt-1.5 flex items-center gap-1.5 text-sm text-destructive">
-                      <AlertCircle size={14} className="flex-shrink-0" />
-                      {dateStepErrors.departureDate}
+                  {dateStepErrors.arrivalDate && (
+                    <p className="mt-1 flex items-center gap-1 text-xs text-destructive">
+                      <AlertCircle size={11} /> {dateStepErrors.arrivalDate}
                     </p>
                   )}
                 </div>
-                <InputField label={t('book.date.flightNumber')} icon={<Plane size={18} className="text-gold" />} error={dateStepErrors.departureFlightNumber}>
-                  <input type="text" placeholder="AA 1234" value={data.departureFlightNumber} onChange={e => setData({ ...data, departureFlightNumber: e.target.value })}
-                    className={cn("input-luxury pl-11", dateStepErrors.departureFlightNumber && "border-destructive ring-1 ring-destructive")} />
-                </InputField>
+
+                {/* Arrival time */}
                 <div>
-                  <label className="text-sm font-semibold text-foreground mb-2 block">{t('book.date.departureTime')}</label>
-                  <div className="relative">
-                    <Clock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gold pointer-events-none z-10" />
-                    <select value={data.departureTime} onChange={e => setData({ ...data, departureTime: e.target.value })}
-                      className="input-luxury pl-11 w-full appearance-none cursor-pointer">
-                      <option value="">Select time</option>
-                      {Array.from({ length: 24 }, (_, h) => [0, 30].map(m => {
-                        const val = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                        const label = `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
-                        return <option key={val} value={val}>{label}</option>;
-                      })).flat()}
-                    </select>
+                  <label className="block text-xs font-semibold text-foreground/60 mb-2 uppercase tracking-wide">
+                    {lang === 'es' ? 'Hora llegada' : 'Arrival time'}
+                  </label>
+                  <div className="flex items-center gap-2 bg-muted/40 border-2 border-border rounded-xl px-3 py-3 focus-within:border-gold/60 transition-all">
+                    <Clock size={16} className="text-gold shrink-0" />
+                    <input type="time" value={data.arrivalTime}
+                      onChange={e => setData({ ...data, arrivalTime: e.target.value })}
+                      className="bg-transparent text-sm text-foreground font-medium w-full focus:outline-none" />
                   </div>
                 </div>
+
+                {/* Flight number */}
                 <div>
-                  <label className="text-sm font-semibold text-foreground mb-2 block">{t('book.date.pickupTime')}</label>
-                  <div className="relative">
-                    <Clock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gold pointer-events-none z-10" />
-                    <select value={data.pickupTime} onChange={e => setData({ ...data, pickupTime: e.target.value })}
-                      className={cn("input-luxury pl-11 w-full appearance-none cursor-pointer", dateStepErrors.pickupTime && "border-destructive ring-1 ring-destructive")}>
-                      <option value="">Select time</option>
-                      {Array.from({ length: 24 }, (_, h) => [0, 30].map(m => {
-                        const val = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                        const label = `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
-                        return <option key={val} value={val}>{label}</option>;
-                      })).flat()}
-                    </select>
+                  <label className="block text-xs font-semibold text-foreground/60 mb-2 uppercase tracking-wide">
+                    {lang === 'es' ? 'N° de vuelo' : 'Flight no.'}
+                  </label>
+                  <div className={cn(
+                    "flex items-center gap-2 bg-muted/40 border-2 border-border rounded-xl px-3 py-3 focus-within:border-gold/60 transition-all",
+                    dateStepErrors.flightNumber && "border-destructive"
+                  )}>
+                    <Plane size={16} className="text-gold shrink-0" />
+                    <input type="text" placeholder="AA 1234" value={data.flightNumber}
+                      onChange={e => setData({ ...data, flightNumber: e.target.value })}
+                      className="bg-transparent text-sm text-foreground font-medium w-full focus:outline-none placeholder:text-muted-foreground/50" />
                   </div>
-                  {dateStepErrors.pickupTime && (
-                    <p className="mt-1.5 flex items-center gap-1.5 text-sm text-destructive">
-                      <AlertCircle size={14} className="flex-shrink-0" />
-                      {dateStepErrors.pickupTime}
+                  {dateStepErrors.flightNumber && (
+                    <p className="mt-1 flex items-center gap-1 text-xs text-destructive">
+                      <AlertCircle size={11} /> {dateStepErrors.flightNumber}
                     </p>
                   )}
-                  <p className="mt-1 text-xs text-muted-foreground">{t('book.date.pickupSuggestion')}</p>
                 </div>
               </div>
+            </motion.div>
+
+            {/* Departure section — only for roundtrip */}
+            {data.tripType === 'roundtrip' && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                className="rounded-2xl border-2 border-border bg-background p-5 space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-7 h-7 rounded-full bg-gold/15 flex items-center justify-center">
+                    <Plane size={14} className="text-gold rotate-180" />
+                  </div>
+                  <h3 className="font-bold text-sm text-foreground uppercase tracking-wide">
+                    {lang === 'es' ? 'Salida' : 'Departure'}
+                  </h3>
+                </div>
+
+                <div className="grid sm:grid-cols-4 gap-3">
+                  {/* Departure date */}
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-foreground/60 mb-2 uppercase tracking-wide">
+                      {lang === 'es' ? 'Fecha' : 'Date'}
+                    </label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className={cn(
+                          "w-full flex items-center gap-2 bg-muted/40 border-2 border-border rounded-xl px-3 py-3 text-sm text-left transition-all hover:border-gold/50",
+                          !data.departureDate && "text-muted-foreground",
+                          dateStepErrors.departureDate && "border-destructive"
+                        )}>
+                          <CalendarDays size={16} className="text-gold shrink-0" />
+                          <span className={data.departureDate ? 'text-foreground font-medium' : ''}>
+                            {data.departureDate ? format(data.departureDate, 'MMM d, yyyy') : (lang === 'es' ? 'Selecciona' : 'Select')}
+                          </span>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={data.departureDate ?? undefined}
+                          onSelect={(d) => d && setData({ ...data, departureDate: d })}
+                          disabled={(d) => d < (data.arrivalDate ?? new Date())}
+                          initialFocus className="p-3 pointer-events-auto" />
+                      </PopoverContent>
+                    </Popover>
+                    {dateStepErrors.departureDate && (
+                      <p className="mt-1 flex items-center gap-1 text-xs text-destructive">
+                        <AlertCircle size={11} /> {dateStepErrors.departureDate}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Departure flight */}
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground/60 mb-2 uppercase tracking-wide">
+                      {lang === 'es' ? 'N° vuelo' : 'Flight no.'}
+                    </label>
+                    <div className={cn(
+                      "flex items-center gap-2 bg-muted/40 border-2 border-border rounded-xl px-3 py-3 focus-within:border-gold/60 transition-all",
+                      dateStepErrors.departureFlightNumber && "border-destructive"
+                    )}>
+                      <Plane size={16} className="text-gold shrink-0 rotate-180" />
+                      <input type="text" placeholder="AA 1234" value={data.departureFlightNumber}
+                        onChange={e => setData({ ...data, departureFlightNumber: e.target.value })}
+                        className="bg-transparent text-sm text-foreground font-medium w-full focus:outline-none placeholder:text-muted-foreground/50" />
+                    </div>
+                    {dateStepErrors.departureFlightNumber && (
+                      <p className="mt-1 flex items-center gap-1 text-xs text-destructive">
+                        <AlertCircle size={11} /> {dateStepErrors.departureFlightNumber}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Departure time */}
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground/60 mb-2 uppercase tracking-wide">
+                      {lang === 'es' ? 'Hora vuelo' : 'Flight time'}
+                    </label>
+                    <div className="flex items-center gap-2 bg-muted/40 border-2 border-border rounded-xl px-3 py-3 focus-within:border-gold/60 transition-all">
+                      <Clock size={16} className="text-gold shrink-0" />
+                      <input type="time" value={data.departureTime}
+                        onChange={e => setData({ ...data, departureTime: e.target.value })}
+                        className="bg-transparent text-sm text-foreground font-medium w-full focus:outline-none" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pickup time — shown after departure time is set */}
+                {data.departureTime && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                    <div className="flex items-center gap-3 bg-gold/5 border border-gold/25 rounded-xl px-4 py-3 mb-3">
+                      <Plane size={14} className="text-gold shrink-0" />
+                      <p className="text-sm text-foreground/80">{t('book.date.pickupNote')}</p>
+                    </div>
+                    <div className="sm:max-w-[200px]">
+                      <label className="block text-xs font-semibold text-foreground/60 mb-2 uppercase tracking-wide">
+                        {lang === 'es' ? 'Hora de recogida' : 'Pickup time'}
+                      </label>
+                      <div className={cn(
+                        "flex items-center gap-2 bg-muted/40 border-2 border-border rounded-xl px-3 py-3 focus-within:border-gold/60 transition-all",
+                        dateStepErrors.pickupTime && "border-destructive"
+                      )}>
+                        <Clock size={16} className="text-gold shrink-0" />
+                        <input type="time" value={data.pickupTime}
+                          onChange={e => setData({ ...data, pickupTime: e.target.value })}
+                          className="bg-transparent text-sm text-foreground font-medium w-full focus:outline-none" />
+                      </div>
+                      {dateStepErrors.pickupTime && (
+                        <p className="mt-1 flex items-center gap-1 text-xs text-destructive">
+                          <AlertCircle size={11} /> {dateStepErrors.pickupTime}
+                        </p>
+                      )}
+                      <p className="mt-1 text-xs text-muted-foreground">{t('book.date.pickupSuggestion')}</p>
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
             )}
 
-            {data.departureTime && data.tripType === 'roundtrip' && (
-              <div className="flex items-center gap-3 text-sm text-gold bg-gold/5 border border-gold/20 rounded-xl px-4 py-3">
-                <Plane size={16} className="flex-shrink-0" />
-                <span className="leading-relaxed">{t('book.date.pickupNote')}</span>
+            {/* Passengers & Vehicle */}
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+              className="rounded-2xl border-2 border-border bg-background p-5 space-y-5">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-full bg-gold/15 flex items-center justify-center">
+                  <Car size={14} className="text-gold" />
+                </div>
+                <h3 className="font-bold text-sm text-foreground uppercase tracking-wide">
+                  {lang === 'es' ? 'Pasajeros y Vehículo' : 'Passengers & Vehicle'}
+                </h3>
               </div>
-            )}
 
-            <div>
-              <label className="text-sm font-semibold text-foreground mb-3 block">{t('book.date.passengers')}</label>
-              <div className="flex items-center gap-5">
-                <motion.button
-                  onClick={() => setData((d) => {
-                    const minPax = d.serviceType === 'private' && d.vehicleClass === 'SPRINTER' ? 6 : 1;
-                    return { ...d, passengers: Math.max(minPax, d.passengers - 1) };
-                  })}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-12 h-12 rounded-xl border-2 border-border flex items-center justify-center hover:border-gold/40 hover:bg-gold/5 transition-all"
-                >
-                  <Minus size={18} />
-                </motion.button>
-                <span className="text-3xl font-bold w-10 text-center text-foreground">{data.passengers}</span>
-                <motion.button
-                  onClick={() => setData((d) => {
-                    const maxPax = d.serviceType === 'private' && d.vehicleClass === 'SUV' ? 5 : 14;
-                    return { ...d, passengers: Math.min(maxPax, d.passengers + 1) };
-                  })}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-12 h-12 rounded-xl border-2 border-border flex items-center justify-center hover:border-gold/40 hover:bg-gold/5 transition-all"
-                >
-                  <Plus size={18} />
-                </motion.button>
-              </div>
-            </div>
-            {/* Vehicle class for private */}
-            {data.serviceType === 'private' && (
-              <div className="space-y-3">
-                <label className="text-sm font-semibold text-foreground mb-3 block">
-                  {t('book.vehicle.title', { defaultValue: 'Vehicle' })}
+              {/* Passenger counter */}
+              <div>
+                <label className="block text-xs font-semibold text-foreground/60 mb-3 uppercase tracking-wide">
+                  {t('book.date.passengers')}
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {(['SUV', 'SPRINTER'] as const).map((vc) => {
-                    const paxRange = vc === 'SUV' ? '1-5' : '6-14';
-                    return (
-                      <button
-                        key={vc}
+                <div className="flex items-center gap-4">
+                  <motion.button type="button"
+                    onClick={() => setData((d) => {
+                      const minPax = d.serviceType === 'private' && d.vehicleClass === 'SPRINTER' ? 6 : 1;
+                      return { ...d, passengers: Math.max(minPax, d.passengers - 1) };
+                    })}
+                    whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+                    className="w-11 h-11 rounded-xl border-2 border-border bg-muted/40 flex items-center justify-center hover:border-gold/60 hover:bg-gold/5 transition-all font-bold">
+                    <Minus size={16} />
+                  </motion.button>
+                  <div className="text-center min-w-[56px]">
+                    <motion.span
+                      key={data.passengers}
+                      initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                      className="block text-4xl font-bold text-foreground leading-none">
+                      {data.passengers}
+                    </motion.span>
+                    <span className="text-xs text-muted-foreground mt-1 block">
+                      {data.passengers === 1 ? (lang === 'es' ? 'pasajero' : 'passenger') : (lang === 'es' ? 'pasajeros' : 'passengers')}
+                    </span>
+                  </div>
+                  <motion.button type="button"
+                    onClick={() => setData((d) => {
+                      const maxPax = d.serviceType === 'private' && d.vehicleClass === 'SUV' ? 5 : 14;
+                      return { ...d, passengers: Math.min(maxPax, d.passengers + 1) };
+                    })}
+                    whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+                    className="w-11 h-11 rounded-xl border-2 border-border bg-muted/40 flex items-center justify-center hover:border-gold/60 hover:bg-gold/5 transition-all font-bold">
+                    <Plus size={16} />
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* Vehicle selector as clean cards */}
+              {data.serviceType === 'private' && (
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-foreground/60 uppercase tracking-wide">
+                    {lang === 'es' ? 'Tipo de vehículo' : 'Vehicle type'}
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {([
+                      { vc: 'SUV' as const, pax: '1–5', desc: lang === 'es' ? 'Hasta 5 pasajeros' : 'Up to 5 passengers', icon: '🚙' },
+                      { vc: 'SPRINTER' as const, pax: '6–14', desc: lang === 'es' ? '6 a 14 pasajeros' : '6 to 14 passengers', icon: '🚐' },
+                    ]).map(({ vc, pax, desc, icon }) => (
+                      <button key={vc} type="button"
                         onClick={() => setData((d) => {
                           const next = { ...d, vehicleClass: vc };
                           if (vc === 'SPRINTER' && d.passengers < 6) next.passengers = 6;
                           return next;
                         })}
                         className={cn(
-                          'px-4 py-2.5 rounded-xl text-sm font-semibold transition-all',
-                          data.vehicleClass === vc ? 'gold-gradient text-secondary-foreground' : 'border border-border hover:border-gold/40'
+                          'rounded-xl p-4 text-left border-2 transition-all relative',
+                          data.vehicleClass === vc ? 'border-gold bg-gold/5' : 'border-border hover:border-gold/40 bg-muted/20'
+                        )}>
+                        <span className="text-2xl block mb-2">{icon}</span>
+                        <p className="font-bold text-sm text-foreground">{vc}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
+                        {data.vehicleClass === vc && (
+                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full gold-gradient flex items-center justify-center">
+                            <Check size={10} className="text-navy" />
+                          </div>
                         )}
-                      >
-                        {vc} ({paxRange})
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
+                  {data.vehicleClass === 'SUV' && data.passengers >= 5 && (
+                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                      className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mt-1">
+                      <AlertCircle size={12} />
+                      {lang === 'es' ? 'Para 6 o más pasajeros, elige Sprinter.' : 'For 6+ passengers, choose Sprinter.'}
+                    </motion.p>
+                  )}
                 </div>
-                {data.vehicleClass === 'SUV' && data.passengers >= 5 && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                    {lang === 'es' ? 'Para 6 o más pasajeros, elige Sprinter.' : 'For 6+ passengers, choose Sprinter.'}
-                  </p>
-                )}
-              </div>
-            )}
+              )}
+            </motion.div>
 
-            {/* Locations — merged into date step */}
-            <div className="pt-4 border-t border-border space-y-4">
-              <p className="text-xs font-semibold text-gold uppercase tracking-wider">
+            {/* Transfer Points — minimal, only show if no hotel auto-filled */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-foreground border-b border-border pb-2">
                 {lang === 'es' ? 'Puntos de traslado' : 'Transfer points'}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {lang === 'es' ? 'Llenados automáticamente desde tu hotel. Puedes editarlos si es necesario.' : 'Auto-filled from your hotel. Edit if needed.'}
               </p>
-              <p className="text-sm text-muted-foreground -mt-2">
-                {lang === 'es' ? 'Pre-llenados según tu hotel. Edita si es necesario.' : 'Pre-filled from your hotel. Edit if needed.'}
-              </p>
-              <InputField label={t('book.locations.pickup')} icon={<MapPin size={18} className="text-gold" />}>
-                <div className="flex gap-3">
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground/70 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
+                    <MapPin size={12} className="text-gold" />
+                    {lang === 'es' ? 'Recogida' : 'Pickup'}
+                  </label>
                   <input type="text" placeholder={t('book.locations.placeholder')} value={data.pickup}
                     onChange={e => setData({ ...data, pickup: e.target.value })}
-                    className="input-luxury pl-11 flex-1" />
-                  <button type="button" onClick={() => setData(d => ({ ...d, pickup: SJD_AIRPORT }))}
-                    className="text-xs font-bold text-gold border-2 border-gold/30 rounded-xl px-4 hover:bg-gold/5 hover:border-gold/50 transition-all whitespace-nowrap">
-                    {t('book.locations.quickFill')}
-                  </button>
+                    className="w-full bg-background border-2 border-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-gold/60 focus:ring-2 focus:ring-gold/20 transition-all placeholder:text-muted-foreground/50" />
+                  {!data.pickup && (
+                    <button type="button" onClick={() => setData(d => ({ ...d, pickup: SJD_AIRPORT }))}
+                      className="mt-1.5 text-xs text-gold font-semibold hover:underline">
+                      → {lang === 'es' ? 'Usar Aeropuerto SJD' : 'Use SJD Airport'}
+                    </button>
+                  )}
                 </div>
-              </InputField>
-              <InputField label={t('book.locations.dropoff')} icon={<MapPin size={18} className="text-ocean" />}>
-                <div className="flex gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground/70 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
+                    <MapPin size={12} className="text-gold" />
+                    {lang === 'es' ? 'Destino' : 'Dropoff'}
+                  </label>
                   <input type="text" placeholder={t('book.locations.placeholder')} value={data.dropoff}
                     onChange={e => setData({ ...data, dropoff: e.target.value })}
-                    className="input-luxury pl-11 flex-1" />
-                  <button type="button" onClick={() => setData(d => ({ ...d, dropoff: SJD_AIRPORT }))}
-                    className="text-xs font-bold text-gold border-2 border-gold/30 rounded-xl px-4 hover:bg-gold/5 hover:border-gold/50 transition-all whitespace-nowrap">
-                    {t('book.locations.quickFill')}
-                  </button>
+                    className="w-full bg-background border-2 border-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-gold/60 focus:ring-2 focus:ring-gold/20 transition-all placeholder:text-muted-foreground/50" />
+                  {!data.dropoff && (
+                    <button type="button" onClick={() => setData(d => ({ ...d, dropoff: SJD_AIRPORT }))}
+                      className="mt-1.5 text-xs text-gold font-semibold hover:underline">
+                      → {lang === 'es' ? 'Usar Aeropuerto SJD' : 'Use SJD Airport'}
+                    </button>
+                  )}
                 </div>
-              </InputField>
+              </div>
             </div>
           </div>
         );
       case 'extras':
-        const isAirportRoute = data.route === 'airport-hotel' || data.route === 'hotel-airport';
         return (
-          <div className="space-y-6">
+          <div className="space-y-7">
+            {/* Header */}
             <div>
-              <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t('book.extras.title')}</h2>
-              <p className="text-muted-foreground text-sm md:text-base mt-2 leading-relaxed">{t('book.extras.subtitle')}</p>
+              <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">
+                {lang === 'es' ? 'Extras & Actividades' : 'Extras & Activities'}
+              </h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                {lang === 'es' ? 'Paso 3 de 4 — Personaliza tu experiencia' : 'Step 3 of 4 — Personalize your experience'}
+              </p>
             </div>
 
-            {/* Included - always shown */}
+            {/* Included strip */}
             {includedExtras.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="p-4 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/50">
-                <p className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider mb-2">
-                  {t('book.extras.included', { en: 'Included', es: 'Incluido' })}
-                </p>
-                <p className="text-sm font-medium text-foreground">
-                  {includedExtras.map((e) => (lang === 'es' && e.labelEs ? e.labelEs : e.label)).join(' · ')}
-                </p>
-              </motion.div>
-            )}
-
-            {/* Round trip suggestions */}
-            {data.tripType === 'roundtrip' && (
-              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="p-4 rounded-xl bg-gold/5 border border-gold/20">
-                <p className="text-xs font-semibold text-gold uppercase tracking-wider mb-3">
-                  {t('book.upsells.roundTripSuggest', { en: 'Popular with round trip guests', es: 'Popular con viajes redondos' })}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {roundTripSuggestedCodes.map((code) => {
-                    const ex = pricingExtras.find((e) => e.code === code);
-                    if (!ex) return null;
-                    const selected = data.extras.includes(code);
-                    return (
-                      <motion.button
-                        key={code}
-                        type="button"
-                        onClick={() => toggleExtra(code)}
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        className={cn(
-                          'inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all',
-                          selected ? 'bg-gold/20 border border-gold text-foreground' : 'border border-gold/30 text-muted-foreground hover:border-gold/50 hover:text-foreground'
-                        )}
-                      >
-                        {selected && (
-                          <motion.span
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                          >
-                            <Check size={14} className="text-gold" />
-                          </motion.span>
-                        )}
-                        {(lang === 'es' && ex.labelEs ? ex.labelEs : ex.label)} (+${(ex.priceCents / 100).toFixed(0)})
-                      </motion.button>
-                    );
-                  })}
+              <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/40 rounded-xl px-4 py-3">
+                <div className="flex gap-1.5">
+                  <span className="text-base">💧</span><span className="text-base">🍺</span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-wide">
+                    {lang === 'es' ? 'Incluido sin costo' : 'Complimentary'}
+                  </p>
+                  <p className="text-sm text-foreground font-medium">
+                    {includedExtras.map((e) => (lang === 'es' && e.labelEs ? e.labelEs : e.label)).join(' · ')}
+                  </p>
                 </div>
               </motion.div>
             )}
 
-            {/* Paid extras (grocery, baby, oversize, etc.) */}
+            {/* Add-ons — professional photo cards */}
             {paidExtras.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-gold uppercase tracking-wider">{t('book.extras.addOns', { en: 'Add-ons', es: 'Complementos' })}</p>
-                {paidExtras.map((ex) => {
-                  const selected = data.extras.includes(ex.code);
-                  return (
-                    <motion.button
-                      key={ex.code}
-                      type="button"
-                      onClick={() => toggleExtra(ex.code)}
-                      whileHover={{ scale: 1.01, x: 2 }}
-                      whileTap={{ scale: 0.99 }}
-                      layout
-                      className={cn(
-                        'w-full booking-card rounded-xl p-5 text-left flex items-center justify-between transition-all',
-                        selected ? 'selected border-gold' : ''
-                      )}
-                    >
-                      <span className="font-medium text-sm text-foreground">{lang === 'es' && ex.labelEs ? ex.labelEs : ex.label}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-gold font-bold">${(ex.priceCents / 100).toFixed(0)}</span>
-                        {selected && (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                            className="w-7 h-7 rounded-full gold-gradient flex items-center justify-center flex-shrink-0"
-                          >
-                            <Check size={15} className="text-navy" />
-                          </motion.div>
-                        )}
-                      </div>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Upgrade kits */}
-            {upsellKits.length > 0 && (isAirportRoute || true) && (
-              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-                <p className="text-xs font-semibold text-gold uppercase tracking-wider">{t('book.upsells.arrivalUpgrades', { en: 'Upgrade kits', es: 'Kits de upgrade' })}</p>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  {upsellKits.map((ex) => {
+              <div className="space-y-4">
+                <div className="border-b border-border pb-2">
+                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-widest">
+                    {lang === 'es' ? 'Complementos opcionales' : 'Optional add-ons'}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {lang === 'es' ? 'Mejora tu experiencia con estos extras' : 'Enhance your experience with these add-ons'}
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {paidExtras.map((ex, i) => {
                     const selected = data.extras.includes(ex.code);
+                    const meta = ADDON_META[ex.code];
                     return (
-                      <motion.button
-                        key={ex.code}
-                        type="button"
+                      <motion.button key={ex.code} type="button"
                         onClick={() => toggleExtra(ex.code)}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        whileHover={{ y: -2 }} whileTap={{ scale: 0.99 }}
                         className={cn(
-                          'flex items-center justify-between gap-3 p-4 rounded-xl border text-left transition-all',
-                          selected ? 'border-gold bg-gold/5' : 'border-border hover:border-gold/30 glass-card'
-                        )}
-                      >
-                        <span className="font-medium text-sm text-foreground">{lang === 'es' && ex.labelEs ? ex.labelEs : ex.label}</span>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-gold font-bold">${(ex.priceCents / 100).toFixed(0)}</span>
-                          {selected && (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                              className="w-6 h-6 rounded-full gold-gradient flex items-center justify-center"
-                            >
-                              <Check size={12} className="text-navy" />
-                            </motion.div>
-                          )}
+                          'w-full rounded-xl text-left overflow-hidden border-2 transition-all duration-200',
+                          'bg-card shadow-sm hover:shadow-md',
+                          selected ? 'border-gold ring-2 ring-gold/30 shadow-gold/10' : 'border-border hover:border-gold/60'
+                        )}>
+                        <div className="flex min-h-[100px]">
+                          {/* Photo */}
+                          <div className="w-28 sm:w-32 shrink-0 relative bg-muted/30 flex items-center justify-center overflow-hidden">
+                            {meta?.photo ? (
+                              <img src={meta.photo} alt={meta.en}
+                                loading="lazy"
+                                className="w-full h-full object-contain p-2"
+                                onError={e => { const el = e.currentTarget; el.onerror = null; el.style.display = 'none'; }}
+                              />
+                            ) : null}
+                            <span className={cn('text-3xl', meta?.photo ? 'absolute inset-0 flex items-center justify-center' : '')}>{meta?.emoji ?? '✨'}</span>
+                            {selected && (
+                              <div className="absolute inset-0 bg-gold/25 flex items-center justify-center backdrop-blur-[1px]">
+                                <div className="w-9 h-9 rounded-full gold-gradient flex items-center justify-center shadow-lg">
+                                  <Check size={16} className="text-navy" strokeWidth={3} />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          {/* Content */}
+                          <div className={cn(
+                            'flex-1 p-4 flex flex-col justify-between min-w-0',
+                            selected ? 'bg-gold/5' : ''
+                          )}>
+                            <div>
+                              <p className="font-semibold text-foreground text-sm leading-tight">
+                                {lang === 'es' && ex.labelEs ? ex.labelEs : ex.label}
+                              </p>
+                              {meta && (
+                                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">
+                                  {lang === 'es' ? (meta.detailEs ?? meta.es) : (meta.detailEn ?? meta.en)}
+                                </p>
+                              )}
+                            </div>
+                            <div className="mt-2 flex items-baseline justify-between">
+                              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                {lang === 'es' ? 'Precio' : 'Price'}
+                              </span>
+                              <span className="font-bold text-gold text-base">
+                                ${((ex.code === 'LUXURY_WELCOME' ? 10000 : ex.priceCents) / 100).toFixed(0)}
+                                <span className="text-[10px] font-normal text-muted-foreground ml-0.5">USD</span>
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </motion.button>
                     );
                   })}
                 </div>
-              </motion.div>
+              </div>
             )}
 
-            {/* Activities upsell — merged into extras step */}
-            <div className="pt-4 border-t border-border space-y-4">
-              <div>
-                <p className="text-xs font-semibold text-gold uppercase tracking-wider">
-                  {lang === 'es' ? 'Actividades (opcional)' : 'Activities (optional)'}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {lang === 'es' ? 'Experiencias exclusivas en Los Cabos' : 'Exclusive experiences in Los Cabos'}
-                </p>
-              </div>
-
-            {/* Crazy Combo CTA — primary upsell */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={cn(
-                "relative rounded-2xl p-6 border-2 overflow-hidden cursor-pointer transition-all",
-                data.comboMode === 'crazy'
-                  ? "border-gold bg-gold/5"
-                  : "border-gold/30 hover:border-gold/60 bg-gradient-to-br from-gold/5 to-transparent"
-              )}
-              onClick={() => {
-                setData(d => ({ ...d, comboMode: 'crazy', activities: d.activities.slice(0, 3) }));
-              }}
-            >
-              <div className="absolute inset-0 shimmer pointer-events-none" />
-              <div className="absolute top-0 right-0 gold-gradient text-secondary-foreground text-[10px] font-bold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider">
-                {lang === 'es' ? 'MEJOR VALOR' : 'BEST VALUE'}
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="text-3xl">🔥</div>
-                <div className="flex-1">
-                  <p className="font-display text-xl font-bold text-foreground">Crazy Combo</p>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    {lang === 'es' ? '3 actividades (1 hr cada una) · Transporte incluido' : '3 activities (1 hr each) · Transport included'}
-                  </p>
-                  <div className="flex items-baseline gap-2 mt-2">
-                    <span className="text-gold text-2xl font-bold">$125</span>
-                    <span className="text-muted-foreground text-sm">USD/{lang === 'es' ? 'persona' : 'person'}</span>
-                    <span className="text-xs line-through text-muted-foreground/60 ml-2">$360</span>
-                    <span className="text-xs text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full">
-                      {lang === 'es' ? 'AHORRA 65%' : 'SAVE 65%'}
-                    </span>
+            {/* Welcome Package celebration picker — only when PREMIUM_WELCOME selected */}
+            {data.extras.includes('LUXURY_WELCOME') && (
+              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                className="rounded-2xl border-2 border-gold/40 bg-gold/5 p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🥂</span>
+                  <div>
+                    <p className="font-bold text-sm text-foreground">
+                      {lang === 'es' ? '¿Cuál es la ocasión?' : "What's the occasion?"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {lang === 'es' ? 'Personalizamos tu paquete según la celebración' : 'We customize your package for the celebration'}
+                    </p>
                   </div>
                 </div>
-                {data.comboMode === 'crazy' && (
-                  <div className="w-7 h-7 rounded-full gold-gradient flex items-center justify-center flex-shrink-0">
-                    <Check size={15} className="text-navy" />
-                  </div>
-                )}
-              </div>
-            </motion.div>
-
-            {/* Combo option */}
-            <div
-              className={cn(
-                "rounded-xl p-5 border cursor-pointer transition-all flex items-center justify-between",
-                data.comboMode === 'combo'
-                  ? "border-gold bg-gold/5"
-                  : "border-border hover:border-gold/30 glass-card"
-              )}
-              onClick={() => {
-                setData(d => ({ ...d, comboMode: 'combo', activities: d.activities.slice(0, 2) }));
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xl">🎯</span>
-                <div>
-                  <p className="font-display font-bold text-foreground">Combo</p>
-                  <p className="text-muted-foreground text-xs">
-                    {lang === 'es' ? '2 actividades · $100/persona' : '2 activities · $100/person'}
-                  </p>
-                </div>
-              </div>
-              {data.comboMode === 'combo' && (
-                <div className="w-7 h-7 rounded-full gold-gradient flex items-center justify-center flex-shrink-0">
-                  <Check size={15} className="text-navy" />
-                </div>
-              )}
-            </div>
-
-            {/* Skip option */}
-            {!data.comboMode && (
-              <p className="text-center text-sm text-muted-foreground">
-                {lang === 'es' ? 'O haz clic en "Continuar" para omitir' : 'Or click "Continue" to skip'}
-              </p>
-            )}
-
-            {/* Activity selection grid (when a mode is chosen) */}
-            {data.comboMode && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-foreground">
-                    {lang === 'es' ? 'Selecciona tus actividades' : 'Select your activities'}
-                  </p>
-                  {(data.comboMode === 'combo' || data.comboMode === 'crazy') && (
-                    <span className="text-xs text-gold font-bold bg-gold/10 px-3 py-1 rounded-full">
-                      {data.activities.length}/{data.comboMode === 'combo' ? 2 : 3}
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {upsellActivities.map(act => {
-                    const selected = data.activities.includes(act.id);
-                    const maxReached = (data.comboMode === 'combo' && data.activities.length >= 2) ||
-                                       (data.comboMode === 'crazy' && data.activities.length >= 3);
-                    const disabled = !selected && maxReached;
+                <div className="grid grid-cols-3 gap-2">
+                  {(['birthday', 'anniversary', 'other'] as const).map(type => {
+                    const labels = {
+                      birthday:    { es: '🎂 Cumpleaños', en: '🎂 Birthday' },
+                      anniversary: { es: '💍 Aniversario', en: '💍 Anniversary' },
+                      other:       { es: '🎉 Otra',        en: '🎉 Other' },
+                    };
                     return (
-                      <button
-                        key={act.id}
-                        onClick={() => !disabled && toggleActivity(act.id)}
-                        disabled={disabled}
+                      <button key={type} type="button"
+                        onClick={() => setCelebrationType(celebrationType === type ? '' : type)}
                         className={cn(
-                          "rounded-xl p-4 text-center border transition-all",
-                          selected ? "border-gold bg-gold/5" : disabled ? "border-border/50 opacity-40 cursor-not-allowed" : "border-border hover:border-gold/30 glass-card"
-                        )}
-                      >
-                        <span className="text-2xl block mb-1">{act.emoji}</span>
-                        <p className="font-display text-xs font-bold text-foreground leading-tight">{t(act.key)}</p>
-                        <p className="text-muted-foreground text-[10px] mt-1 flex items-center justify-center gap-1">
-                          <Clock size={9} /> {act.duration}
-                        </p>
-                        {selected && (
-                          <div className="w-5 h-5 rounded-full gold-gradient flex items-center justify-center mx-auto mt-2">
-                            <Check size={11} className="text-navy" />
-                          </div>
-                        )}
+                          'rounded-xl py-3 px-2 text-center text-xs font-semibold border-2 transition-all',
+                          celebrationType === type
+                            ? 'border-gold bg-gold/15 text-foreground'
+                            : 'border-border bg-background text-muted-foreground hover:border-gold/40'
+                        )}>
+                        {lang === 'es' ? labels[type].es : labels[type].en}
                       </button>
                     );
                   })}
                 </div>
-
-                <div className="flex items-start gap-2 text-xs text-muted-foreground bg-accent rounded-xl p-3 border border-border">
-                  <Shield size={14} className="text-gold flex-shrink-0 mt-0.5" />
-                  <span>{lang === 'es' ? 'Incluye transporte, equipo, guía bilingüe. Entrada al parque $25/persona pagada en sitio.' : 'Includes transport, equipment, bilingual guide. Park fee $25/person paid on-site.'}</span>
+                {celebrationType === 'birthday' && (
+                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="text-xs text-muted-foreground bg-background rounded-xl px-4 py-3 border border-border">
+                    🎂 {lang === 'es'
+                      ? 'Incluye: tabla de quesos + pastelito simbólico para 2 personas + champagne + globo de cumpleaños.'
+                      : 'Includes: cheese board · symbolic cake for 2 · champagne · birthday balloon.'}
+                  </motion.p>
+                )}
+                {celebrationType === 'anniversary' && (
+                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="text-xs text-muted-foreground bg-background rounded-xl px-4 py-3 border border-border">
+                    💍 {lang === 'es'
+                      ? 'Incluye: champagne + tabla de quesos artesanales.'
+                      : 'Includes: champagne · artisan cheese board.'}
+                  </motion.p>
+                )}
+                <div>
+                  <label className="block text-xs font-semibold text-foreground/60 uppercase tracking-wide mb-1.5">
+                    📝 {lang === 'es' ? 'Nota adicional (opcional)' : 'Additional note (optional)'}
+                  </label>
+                  <textarea rows={2}
+                    placeholder={lang === 'es'
+                      ? 'Ej: nombre del festejado, algún detalle especial...'
+                      : 'E.g.: name of the guest of honor, any special detail...'}
+                    value={data.specialNote}
+                    onChange={e => setData({ ...data, specialNote: e.target.value })}
+                    className="w-full bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-gold/60 transition-all resize-none placeholder:text-muted-foreground/50"
+                  />
                 </div>
               </motion.div>
             )}
+
+            {/* Activities — expandable with photo grid */}
+            <div className="pt-4 border-t border-border space-y-4">
+              {!showActivityOptions && !data.comboMode ? (
+                <motion.button type="button" onClick={() => setShowActivityOptions(true)}
+                  whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                  className="w-full rounded-2xl overflow-hidden border-2 border-gold/40 hover:border-gold transition-all relative group h-20">
+                  {/* 4-photo horizontal strip */}
+                  <div className="absolute inset-0 flex">
+                    {ACTIVITY_COLLAGE.map((src, i) => (
+                      <div key={i} className="flex-1 overflow-hidden relative">
+                        <img src={src} alt="" loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        {/* thin divider between photos */}
+                        {i < 3 && <div className="absolute right-0 inset-y-0 w-px bg-black/30" />}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Dark overlay + text */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-navy/80 via-navy/50 to-navy/30" />
+                  <div className="relative z-10 flex items-center gap-3 px-5 h-full">
+                    <Sparkles size={18} className="text-gold shrink-0" />
+                    <div className="text-left">
+                      <p className="font-bold text-base text-white leading-tight">
+                        {lang === 'es' ? 'Agregar actividades' : 'Add activities'}
+                      </p>
+                      <p className="text-xs text-white/60">
+                        ATV · RZR · Camellos · Sky Bikes · {lang === 'es' ? 'más' : 'more'}
+                      </p>
+                    </div>
+                    <span className="ml-auto text-gold font-bold text-sm shrink-0">
+                      {lang === 'es' ? 'desde $100/persona' : 'from $100/person'}
+                    </span>
+                  </div>
+                </motion.button>
+              ) : (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-foreground/60 uppercase tracking-wider">
+                      {lang === 'es' ? 'Elige tu combo' : 'Choose your combo'}
+                    </p>
+                    {!data.comboMode && (
+                      <button type="button" onClick={() => { setShowActivityOptions(false); setData(d => ({ ...d, comboMode: '', activities: [] })); }}
+                        className="text-xs text-muted-foreground hover:text-foreground underline">
+                        {lang === 'es' ? 'Cancelar' : 'Cancel'}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Combo cards — 2×2 photo collage */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {([
+                      {
+                        mode: 'combo', count: 2, price: 100, label: 'Combo',
+                        // Combo: 2 activities — show ATV + Camel
+                        collage: [ACTIVITY_COLLAGE[0], ACTIVITY_COLLAGE[2], ACTIVITY_COLLAGE[3], ACTIVITY_COLLAGE[1]],
+                      },
+                      {
+                        mode: 'crazy', count: 3, price: 125, label: 'Crazy Combo',
+                        // Crazy: all 4 quadrants
+                        collage: ACTIVITY_COLLAGE,
+                      },
+                    ] as const).map(opt => (
+                      <button key={opt.mode} type="button"
+                        onClick={() => setData(d => ({ ...d, comboMode: opt.mode, activities: d.activities.slice(0, opt.count) }))}
+                        className={cn(
+                          'rounded-2xl border-2 text-left transition-all relative overflow-hidden h-44',
+                          data.comboMode === opt.mode ? 'border-gold shadow-lg shadow-gold/20' : 'border-border hover:border-gold/50'
+                        )}>
+                        {/* 2×2 photo collage */}
+                        <div className="absolute inset-0 grid grid-cols-2 grid-rows-2">
+                          {opt.collage.map((src, i) => (
+                            <div key={i} className="overflow-hidden relative">
+                              <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
+                              {/* thin grid lines */}
+                              {(i === 0 || i === 2) && <div className="absolute right-0 inset-y-0 w-px bg-black/40" />}
+                              {(i === 0 || i === 1) && <div className="absolute bottom-0 inset-x-0 h-px bg-black/40" />}
+                            </div>
+                          ))}
+                        </div>
+                        {/* Bottom gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-navy/95 via-navy/40 to-black/10" />
+                        {/* Top label badge */}
+                        {data.comboMode === opt.mode && (
+                          <div className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full gold-gradient flex items-center justify-center shadow">
+                            <Check size={13} className="text-navy" />
+                          </div>
+                        )}
+                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                          <p className="font-display font-bold text-base text-white">{opt.label}</p>
+                          <p className="text-white/70 text-xs">{opt.count} {lang === 'es' ? 'actividades a elegir' : 'activities to pick'}</p>
+                          <div className="flex items-baseline gap-1 mt-1">
+                            <span className="text-gold font-bold text-xl">${opt.price}</span>
+                            <span className="text-white/60 text-[10px]">/{lang === 'es' ? 'persona' : 'person'}</span>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Activity photo grid */}
+                  {data.comboMode && (
+                    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-bold text-foreground">
+                          {lang === 'es' ? 'Selecciona tus actividades' : 'Select your activities'}
+                        </p>
+                        <span className={cn(
+                          'text-xs font-bold px-3 py-1 rounded-full',
+                          data.activities.length === (data.comboMode === 'combo' ? 2 : 3)
+                            ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400'
+                            : 'bg-gold/10 text-gold'
+                        )}>
+                          {data.activities.length}/{data.comboMode === 'combo' ? 2 : 3}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                        {upsellActivities.map(act => {
+                          const selected = data.activities.includes(act.id);
+                          const maxReached = (data.comboMode === 'combo' && data.activities.length >= 2) ||
+                                             (data.comboMode === 'crazy' && data.activities.length >= 3);
+                          const disabled = !selected && maxReached;
+                          return (
+                            <button key={act.id} type="button"
+                              onClick={() => !disabled && toggleActivity(act.id)} disabled={disabled}
+                              className={cn(
+                                'rounded-xl overflow-hidden border-2 relative h-28 text-left transition-all',
+                                selected ? 'border-gold shadow-md shadow-gold/20' : disabled ? 'opacity-40 cursor-not-allowed border-border/50' : 'border-border hover:border-gold/50'
+                              )}>
+                              {act.photo ? (
+                                <img src={act.photo} alt={t(act.key)} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+                              ) : (
+                                <div className="absolute inset-0 bg-muted flex items-center justify-center text-4xl">{act.emoji}</div>
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                              <div className="absolute bottom-0 left-0 right-0 px-2.5 py-2.5">
+                                <p className="font-bold text-xs text-white leading-tight">{t(act.key)}</p>
+                              </div>
+                              {selected && (
+                                <div className="absolute top-2 right-2 w-6 h-6 rounded-full gold-gradient flex items-center justify-center">
+                                  <Check size={11} className="text-navy" />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/40 rounded-xl p-3 border border-border">
+                        <Shield size={13} className="text-gold flex-shrink-0 mt-0.5" />
+                        <span>{lang === 'es' ? 'Incluye transporte, equipo y guía bilingüe. Entrada al parque $25/persona en sitio.' : 'Includes transport, equipment & bilingual guide. Park fee $25/person on-site.'}</span>
+                      </div>
+                    </motion.div>
+                  )}
+                </motion.div>
+              )}
             </div>
           </div>
         );
 
       case 'review':
         return (
-          <div className="space-y-6">
-            <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t('book.review.title')}</h2>
+          <div className="space-y-5">
+            {/* Header */}
+            <div>
+              <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">
+                {lang === 'es' ? 'Resumen y Pago' : 'Review & Pay'}
+              </h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                {lang === 'es' ? 'Paso 4 de 4 — Confirma tu reservación' : 'Step 4 of 4 — Confirm your booking'}
+              </p>
+            </div>
 
-            {/* Trip summary - premium card */}
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="glass-card rounded-2xl p-6 md:p-8 space-y-4"
-            >
-              <h3 className="font-display text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-                {lang === 'es' ? 'Resumen del viaje' : 'Trip summary'}
-              </h3>
-              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                <Row label={t('book.review.service')} value={data.serviceType || '—'} />
-                <Row label={t('book.review.trip')} value={data.tripType || '—'} />
-                <Row label={t('book.review.route')} value={data.route || '—'} />
-                <Row label={t('book.review.date')} value={data.arrivalDate ? format(data.arrivalDate, 'PPP') : '—'} />
-                <Row label={t('book.review.passengers')} value={String(data.passengers)} />
-                <Row label={t('book.review.pickup')} value={data.pickup || '—'} />
-                <Row label={t('book.review.dropoff')} value={data.dropoff || '—'} />
-                {data.extras.length > 0 && <Row label={t('book.review.extras')} value={data.extras.map(getExtraLabel).join(', ')} className="sm:col-span-2" />}
-                {data.activities.length > 0 && (
-                  <Row label={t('book.review.activitiesUpsell')} value={data.activities.map(id => {
-                    const act = upsellActivities.find(a => a.id === id);
-                    return act ? t(act.key) : id;
-                  }).join(', ')} className="sm:col-span-2" />
-                )}
-              </div>
-            </motion.div>
-
-            {/* Pricing breakdown - premium */}
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.05 }}
-              className="glass-card rounded-2xl p-6 md:p-8 border-2 border-gold/20"
-            >
-              <h3 className="font-display text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-5">
-                {lang === 'es' ? 'Desglose de precios' : 'Price breakdown'}
-              </h3>
-              <div className="space-y-4">
-                {data.serviceType && selectedArea ? (
-                  <>
-                    <Row
-                      label={t('book.review.transferPrice')}
-                      value={`$${transferPrice.toFixed(0)} USD`}
-                      gold
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {selectedArea.name} · {data.tripType === 'roundtrip' ? (lang === 'es' ? 'Ida y vuelta' : 'Round trip') : (lang === 'es' ? 'Solo ida' : 'One way')}
-                    </p>
-                  </>
-                ) : data.serviceType && !data.areaId ? (
-                  <p className="text-amber-600 dark:text-amber-400 text-sm py-2">{t('book.area.selectToSeePrice')}</p>
-                ) : data.serviceType ? (
-                  <Row label={t('book.review.transferPrice')} value={`$${transferPrice.toFixed(0)} USD`} gold />
-                ) : null}
-                {activitiesPrice > 0 && (
-                  <Row label={data.comboMode === 'crazy' ? 'Crazy Combo' : data.comboMode === 'combo' ? 'Combo' : t('book.review.activitiesDeposit')}
-                    value={`$${activitiesPrice} USD`} gold />
-                )}
-              </div>
-
-              {/* Total - prominent */}
-              <div className="mt-6 pt-6 border-t-2 border-gold/30 bg-gold/5 -mx-6 md:-mx-8 px-6 md:px-8 py-5 rounded-b-2xl">
-                <div className="flex justify-between items-center">
-                  <span className="font-display text-base font-bold text-foreground">{t('book.review.total')}</span>
-                  <span className="text-gold font-display text-2xl font-bold">${total} USD</span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Validation alert: incomplete section */}
+            {/* Validation alert */}
             {!reviewValidation.valid && reviewValidation.firstInvalidStepIndex !== null && (
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-xl border-2 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-              >
+              <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl border-2 border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" size={18} />
+                  <AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={16} />
                   <p className="text-sm text-amber-800 dark:text-amber-200">
                     {t('book.validation.incomplete')}{' '}
-                    <span className="font-semibold">{stepLabels[steps[reviewValidation.firstInvalidStepIndex]]}</span>
+                    <span className="font-bold">{stepLabels[steps[reviewValidation.firstInvalidStepIndex]]}</span>
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setCurrent(reviewValidation.firstInvalidStepIndex!)}
-                  className="shrink-0 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-4 py-2 inline-flex items-center gap-1.5"
-                >
+                <button type="button" onClick={() => setCurrent(reviewValidation.firstInvalidStepIndex!)}
+                  className="shrink-0 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-4 py-2 inline-flex items-center gap-1.5">
                   {t('book.validation.goTo')} <ArrowRight size={14} />
                 </button>
               </motion.div>
             )}
 
-            {/* Trust + CTA */}
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-              className="space-y-4"
-            >
+            {/* ── Section 1: Customer ── */}
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}
+              className="rounded-2xl border border-border bg-background overflow-hidden">
+              <div className="flex items-center gap-2 px-5 py-3 bg-muted/40 border-b border-border">
+                <span className="text-base">👤</span>
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                  {lang === 'es' ? 'Tus datos' : 'Your details'}
+                </h3>
+                {data.customerName && (
+                  <button type="button" onClick={() => setCurrent(0)}
+                    className="ml-auto text-xs text-gold font-semibold hover:underline">
+                    {lang === 'es' ? 'Editar' : 'Edit'}
+                  </button>
+                )}
+              </div>
+              <div className="px-5 py-4 grid sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                <ReviewRow icon="📛" label={lang === 'es' ? 'Nombre' : 'Name'} value={data.customerName || '—'} />
+                <ReviewRow icon="✉️" label="Email" value={data.customerEmail || '—'} />
+                <ReviewRow icon="📱" label={lang === 'es' ? 'Teléfono' : 'Phone'} value={data.customerPhone || '—'} />
+                <ReviewRow icon="👥" label={lang === 'es' ? 'Pasajeros' : 'Passengers'} value={`${data.passengers} ${data.passengers === 1 ? (lang === 'es' ? 'persona' : 'person') : (lang === 'es' ? 'personas' : 'people')}`} />
+              </div>
+            </motion.div>
+
+            {/* ── Section 2: Trip details ── */}
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+              className="rounded-2xl border border-border bg-background overflow-hidden">
+              <div className="flex items-center gap-2 px-5 py-3 bg-muted/40 border-b border-border">
+                <span className="text-base">✈️</span>
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                  {lang === 'es' ? 'Tu traslado' : 'Your transfer'}
+                </h3>
+                <button type="button" onClick={() => setCurrent(0)}
+                  className="ml-auto text-xs text-gold font-semibold hover:underline">
+                  {lang === 'es' ? 'Editar' : 'Edit'}
+                </button>
+              </div>
+              <div className="px-5 py-4 grid sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                <ReviewRow icon="🔄" label={lang === 'es' ? 'Tipo' : 'Type'}
+                  value={data.tripType === 'roundtrip' ? (lang === 'es' ? 'Ida y Vuelta' : 'Round Trip') : (lang === 'es' ? 'Solo Ida' : 'One Way')} />
+                <ReviewRow icon="🗺️" label={lang === 'es' ? 'Ruta' : 'Route'}
+                  value={data.route === 'airport-hotel' ? (lang === 'es' ? 'Aeropuerto → Hotel' : 'Airport → Hotel') : (lang === 'es' ? 'Hotel → Aeropuerto' : 'Hotel → Airport')} />
+                <ReviewRow icon="🏨" label="Hotel" value={data.selectedHotel?.name || '—'} />
+                <ReviewRow icon="🚙" label={lang === 'es' ? 'Vehículo' : 'Vehicle'} value={data.vehicleClass} />
+                <ReviewRow icon="📅" label={lang === 'es' ? 'Llegada' : 'Arrival'}
+                  value={data.arrivalDate ? `${format(data.arrivalDate, 'MMM d, yyyy')}${data.arrivalTime ? ` · ${data.arrivalTime}` : ''}` : '—'} />
+                {data.tripType === 'roundtrip' && data.departureDate && (
+                  <ReviewRow icon="📅" label={lang === 'es' ? 'Salida' : 'Departure'}
+                    value={`${format(data.departureDate, 'MMM d, yyyy')}${data.departureTime ? ` · ${data.departureTime}` : ''}`} />
+                )}
+                {data.flightNumber && <ReviewRow icon="🛫" label={lang === 'es' ? 'Vuelo llegada' : 'Arrival flight'} value={data.flightNumber} />}
+                {data.departureFlightNumber && <ReviewRow icon="🛬" label={lang === 'es' ? 'Vuelo salida' : 'Dep. flight'} value={data.departureFlightNumber} />}
+                <ReviewRow icon="📍" label={lang === 'es' ? 'Recogida' : 'Pickup'} value={data.pickup || '—'} />
+                <ReviewRow icon="🏁" label={lang === 'es' ? 'Destino' : 'Dropoff'} value={data.dropoff || '—'} />
+              </div>
+            </motion.div>
+
+            {/* ── Section 3: Extras if selected ── */}
+            {(data.extras.length > 0 || data.activities.length > 0 || data.specialNote.trim()) && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
+                className="rounded-2xl border border-border bg-background overflow-hidden">
+                <div className="flex items-center gap-2 px-5 py-3 bg-muted/40 border-b border-border">
+                  <span className="text-base">✨</span>
+                  <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                    {lang === 'es' ? 'Extras seleccionados' : 'Selected extras'}
+                  </h3>
+                  <button type="button" onClick={() => setCurrent(2)}
+                    className="ml-auto text-xs text-gold font-semibold hover:underline">
+                    {lang === 'es' ? 'Editar' : 'Edit'}
+                  </button>
+                </div>
+                <div className="px-5 py-4 space-y-2 text-sm">
+                  {data.extras.map(code => {
+                    const meta = ADDON_META[code];
+                    return (
+                      <div key={code} className="flex items-center gap-2">
+                        <span>{meta?.emoji ?? '•'}</span>
+                        <span className="text-foreground font-medium">{getExtraLabel(code)}</span>
+                      </div>
+                    );
+                  })}
+                  {data.activities.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span>🎯</span>
+                      <span className="text-foreground font-medium">
+                        {data.comboMode === 'crazy' ? 'Crazy Combo' : 'Combo'} — {data.activities.map(id => {
+                          const act = upsellActivities.find(a => a.id === id);
+                          return act ? t(act.key) : id;
+                        }).join(', ')}
+                      </span>
+                    </div>
+                  )}
+                  {data.specialNote.trim() && (
+                    <div className="flex items-start gap-2 mt-1">
+                      <span>📝</span>
+                      <span className="text-muted-foreground italic text-xs">{data.specialNote}</span>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── Section 4: Price breakdown ── */}
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
+              className="rounded-2xl border-2 border-gold/30 bg-background overflow-hidden">
+              <div className="flex items-center gap-2 px-5 py-3 bg-gold/5 border-b border-gold/20">
+                <span className="text-base">💳</span>
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                  {lang === 'es' ? 'Desglose de precios' : 'Price breakdown'}
+                </h3>
+              </div>
+              <div className="px-5 py-4 space-y-3">
+                {data.serviceType && selectedArea ? (
+                  <div className="flex justify-between items-center text-sm">
+                    <div>
+                      <p className="font-semibold text-foreground">{lang === 'es' ? 'Traslado privado' : 'Private transfer'}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {selectedArea.name} · {data.tripType === 'roundtrip' ? (lang === 'es' ? 'Ida y vuelta' : 'Round trip') : (lang === 'es' ? 'Solo ida' : 'One way')}
+                      </p>
+                    </div>
+                    <span className="font-bold text-foreground">${transferPrice.toFixed(0)}</span>
+                  </div>
+                ) : data.serviceType ? (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="font-semibold text-foreground">{lang === 'es' ? 'Traslado' : 'Transfer'}</span>
+                    <span className="font-bold text-foreground">${transferPrice.toFixed(0)}</span>
+                  </div>
+                ) : null}
+
+                {activitiesPrice > 0 && (
+                  <div className="flex justify-between items-center text-sm pt-2 border-t border-border">
+                    <div>
+                      <p className="font-semibold text-foreground">
+                        {data.comboMode === 'crazy' ? 'Crazy Combo' : 'Combo'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {data.passengers} {lang === 'es' ? 'personas' : 'people'} × ${data.comboMode === 'crazy' ? 125 : 100}
+                      </p>
+                    </div>
+                    <span className="font-bold text-foreground">${activitiesPrice}</span>
+                  </div>
+                )}
+
+                {data.extras.length > 0 && (
+                  <div className="flex justify-between items-center text-sm pt-2 border-t border-border">
+                    <span className="font-semibold text-foreground">{lang === 'es' ? 'Extras' : 'Add-ons'}</span>
+                    <span className="font-bold text-foreground">
+                      ${data.extras.reduce((acc, code) => {
+                        const ex = pricingExtras.find(e => e.code === code);
+                        const cents = code === 'LUXURY_WELCOME' ? 10000 : (ex?.priceCents ?? 0);
+                        return acc + (cents / 100);
+                      }, 0).toFixed(0)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Total */}
+                <div className="flex justify-between items-center pt-3 mt-1 border-t-2 border-gold/30">
+                  <span className="font-display font-bold text-base text-foreground">{t('book.review.total')}</span>
+                  <span className="font-display font-bold text-2xl text-gold">${total} USD</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* ── CTA: Pay with PayPal ── */}
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              className="space-y-4">
               <TrustBadges compact />
 
               <motion.button
                 onClick={handlePayPalCheckout}
                 disabled={creatingBooking || !reviewValidation.valid}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
+                whileHover={reviewValidation.valid && !creatingBooking ? { scale: 1.02 } : {}}
+                whileTap={reviewValidation.valid && !creatingBooking ? { scale: 0.98 } : {}}
                 className={cn(
-                  'w-full py-5 rounded-xl font-bold text-base flex items-center justify-center gap-3 transition-all',
+                  'w-full py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all',
                   'bg-[#0070ba] hover:bg-[#005ea6] text-white',
-                  'shadow-lg shadow-[#0070ba]/25 hover:shadow-xl hover:shadow-[#0070ba]/30',
-                  'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
-                )}
-              >
+                  'shadow-xl shadow-[#0070ba]/20',
+                  'disabled:opacity-40 disabled:cursor-not-allowed'
+                )}>
                 {creatingBooking ? (
-                  <>
-                    <LuxurySpinner size={22} />
-                    {lang === 'es' ? 'Creando reserva...' : 'Creating booking...'}
-                  </>
+                  <><LuxurySpinner size={22} /> {lang === 'es' ? 'Procesando...' : 'Processing...'}</>
                 ) : (
-                  <>
-                    <Shield size={22} />
-                    {t('book.review.paypal')}
-                  </>
+                  <><Shield size={20} /> {t('book.review.paypal')}</>
                 )}
               </motion.button>
+
               {bookingError && (
-                <div className="text-center mt-2 space-y-2">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-center space-y-2">
                   <p className="text-sm text-destructive">{bookingError}</p>
                   <a href="https://wa.me/5216241222174" target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm text-[#25D366] font-medium hover:underline">
+                    className="inline-flex items-center gap-1.5 text-sm text-[#25D366] font-semibold hover:underline">
                     <MessageCircle size={14} />
                     {lang === 'es' ? 'Reservar por WhatsApp' : 'Book via WhatsApp'}
                   </a>
-                </div>
+                </motion.div>
               )}
+
               {!bookingError && !creatingBooking && (
-                <p className="text-center text-sm text-muted-foreground">
-                  {lang === 'es' ? 'Serás redirigido a PayPal para completar el pago' : 'You will be redirected to PayPal to complete payment'}
+                <p className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1.5">
+                  <Shield size={12} className="text-gold" />
+                  {lang === 'es' ? 'Pago 100% seguro · Procesado por PayPal' : '100% secure payment · Processed by PayPal'}
                 </p>
               )}
             </motion.div>
@@ -1305,8 +1698,8 @@ const Book = () => {
   };
 
   const stepLabels: Record<string, string> = {
-    route: lang === 'es' ? 'Traslado' : 'Transfer',
-    date: lang === 'es' ? 'Fecha' : 'Date',
+    info: lang === 'es' ? 'Información' : 'Info',
+    details: lang === 'es' ? 'Detalles' : 'Details',
     extras: lang === 'es' ? 'Extras' : 'Extras',
     review: lang === 'es' ? 'Resumen' : 'Review',
   };
@@ -1317,6 +1710,16 @@ const Book = () => {
         title="Book Your Transfer"
         description="Book your private luxury airport transfer in Los Cabos in minutes. Choose your vehicle, route, date, and extras. Secure payment via PayPal."
         keywords="book cabo transfer, reserve los cabos transportation, cabo airport pickup, private driver reservation los cabos"
+        canonical="https://classviptransfers.com/book"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'Service',
+          name: 'Book a Private Airport Transfer — Los Cabos',
+          provider: { '@type': 'LocalBusiness', name: 'Class VIP Transfers', url: 'https://classviptransfers.com' },
+          areaServed: { '@type': 'Place', name: 'Los Cabos, Baja California Sur, Mexico' },
+          description: 'Book a private luxury SUV or Sprinter transfer from SJD Airport to your hotel in Los Cabos.',
+          offers: { '@type': 'Offer', priceCurrency: 'USD', price: '90', priceValidUntil: '2027-12-31' },
+        }}
       />
       <div className="container mx-auto max-w-5xl">
         {/* Header */}
@@ -1500,9 +1903,9 @@ const Book = () => {
               )}
 
               {/* Upsell prompt in summary */}
-              {current < 6 && data.activities.length === 0 && (
+              {current < 2 && data.activities.length === 0 && (
                 <div className="border-t border-border pt-4">
-                  <button onClick={() => setCurrent(6)} className="w-full text-left rounded-xl p-3 border border-gold/20 bg-gold/5 hover:bg-gold/10 transition-all group">
+                  <button onClick={() => setCurrent(2)} className="w-full text-left rounded-xl p-3 border border-gold/20 bg-gold/5 hover:bg-gold/10 transition-all group">
                     <div className="flex items-center gap-2">
                       <Sparkles size={14} className="text-gold" />
                       <span className="text-xs font-bold text-gold">
@@ -1584,8 +1987,8 @@ const Book = () => {
                 {activitiesPrice > 0 && <Row label={lang === 'es' ? 'Actividades' : 'Activities'} value={`$${activitiesPrice}`} gold />}
 
                 {/* Mobile upsell prompt */}
-                {data.activities.length === 0 && current < 6 && (
-                  <button onClick={() => { setCurrent(6); setMobileOpen(false); }} className="w-full text-left rounded-lg p-2.5 border border-gold/20 bg-gold/5 mt-2">
+                {data.activities.length === 0 && current < 2 && (
+                  <button onClick={() => { setCurrent(2); setMobileOpen(false); }} className="w-full text-left rounded-lg p-2.5 border border-gold/20 bg-gold/5 mt-2">
                     <div className="flex items-center gap-2">
                       <Sparkles size={12} className="text-gold" />
                       <span className="text-[11px] font-bold text-gold">🔥 {lang === 'es' ? '¡Agrega Crazy Combo por $125!' : 'Add Crazy Combo for $125!'}</span>
@@ -1626,6 +2029,16 @@ const Row = ({ label, value, gold, bold, className }: { label: string; value: st
       bold && 'text-lg',
       'ml-auto truncate max-w-[220px] text-right'
     )}>{value}</span>
+  </div>
+);
+
+const ReviewRow = ({ icon, label, value }: { icon: string; label: string; value: string }) => (
+  <div className="flex items-start gap-3">
+    <span className="text-base mt-0.5">{icon}</span>
+    <div className="min-w-0">
+      <p className="text-[11px] font-bold text-foreground/50 uppercase tracking-widest leading-none mb-1">{label}</p>
+      <p className="text-[15px] font-semibold text-foreground leading-snug">{value}</p>
+    </div>
   </div>
 );
 

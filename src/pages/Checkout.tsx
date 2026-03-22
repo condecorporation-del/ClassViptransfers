@@ -241,61 +241,43 @@ export default function Checkout() {
             </h1>
             <p className="text-muted-foreground">
               {lang === 'es'
-                ? 'Revisa los detalles y procede con el pago'
-                : 'Review details and proceed with payment'}
+                ? 'Confirma los detalles y procede con el pago seguro'
+                : 'Confirm details and proceed with secure payment'}
             </p>
           </div>
 
-          {/* Customer Information Form */}
+          {/* Customer Information Form — only shown if data was not captured in booking flow */}
           {showCustomerForm && (
             <div className="border border-gold/20 rounded-lg p-6 space-y-4 bg-muted/30">
               <h2 className="font-semibold text-lg text-gold flex items-center gap-2">
                 <User size={20} />
                 {lang === 'es' ? 'Información de Contacto' : 'Contact Information'}
               </h2>
-              <p className="text-sm text-muted-foreground">
-                {lang === 'es' 
-                  ? 'Por favor ingresa tu información para recibir la confirmación por email'
-                  : 'Please enter your information to receive email confirmation'}
-              </p>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     {lang === 'es' ? 'Nombre completo' : 'Full Name'} *
                   </label>
-                  <input
-                    type="text"
-                    value={customerInfo.name}
+                  <input type="text" value={customerInfo.name}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
                     className="w-full px-4 py-2 border border-gold/20 rounded-lg bg-background"
-                    placeholder={lang === 'es' ? 'Tu nombre' : 'Your name'}
-                  />
+                    placeholder={lang === 'es' ? 'Tu nombre' : 'Your name'} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1 flex items-center gap-2">
-                    <Mail size={14} />
-                    {lang === 'es' ? 'Email' : 'Email'} *
-                  </label>
-                  <input
-                    type="email"
-                    value={customerInfo.email}
+                  <label className="block text-sm font-medium mb-1">Email *</label>
+                  <input type="email" value={customerInfo.email}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
                     className="w-full px-4 py-2 border border-gold/20 rounded-lg bg-background"
-                    placeholder="tu@email.com"
-                  />
+                    placeholder="tu@email.com" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1 flex items-center gap-2">
-                    <Phone size={14} />
+                  <label className="block text-sm font-medium mb-1">
                     {lang === 'es' ? 'Teléfono' : 'Phone'} *
                   </label>
-                  <input
-                    type="tel"
-                    value={customerInfo.phone}
+                  <input type="tel" value={customerInfo.phone}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
                     className="w-full px-4 py-2 border border-gold/20 rounded-lg bg-background"
-                    placeholder="+1234567890"
-                  />
+                    placeholder="+1234567890" />
                 </div>
               </div>
             </div>

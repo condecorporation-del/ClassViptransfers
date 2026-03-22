@@ -6,6 +6,7 @@ export const translations: Record<string, { en: string; es: string }> = {
   'nav.contact': { en: 'Contact', es: 'Contacto' },
   'nav.giftCards': { en: 'Gift Cards', es: 'Gift Cards' },
   'nav.gallery': { en: 'Gallery', es: 'Galería' },
+  'nav.portfolio': { en: 'Portfolio', es: 'Portafolio' },
   'nav.bookNow': { en: 'Book Now', es: 'Reservar' },
 
   // Hero
@@ -152,8 +153,30 @@ export const translations: Record<string, { en: string; es: string }> = {
   'chat.shortcut.human': { en: 'Talk to a human', es: 'Hablar con humano' },
 
   // Activities page
-  'activities.hero.title': { en: 'Activities & Experiences', es: 'Actividades y Experiencias' },
-  'activities.hero.subtitle': { en: 'Discover the best of Los Cabos — add activities during your transfer booking and save', es: 'Descubre lo mejor de Los Cabos — agrega actividades durante tu reserva de traslado y ahorra' },
+  'activities.hero.eyebrow': { en: 'Los Cabos, México', es: 'Los Cabos, México' },
+  'activities.hero.title': { en: 'Adventures Built\nfor Memories', es: 'Aventuras Hechas\npara Recordar' },
+  'activities.hero.subtitle': { en: 'ATV, camels, horses, UTV & sky bikes — curated combos with round-trip transport included.', es: 'ATV, camellos, caballos, UTV y sky bikes — combos curados con transporte ida y vuelta incluido.' },
+  'activities.hero.cta': { en: 'Choose Your Combo', es: 'Elige Tu Combo' },
+  'activities.combos.eyebrow': { en: 'Best Value', es: 'Mejor Precio' },
+  'activities.combos.title': { en: 'Pick Your Combo', es: 'Elige Tu Combo' },
+  'activities.combos.subtitle': { en: 'All combos include round-trip transportation, bilingual guide, tequila tasting & kids club.', es: 'Todos los combos incluyen transporte ida y vuelta, guía bilingüe, degustación de tequila y kids club.' },
+  'activities.combo.2.title': { en: 'Combo', es: 'Combo' },
+  'activities.combo.2.desc': { en: 'Choose any 2 activities (1 hr each)', es: 'Elige cualquier 2 actividades (1 hr c/u)' },
+  'activities.combo.3.title': { en: 'Crazy Combo', es: 'Crazy Combo' },
+  'activities.combo.3.desc': { en: 'Choose any 3 activities (1 hr each)', es: 'Elige cualquier 3 actividades (1 hr c/u)' },
+  'activities.combo.badge': { en: 'Most Popular', es: 'Más Popular' },
+  'activities.combo.perPerson': { en: 'USD / person', es: 'USD / persona' },
+  'activities.combo.bookNow': { en: 'Book This Combo', es: 'Reservar Este Combo' },
+  'activities.what.title': { en: 'What\'s Available', es: 'Qué Está Disponible' },
+  'activities.what.subtitle': { en: 'Each activity lasts approximately 1 hour. Mix and match to build your perfect combo.', es: 'Cada actividad dura aproximadamente 1 hora. Combínalas para armar tu aventura perfecta.' },
+  'activities.includes.title': { en: 'Everything Included', es: 'Todo Incluido' },
+  'activities.policy.title': { en: 'Good to Know', es: 'Bueno Saber' },
+  'activities.policy.parkFee': { en: 'Park entry fee: $25 USD/person (paid on-site)', es: 'Entrada al parque: $25 USD/persona (pago en sitio)' },
+  'activities.policy.insurance': { en: 'Vehicle deposit: $500 USD hold required for ATV / UTV / Motorcycle', es: 'Depósito vehicular: retención de $500 USD para ATV / UTV / Moto' },
+  'activities.policy.camera': { en: 'Phones & cameras not allowed during group tours for safety (GoPro OK)', es: 'No se permiten celulares ni cámaras en tours grupales por seguridad (GoPro sí)' },
+  'activities.policy.kidsClub': { en: 'Kids Club FREE for children 6 months–12 yrs when parents book a tour', es: 'Kids Club GRATIS para niños de 6 meses–12 años cuando los padres reservan un tour' },
+  'activities.whatsapp.title': { en: 'Private Yachts & In-Villa Massages', es: 'Yates Privados y Masajes a Domicilio' },
+  'activities.whatsapp.desc': { en: 'Exclusive experiences booked directly via WhatsApp.', es: 'Experiencias exclusivas reservadas directamente por WhatsApp.' },
   'activities.allInclude.title': { en: 'All Activities Include', es: 'Todas las Actividades Incluyen' },
   'activities.include.transport': { en: 'Round-trip transportation', es: 'Transportación ida y vuelta' },
   'activities.include.safety': { en: 'Safety equipment', es: 'Equipo de seguridad' },
@@ -181,13 +204,13 @@ export const translations: Record<string, { en: string; es: string }> = {
   'activities.cta.subtitle': { en: 'Book your activities and make unforgettable memories in Los Cabos.', es: 'Reserva tus actividades y crea memorias inolvidables en Los Cabos.' },
 
   // Activity descriptions
-  'activity.camel.desc': { en: 'Ride through desert landscapes with stunning ocean views. A unique Baja experience.', es: 'Recorre paisajes desérticos con impresionantes vistas al mar. Una experiencia única en Baja.' },
+  'activity.camel.desc': { en: 'Glide across Migriño desert dunes on a camel with the Pacific Ocean as your backdrop. In season (Nov–Apr), spot grey whales from the shore.', es: 'Recorre las dunas del desierto de Migriño a lomos de un camello con el Océano Pacífico de fondo. En temporada (Nov–Abr) puedes ver ballenas grises.' },
   'activity.camelKids.desc': { en: 'Gentle camel ride designed for young adventurers. Safe and fun!', es: 'Paseo suave en camello diseñado para jóvenes aventureros. ¡Seguro y divertido!' },
-  'activity.horseback.desc': { en: 'Scenic horseback ride along the beach and desert trails.', es: 'Paseo a caballo por la playa y senderos del desierto.' },
-  'activity.atv.desc': { en: 'Adrenaline-pumping ATV ride through desert trails.', es: 'Paseo en ATV por senderos del desierto lleno de adrenalina.' },
-  'activity.doubleMoto.desc': { en: 'Share the adventure on a double motorcycle through Baja terrain.', es: 'Comparte la aventura en moto doble por el terreno de Baja.' },
-  'activity.rzr.desc': { en: 'Off-road RZR experience through Baja landscapes.', es: 'Experiencia off-road en RZR por paisajes de Baja.' },
-  'activity.skyBikes.desc': { en: 'Pedal through the sky with panoramic views of the coast.', es: 'Pedalea por el cielo con vistas panorámicas de la costa.' },
+  'activity.horseback.desc': { en: 'Ride along Migriño beach and desert trails with a bilingual guide. Watch the Pacific sunset from horseback — an unforgettable experience.', es: 'Cabalga por la playa de Migriño y senderos del desierto con guía bilingüe. Disfruta la puesta de sol del Pacífico a caballo — inolvidable.' },
+  'activity.atv.desc': { en: 'Race through desert trails and sandy dunes all the way to the Pacific coast. Mountain scenery, arroyos and ocean views in one epic ride.', es: 'Recorre senderos del desierto y dunas hasta la costa del Pacífico. Montañas, arroyos y vistas al mar en una sola aventura épica.' },
+  'activity.doubleMoto.desc': { en: 'Share the thrill on a double ATV through Baja\'s most iconic terrain — mountains, desert, and beach all in one route.', es: 'Comparte la adrenalina en un ATV doble por el terreno más icónico de Baja — montañas, desierto y playa en una sola ruta.' },
+  'activity.rzr.desc': { en: 'Command a high-performance Can-Am side-by-side through Baja\'s most rugged off-road terrain. Mountains, dunes, and Pacific views — the ultimate power experience.', es: 'Domina un Can-Am de alto rendimiento por el terreno off-road más salvaje de Baja. Montañas, dunas y vistas al Pacífico — la experiencia máxima de potencia.' },
+  'activity.skyBikes.desc': { en: 'Guinness World Record — the world\'s longest Sky Bike zipline. Pedal above Baja\'s landscape with panoramic mountain and Pacific Ocean views.', es: 'Récord Guinness — la tirolesa Sky Bike más larga del mundo. Pedalea sobre el paisaje de Baja con vistas panorámicas de montañas y el Océano Pacífico.' },
   'activity.fishing.desc': { en: "Deep-sea fishing in the world's aquarium. Private yacht experience.", es: 'Pesca de altura en el acuario del mundo. Experiencia en yate privado.' },
   'activity.sunset.desc': { en: 'Sail past El Arco with drinks and snacks included.', es: 'Navega frente a El Arco con bebidas y snacks incluidos.' },
 
@@ -385,6 +408,23 @@ export const translations: Record<string, { en: string; es: string }> = {
   'admin.sidebar.places': { en: 'Places', es: 'Lugares' },
   'admin.sidebar.extras': { en: 'Extras', es: 'Extras' },
   'admin.sidebar.bookings': { en: 'Bookings', es: 'Reservaciones' },
+
+  // Company Story (Home)
+  'home.story.eyebrow': { en: 'Our Story', es: 'Nuestra Historia' },
+  'home.story.title': { en: '30 Years Driving\nLos Cabos with Pride', es: '30 Años Manejando\nLos Cabos con Orgullo' },
+  'home.story.text': {
+    en: 'Class VIP Transfers was born over 30 years ago with Armando Álvarez Hernández behind the wheel — literally. He started as a one-man operation, driving every client himself with the care and professionalism that would become our hallmark. Word spread. VIP clients kept coming back. Today, Class VIP is a proud family business built on three decades of trust, exceptional service, and a deep love for Los Cabos hospitality.',
+    es: 'Class VIP Transfers nació hace más de 30 años con Armando Álvarez Hernández al volante — literalmente. Comenzó como un hombre máquina, siendo él mismo el chofer, brindando a cada cliente el cuidado y profesionalismo que se convertirían en nuestra marca. La voz se corrió. Los clientes VIP siguieron regresando. Hoy, Class VIP es un orgulloso negocio familiar construido sobre tres décadas de confianza, servicio excepcional y un profundo amor por la hospitalidad de Los Cabos.',
+  },
+  'home.story.quote': {
+    en: 'Every client who steps into our vehicle deserves to feel like a VIP — that has always been our standard.',
+    es: 'Cada cliente que sube a nuestro vehículo merece sentirse VIP — ese ha sido siempre nuestro estándar.',
+  },
+  'home.story.founderTitle': { en: 'Founder, Class VIP Transfers', es: 'Fundador, Class VIP Transfers' },
+  'home.story.stat1Label': { en: 'Years of service', es: 'Años de servicio' },
+  'home.story.stat2Label': { en: 'Family business', es: 'Negocio familiar' },
+  'home.story.stat3Label': { en: 'Client base', es: 'Base de clientes' },
+  'home.activities.exploreAll': { en: 'Explore All Activities', es: 'Ver Todas las Actividades' },
 
   // Footer
   'footer.brand': { en: 'Premium transportation and experiences in Los Cabos, México. 30+ years of excellence.', es: 'Transportación premium y experiencias en Los Cabos, México. 30+ años de excelencia.' },

@@ -30,31 +30,30 @@ const Navbar = () => {
   const isDarkHero = isHome && !scrolled;
 
   const navBg = isDarkHero
-    ? 'bg-gradient-to-b from-navy/70 to-transparent'
-    : 'bg-card/95 backdrop-blur-2xl border-b border-border/60 shadow-sm';
+    ? 'bg-gradient-to-b from-navy/75 to-transparent'
+    : 'bg-white/98 backdrop-blur-xl border-b border-border/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]';
 
   const textColor = isDarkHero ? 'text-off-white' : 'text-foreground';
-  const mutedText = isDarkHero ? 'text-off-white/70' : 'text-foreground/60';
+  const mutedText = isDarkHero ? 'text-off-white/75' : 'text-muted-foreground';
   const activeText = 'text-gold';
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 overflow-visible ${navBg}`}>
-      <div className="container mx-auto px-4 h-20 md:h-28 flex items-center justify-between overflow-visible">
+      <div className="container mx-auto px-4 h-16 md:h-20 flex items-center justify-between overflow-visible">
         <Link to="/" className="flex-shrink-0 overflow-visible flex items-center group">
           <img
             src="/logo.png"
             alt="Class VIP Transfers"
-            style={{ height: 'clamp(80px, 10vw, 144px)' }}
-            className="w-auto drop-shadow-[0_0_40px_rgba(212,175,55,0.9)] brightness-[1.15] transition-transform duration-300 group-hover:scale-[1.03]"
+            className="logo h-20 md:h-[120px] w-auto object-contain drop-shadow-[0_0_30px_rgba(212,175,55,0.6)] brightness-[1.1] transition-transform duration-300 group-hover:scale-[1.02]"
           />
         </Link>
 
-        <div className="hidden md:flex items-center gap-10">
+        <div className="hidden md:flex items-center gap-8">
           {links.map(link => (
             <Link
               key={link.to}
               to={link.to}
-              className={`text-[11px] font-semibold uppercase tracking-[0.2em] transition-colors gold-underline ${
-                isActive(link.to) ? activeText : `${mutedText} hover:${textColor}`
+              className={`text-xs font-semibold uppercase tracking-[0.18em] transition-colors gold-underline ${
+                isActive(link.to) ? activeText : `${mutedText} ${isDarkHero ? 'hover:text-off-white' : 'hover:text-foreground'}`
               }`}
             >
               {link.label}
@@ -86,7 +85,7 @@ const Navbar = () => {
 
           <Link
             to="/book"
-            className="hidden md:inline-flex gold-gradient text-secondary-foreground px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider hover:brightness-110 transition-all gold-glow items-center gap-2"
+            className="hidden md:inline-flex gold-gradient text-secondary-foreground px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:brightness-105 transition-all shadow-sm items-center gap-2"
           >
             {t('nav.bookNow')}
           </Link>
@@ -103,7 +102,7 @@ const Navbar = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-t border-border/30 bg-card/98 backdrop-blur-2xl overflow-hidden"
+            className="md:hidden border-t border-border/40 bg-white/98 backdrop-blur-xl overflow-hidden"
           >
             <div className="max-h-[calc(100vh-5rem)] overflow-y-auto px-6 py-5 flex flex-col gap-1">
               {links.map(link => (
@@ -123,7 +122,7 @@ const Navbar = () => {
               <Link
                 to="/book"
                 onClick={() => setOpen(false)}
-                className="gold-gradient text-secondary-foreground px-6 py-3.5 rounded-full text-sm font-bold text-center mt-3 gold-glow"
+                className="gold-gradient text-secondary-foreground px-6 py-3.5 rounded-lg text-sm font-bold text-center mt-3 shadow-sm"
               >
                 {t('nav.bookNow')}
               </Link>

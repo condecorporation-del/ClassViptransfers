@@ -103,16 +103,18 @@ const Navbar = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-t border-border/30 bg-card/98 backdrop-blur-2xl"
+            className="md:hidden border-t border-border/30 bg-card/98 backdrop-blur-2xl overflow-hidden"
           >
-            <div className="px-6 py-6 flex flex-col gap-4">
+            <div className="max-h-[calc(100vh-5rem)] overflow-y-auto px-6 py-5 flex flex-col gap-1">
               {links.map(link => (
                 <Link
                   key={link.to}
                   to={link.to}
                   onClick={() => setOpen(false)}
-                  className={`text-sm font-medium uppercase tracking-wider py-2 ${
-                    isActive(link.to) ? 'text-gold' : 'text-foreground/60'
+                  className={`flex items-center text-sm font-semibold uppercase tracking-wider px-3 py-3.5 rounded-xl transition-colors ${
+                    isActive(link.to)
+                      ? 'text-gold bg-gold/10'
+                      : 'text-foreground/70 hover:text-foreground hover:bg-muted/60'
                   }`}
                 >
                   {link.label}
@@ -121,7 +123,7 @@ const Navbar = () => {
               <Link
                 to="/book"
                 onClick={() => setOpen(false)}
-                className="gold-gradient text-secondary-foreground px-6 py-3 rounded-full text-sm font-bold text-center mt-2 gold-glow"
+                className="gold-gradient text-secondary-foreground px-6 py-3.5 rounded-full text-sm font-bold text-center mt-3 gold-glow"
               >
                 {t('nav.bookNow')}
               </Link>

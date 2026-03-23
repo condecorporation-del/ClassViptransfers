@@ -16,12 +16,21 @@ import { SEO } from '@/components/SEO';
 const steps = ['info', 'details', 'extras', 'review'] as const;
 
 // Mapeo área → zona de hoteles (areas y hotels usan nombres distintos en algunos casos)
+// Puerto Los Cabos / Port Los Cabos: mismo lugar, NO traducir. Ambas normalizan a misma zona.
 const AREA_TO_HOTEL_ZONE: Record<string, string> = {
   'Corredor Turistico': 'Tourist Corridor',
   'Tourist Corridor': 'Tourist Corridor',
   'East Cape': 'Pacific & East Cape',
   'Pacific & East Cape': 'Pacific & East Cape',
+  'Port Los Cabos': 'Port Los Cabos',
+  'Puerto Los Cabos': 'Port Los Cabos',
 };
+// Zonas que son equivalentes (ej. Puerto Los Cabos = Port Los Cabos, no traducir)
+const ZONE_MATCHES = (zoneA: string, zoneB: string) =>
+  zoneA === zoneB || (
+    (zoneA === 'Port Los Cabos' || zoneA === 'Puerto Los Cabos') &&
+    (zoneB === 'Port Los Cabos' || zoneB === 'Puerto Los Cabos')
+  );
 
 const upsellActivities = [
   { id: 'camel',      key: 'activity.camel',      emoji: '🐫', duration: '2h', price: 120, photo: 'https://cactustours.com.mx/wp-content/uploads/2024/03/Cactus-tours-camel-ride-miniatura.webp' },
@@ -528,7 +537,7 @@ const Book = () => {
         const zonesOrdered = areas.length > 0 ? areas.map((a) => a.name) : [...new Set(hotels.map((h) => h.zone))].sort();
         const zoneSelected = selectedZoneForHotel ?? data.selectedHotel?.zone ?? null;
         const hotelZone = zoneSelected ? (AREA_TO_HOTEL_ZONE[zoneSelected] || zoneSelected) : '';
-        const hotelsInZone = hotelZone ? hotels.filter((h) => h.zone === hotelZone) : [];
+        const hotelsInZone = hotelZone ? hotels.filter((h) => ZONE_MATCHES(h.zone, hotelZone)) : [];
         const searchLower = hotelSearch.toLowerCase();
         const filteredHotels = hotelsInZone.filter(
           (h) => h.name.toLowerCase().includes(searchLower)
@@ -668,7 +677,7 @@ const Book = () => {
                     <div className="grid grid-cols-2 gap-2">
                       {zonesOrdered.map((zone) => {
                         const hz = AREA_TO_HOTEL_ZONE[zone] || zone;
-                        const count = hotels.filter((h) => h.zone === hz).length;
+                        const count = hotels.filter((h) => ZONE_MATCHES(h.zone, hz)).length;
                         return (
                           <button key={zone} type="button"
                             onClick={() => setSelectedZoneForHotel(zone)}

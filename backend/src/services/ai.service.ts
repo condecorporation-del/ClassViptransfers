@@ -10,12 +10,14 @@ const bookingService = new BookingService();
 const pricingService = new PricingService();
 
 // Zone aliases for mapping user input to pricing zones
+// Puerto Los Cabos / Port Los Cabos: mismo lugar, NO traducir — ambos válidos
 const ZONE_ALIASES: Record<string, string> = {
   airport: 'SJD', aeropuerto: 'SJD', sjd: 'SJD', 'los cabos airport': 'SJD',
   cabo: 'Cabo San Lucas', 'cabo san lucas': 'Cabo San Lucas',
   'san jose': 'San Jose', 'san josé': 'San Jose', 'san jose del cabo': 'San Jose',
   corridor: 'Corridor', corredor: 'Corridor', 'tourist corridor': 'Corridor',
   'hotel zone': 'Cabo San Lucas', marina: 'Cabo San Lucas',
+  'puerto los cabos': 'Port Los Cabos', 'port los cabos': 'Port Los Cabos',
 };
 
 function resolveZone(text: string | null | undefined, validZones: string[]): string | null {
@@ -26,6 +28,9 @@ function resolveZone(text: string | null | undefined, validZones: string[]): str
   for (const z of validZones) if (z.toLowerCase() === lower) return z;
   for (const [k, v] of Object.entries(ZONE_ALIASES))
     if (lower.includes(k) && validZones.includes(v)) return v;
+  // Puerto Los Cabos / Port Los Cabos: aceptar cualquiera si está en validZones
+  if (lower.includes('puerto los cabos') || lower.includes('port los cabos'))
+    return validZones.find(z => z === 'Port Los Cabos' || z === 'Puerto Los Cabos') ?? null;
   return validZones.includes(text) ? text : null;
 }
 
@@ -235,6 +240,8 @@ IMPORTANTE - BREVEDAD Y IDIOMA:
 - Respuestas CORTAS (1–3 oraciones). Sin párrafos largos. Un paso a la vez.
 - Responde SIEMPRE en el mismo idioma que el mensaje del usuario: si escribe en español → respuesta en español; si escribe en inglés → respuesta en inglés.
 
+NOMBRES DE ZONA — NO TRADUCIR: Puerto Los Cabos, Port Los Cabos, San Jose del Cabo, Cabo San Lucas, Tourist Corridor, etc. son nombres propios. Usa siempre "Puerto Los Cabos" (nunca traduzcas a "Port Los Cabos" ni al revés).
+
 CONOCIMIENTO (usa siempre):
 ${knowledge}
 
@@ -289,6 +296,8 @@ Responde SOLO con este JSON:
   },
   "reply": "Tu respuesta BREVE (1–3 oraciones) en español: proactivo, valor, siguiente paso. Sin párrafos largos."
 }` : `You are an INTELLIGENT SALESPERSON for Class VIP Transfers in Los Cabos. Your role: close bookings with value, never be passive. ALWAYS USE THE REAL PRICES BELOW when quoting and closing sales.
+
+ZONE NAMES — DO NOT TRANSLATE: Puerto Los Cabos, Port Los Cabos, San Jose del Cabo, Cabo San Lucas, Tourist Corridor, etc. are proper place names. Always use "Puerto Los Cabos" (never translate to "Port Los Cabos" or vice versa).
 
 STRICT RESTRICTION: You ONLY answer questions related to Class VIP Transfers services, prices, activities, the Los Cabos destination, and company policies. If the user asks about anything completely unrelated (weather in other countries, politics, recipes, other companies, etc.), respond ONLY with: "I can only help you with Class VIP Transfers services and Los Cabos. How can I assist you?" — Don't explain further, just offer relevant help.
 

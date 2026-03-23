@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { cloudinaryAssets } from '@/lib/cloudinary-assets';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Phone, Mail, MapPin, ArrowRight } from 'lucide-react';
+import { Phone, Mail, MapPin, ArrowRight, Facebook, Instagram, Star } from 'lucide-react';
 
 const Footer = () => {
   const { t, lang } = useLanguage();
@@ -55,6 +55,32 @@ const Footer = () => {
         </div>
 
         <div className="section-divider mt-12 mb-6" />
+        <div className="flex flex-col items-center gap-4 mb-6">
+          <a
+            href="https://www.tripadvisor.com.mx/Attraction_Review-g152515-d10486878-Reviews-Class_VIP_Transfers-Cabo_San_Lucas_Los_Cabos_Baja_California.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="See Class VIP Transfers on TripAdvisor"
+          >
+            <img
+              src="https://www.tripadvisor.com/img/cdsi/img2/branding/v2/Tripadvisor_lockup_horizontal_secondary_registered-11900-2.svg"
+              alt="See us on TripAdvisor"
+              className="h-8 w-auto opacity-70 hover:opacity-100 transition-opacity"
+              loading="lazy"
+            />
+          </a>
+          <div className="flex items-center gap-5">
+            <a href="https://facebook.com/classviptransfers" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-off-white/40 hover:text-off-white transition-colors">
+              <Facebook className="h-6 w-6" />
+            </a>
+            <a href="https://instagram.com/classviptransfers" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-off-white/40 hover:text-off-white transition-colors">
+              <Instagram className="h-6 w-6" />
+            </a>
+            <a href="https://www.tripadvisor.com.mx/Attraction_Review-g152515-d10486878-Reviews-Class_VIP_Transfers-Cabo_San_Lucas_Los_Cabos_Baja_California.html" target="_blank" rel="noopener noreferrer" aria-label="TripAdvisor" className="text-off-white/40 hover:text-gold transition-colors">
+              <Star className="h-6 w-6" />
+            </a>
+          </div>
+        </div>
         <div className="text-center text-off-white/40 text-xs flex flex-col items-center justify-center gap-2">
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <span>© {new Date().getFullYear()} Class VIP Transfers. {t('footer.rights')}</span>

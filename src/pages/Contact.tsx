@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { SEO } from '@/components/SEO';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Phone, Mail, MapPin, Clock, MessageCircle } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, MessageCircle, Facebook, Instagram, Star } from 'lucide-react';
 import { useState } from 'react';
 
 
@@ -177,6 +177,22 @@ const Contact = () => {
                   <p className="text-muted-foreground text-sm">{t('contact.hours')}</p>
                 </div>
               </div>
+            </div>
+
+            <div className="flex items-center gap-1 pt-1">
+              <a href="https://facebook.com/classviptransfers" target="_blank" rel="noopener noreferrer" aria-label="Facebook"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                <Facebook size={18} />
+              </a>
+              <a href="https://instagram.com/classviptransfers" target="_blank" rel="noopener noreferrer" aria-label="Instagram"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                <Instagram size={18} />
+              </a>
+              <a href="https://www.tripadvisor.com.mx/Attraction_Review-g152515-d10486878-Reviews-Class_VIP_Transfers-Cabo_San_Lucas_Los_Cabos_Baja_California.html"
+                target="_blank" rel="noopener noreferrer" aria-label="TripAdvisor"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-gold hover:bg-muted transition-colors">
+                <Star size={18} />
+              </a>
             </div>
 
             <a href="https://wa.me/5216241222174" target="_blank" rel="noopener noreferrer"

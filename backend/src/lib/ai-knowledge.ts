@@ -106,7 +106,8 @@ export function getKnowledgeForPrompt(locale: 'en' | 'es'): string {
   const benefits = isEs ? k.benefitsEs : k.benefits;
 
   const p = k.pricing;
-  const priceTable = `San José $${p.transportSjdToSanJose}, Port Los Cabos $${p.transportSjdToPortLosCabos}, Corridor $${p.transportSjdToCorridor}, Cabo San Lucas $${p.transportSjdToCabo}, Pacific $${p.transportSjdToPacific}, East Cape $${p.transportSjdToEastCape}`;
+  // Puerto Los Cabos is a proper name - never translate (same in EN/ES)
+  const priceTable = `San José $${p.transportSjdToSanJose}, Puerto Los Cabos $${p.transportSjdToPortLosCabos}, Corridor $${p.transportSjdToCorridor}, Cabo San Lucas $${p.transportSjdToCabo}, Pacific $${p.transportSjdToPacific}, East Cape $${p.transportSjdToEastCape}`;
 
   return isEs
     ? `CATÁLOGO VEHÍCULOS: ${vehicles}

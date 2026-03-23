@@ -21,10 +21,8 @@ export default defineConfig(({ mode }) => {
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
-        changeOrigin: true,
+        changeOrigin: false, // Preserve Host: localhost:5173 so cookie scope matches frontend
         secure: false,
-        // Forward cookies so admin login works (cookie set by backend reaches browser for 5173)
-        cookieDomainRewrite: '',
       },
     },
   },

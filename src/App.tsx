@@ -19,6 +19,7 @@ import Confirmation from "./pages/Confirmation";
 import Checkout from "./pages/Checkout";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import CheckoutCancel from "./pages/CheckoutCancel";
+import HotelPage from "./pages/HotelPage";
 import NotFound from "./pages/NotFound";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/transfers" element={<Transfers />} />
               <Route path="/activities" element={<Activities />} />
               <Route path="/activities/:slug" element={<ActivityDetail />} />
+              <Route path="/hotels/:slug" element={<HotelPage />} />
               <Route path="/book" element={<Book />} />
               <Route path="/book-activities" element={<BookActivities />} />
               <Route path="/contact" element={<Contact />} />

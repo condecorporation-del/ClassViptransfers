@@ -20,6 +20,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:test": "tsx scripts/test-connection.ts",
     "verify:env": "tsx scripts/verificar-env.ts",
+    "generate-sitemap": "tsx scripts/generate-sitemap.ts",
     "setup:supabase": "tsx scripts/auto-setup-supabase.ts",
     "test": "vitest run",
     "test:watch": "vitest"

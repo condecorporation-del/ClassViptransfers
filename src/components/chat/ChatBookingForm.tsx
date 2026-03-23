@@ -48,12 +48,20 @@ interface ChatBookingFormData {
 const SJD_AIRPORT = 'SJD International Airport';
 
 // Mapeo área → zona de hoteles (areas y hotels usan nombres distintos en algunos casos)
+// Puerto Los Cabos / Port Los Cabos: mismo lugar, NO traducir
 const AREA_TO_HOTEL_ZONE: Record<string, string> = {
+  'Port Los Cabos': 'Port Los Cabos',
+  'Puerto Los Cabos': 'Port Los Cabos',
   'Corredor Turistico': 'Tourist Corridor',
   'Tourist Corridor': 'Tourist Corridor',
   'East Cape': 'Pacific & East Cape',
   'Pacific & East Cape': 'Pacific & East Cape',
 };
+const ZONE_MATCHES = (zoneA: string, zoneB: string) =>
+  zoneA === zoneB || (
+    (zoneA === 'Port Los Cabos' || zoneA === 'Puerto Los Cabos') &&
+    (zoneB === 'Port Los Cabos' || zoneB === 'Puerto Los Cabos')
+  );
 
 interface ChatBookingFormProps {
   lang: 'en' | 'es';
@@ -140,7 +148,8 @@ export function ChatBookingForm({ lang, onClose }: ChatBookingFormProps) {
         (a) =>
           a.name === hotel.zone ||
           a.name.toLowerCase() === hotel.zone.toLowerCase() ||
-          (AREA_TO_HOTEL_ZONE[a.name] || a.name) === hotel.zone
+          (AREA_TO_HOTEL_ZONE[a.name] || a.name) === hotel.zone ||
+          ZONE_MATCHES(a.name, hotel.zone)
       );
       return {
         ...d,
@@ -152,7 +161,7 @@ export function ChatBookingForm({ lang, onClose }: ChatBookingFormProps) {
 
   const selectedArea = areas.find((a) => a.name === data.zone);
   const hotelZone = data.zone ? (AREA_TO_HOTEL_ZONE[data.zone] || data.zone) : '';
-  const hotelsInZone = hotelZone ? hotels.filter((h) => h.zone === hotelZone) : [];
+  const hotelsInZone = hotelZone ? hotels.filter((h) => ZONE_MATCHES(h.zone, hotelZone)) : [];
   const searchLower = hotelSearch.toLowerCase();
   const filteredHotels = hotelsInZone.filter((h) => h.name.toLowerCase().includes(searchLower));
 

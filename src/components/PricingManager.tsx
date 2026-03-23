@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Loader2, Save, X } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Edit, Trash2, Loader2, Save, X, Search } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { getApiBaseUrl } from '@/lib/api';
 
@@ -65,6 +65,7 @@ export function PricingManager() {
   const [showExtraForm, setShowExtraForm] = useState(false);
   const [showAreaForm, setShowAreaForm] = useState(false);
   const [showHotelForm, setShowHotelForm] = useState(false);
+  const [addToZone, setAddToZone] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -544,90 +545,212 @@ export function PricingManager() {
 
       {/* Hotels Tab */}
       {activeTab === 'hotels' && (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-            <h2 className="text-xl font-semibold">Hotels ({hotels.filter(h => h.isActive).length} active)</h2>
-            <button
-              onClick={() => { setEditingHotel(null); setShowHotelForm(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-gold text-navy rounded-lg hover:bg-gold/90 transition-colors"
-            >
-              <Plus size={16} />
-              Add Hotel
-            </button>
-          </div>
+        <HotelsTab
+          hotels={hotels}
+          areas={areas}
+          showHotelForm={showHotelForm}
+          editingHotel={editingHotel}
+          addToZone={addToZone}
+          zones={[...new Set([...areas.filter(a => a.isActive).map(a => a.name), ...hotels.map(h => h.zone)])].sort()}
+          onShowForm={(hotel, zone) => {
+            setEditingHotel(hotel);
+            setAddToZone(zone ?? null);
+            setShowHotelForm(true);
+          }}
+          onHideForm={() => {
+            setShowHotelForm(false);
+            setEditingHotel(null);
+            setAddToZone(null);
+          }}
+          onSave={handleSaveHotel}
+          onDeactivate={handleDeactivateHotel}
+        />
+      )}
+    </div>
+  );
+}
 
-          {showHotelForm && (
-            <HotelForm
-              hotel={editingHotel}
-              zones={[...new Set(hotels.map(h => h.zone))].sort()}
-              onSave={handleSaveHotel}
-              onCancel={() => { setShowHotelForm(false); setEditingHotel(null); }}
+function HotelsTab({
+  hotels,
+  areas,
+  showHotelForm,
+  editingHotel,
+  addToZone,
+  zones,
+  onShowForm,
+  onHideForm,
+  onSave,
+  onDeactivate,
+}: {
+  hotels: Hotel[];
+  areas: Area[];
+  showHotelForm: boolean;
+  editingHotel: Hotel | null;
+  addToZone: string | null;
+  zones: string[];
+  onShowForm: (hotel: Hotel | null, zone?: string) => void;
+  onHideForm: () => void;
+  onSave: (data: { name?: string; zone?: string; isActive?: boolean }) => void;
+  onDeactivate: (id: string) => void;
+}) {
+  const [search, setSearch] = useState('');
+  const activeHotels = hotels.filter(h => h.isActive);
+
+  const filteredHotels = useMemo(() => {
+    if (!search.trim()) return hotels;
+    const q = search.trim().toLowerCase();
+    return hotels.filter(h => h.name.toLowerCase().includes(q) || h.zone.toLowerCase().includes(q));
+  }, [hotels, search]);
+
+  const hotelsByZone = useMemo(() => {
+    const byZone: Record<string, Hotel[]> = {};
+    for (const h of filteredHotels) {
+      if (!byZone[h.zone]) byZone[h.zone] = [];
+      byZone[h.zone].push(h);
+    }
+    for (const z of zones) {
+      if (!byZone[z]) byZone[z] = [];
+    }
+    return byZone;
+  }, [filteredHotels, zones]);
+
+  const zoneOrder = zones;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h2 className="text-xl font-semibold">Hotels ({activeHotels.length} active)</h2>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar hotel o zona..."
+              className="pl-9 pr-4 py-2 border rounded-lg w-full sm:w-64 text-sm"
             />
-          )}
+          </div>
+          <button
+            onClick={() => onShowForm(null)}
+            className="flex items-center gap-2 px-4 py-2 bg-gold text-navy rounded-lg hover:bg-gold/90 transition-colors whitespace-nowrap"
+          >
+            <Plus size={16} />
+            Add Hotel
+          </button>
+        </div>
+      </div>
 
-          <div className="border rounded-lg overflow-x-auto table-scroll-x">
-            <table className="w-full min-w-[400px]">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Zone</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {hotels.map((hotel) => (
-                  <tr key={hotel.id} className={!hotel.isActive ? 'opacity-50' : ''}>
-                    <td className="px-4 py-3 text-sm font-medium">{hotel.name}</td>
-                    <td className="px-4 py-3 text-sm">{hotel.zone}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${hotel.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                        {hotel.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex gap-2">
-                        <button onClick={() => { setEditingHotel(hotel); setShowHotelForm(true); }} className="text-gold hover:text-gold/80">
-                          <Edit size={16} />
+      {showHotelForm && (
+        <HotelForm
+          hotel={editingHotel}
+          initialZone={addToZone ?? undefined}
+          zones={zones}
+          onSave={onSave}
+          onCancel={onHideForm}
+        />
+      )}
+
+      <div className="grid gap-6">
+        {zoneOrder.map((zone) => {
+          const zoneHotels = (hotelsByZone[zone] || []).sort((a, b) => a.name.localeCompare(b.name));
+          const area = areas.find(a => a.name === zone);
+          const priceInfo = area
+            ? `$${(area.oneWayPriceCents / 100).toFixed(0)} / $${(area.roundTripPriceCents / 100).toFixed(0)}`
+            : '—';
+
+          return (
+            <div key={zone} className="border rounded-xl overflow-hidden bg-card">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 bg-muted/40 border-b">
+                <div>
+                  <h3 className="font-semibold text-foreground">{zone}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    One-way / Round-trip: {priceInfo}
+                  </p>
+                </div>
+                <button
+                  onClick={() => onShowForm(null, zone)}
+                  className="flex items-center gap-2 px-3 py-2 bg-gold/90 text-navy rounded-lg hover:bg-gold text-sm font-medium"
+                >
+                  <Plus size={14} />
+                  Add
+                </button>
+              </div>
+              <div className="divide-y divide-border min-h-[60px]">
+                {zoneHotels.length === 0 ? (
+                  <div className="px-5 py-6 text-center text-sm text-muted-foreground">
+                    No hotels. Click &quot;Add&quot; to add one.
+                  </div>
+                ) : (
+                  zoneHotels.map((hotel) => (
+                    <div
+                      key={hotel.id}
+                      className={`flex items-center justify-between px-5 py-3 ${!hotel.isActive ? 'opacity-50' : ''}`}
+                    >
+                      <span className="font-medium text-sm">{hotel.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-xs ${hotel.isActive ? 'bg-green-500/20 text-green-600' : 'bg-red-500/20 text-red-600'}`}>
+                          {hotel.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                        <button
+                          onClick={() => onShowForm(hotel)}
+                          className="p-1.5 rounded hover:bg-muted text-gold"
+                          title="Edit / Move to another zone"
+                        >
+                          <Edit size={14} />
                         </button>
                         {hotel.isActive && (
-                          <button onClick={() => handleDeactivateHotel(hotel.id)} className="text-red-500 hover:text-red-600">
-                            <Trash2 size={16} />
+                          <button
+                            onClick={() => onDeactivate(hotel.id)}
+                            className="p-1.5 rounded hover:bg-red-500/10 text-red-500"
+                            title="Deactivate"
+                          >
+                            <Trash2 size={14} />
                           </button>
                         )}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 function HotelForm({
   hotel,
+  initialZone,
   zones,
   onSave,
   onCancel,
 }: {
   hotel: Hotel | null;
+  initialZone?: string;
   zones: string[];
   onSave: (data: { name?: string; zone?: string; isActive?: boolean }) => void;
   onCancel: () => void;
 }) {
   const [formData, setFormData] = useState({
     name: hotel?.name || '',
-    zone: hotel?.zone || '',
+    zone: hotel?.zone || initialZone || '',
     isActive: hotel?.isActive ?? true,
   });
 
+  useEffect(() => {
+    setFormData({
+      name: hotel?.name || '',
+      zone: hotel?.zone || initialZone || '',
+      isActive: hotel?.isActive ?? true,
+    });
+  }, [hotel?.id, hotel?.name, hotel?.zone, hotel?.isActive, initialZone]);
+
   return (
     <div className="border rounded-lg p-4 space-y-4 bg-muted/20">
-      <h3 className="font-semibold">{hotel ? 'Edit Hotel' : 'Add Hotel'}</h3>
+      <h3 className="font-semibold">{hotel ? 'Edit Hotel / Move to Zone' : 'Add Hotel'}</h3>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Name</label>
@@ -636,22 +759,21 @@ function HotelForm({
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg"
-            placeholder="Hotel name"
+            placeholder="Hotel, Airbnb, propiedad..."
           />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Zone</label>
-          <input
-            type="text"
-            list="zone-options"
+          <select
             value={formData.zone}
             onChange={(e) => setFormData({ ...formData, zone: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
-            placeholder="e.g. Tourist Corridor"
-          />
-          <datalist id="zone-options">
-            {zones.map((z) => <option key={z} value={z} />)}
-          </datalist>
+            className="w-full px-3 py-2 border rounded-lg bg-background"
+          >
+            <option value="">— Select zone —</option>
+            {[...new Set([...zones, formData.zone].filter(Boolean))].sort().map((z) => (
+              <option key={z} value={z}>{z}</option>
+            ))}
+          </select>
         </div>
         <div className="flex items-end gap-2">
           <label className="flex items-center gap-2 text-sm">
@@ -671,7 +793,7 @@ function HotelForm({
           className="flex items-center gap-2 px-4 py-2 bg-gold text-navy rounded-lg hover:bg-gold/90 disabled:opacity-50"
         >
           <Save size={16} />
-          Save
+          {hotel ? 'Save' : 'Add'}
         </button>
         <button onClick={onCancel} className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-muted">
           <X size={16} />

@@ -11,6 +11,7 @@ import paypalRoutes from './routes/paypal.routes';
 import aiRoutes from './routes/ai.routes';
 import authRoutes from './routes/auth.routes';
 import pricingRoutes from './routes/pricing.routes';
+import hotelsRoutes from './routes/hotels.routes';
 import previewRoutes from './routes/preview.routes';
 import { EmailService } from './services/email.service';
 
@@ -86,6 +87,7 @@ app.use('/api/admin', adminRoutes); // Admin routes (protected by auth middlewar
 app.use('/api/paypal', paypalLimiter, paypalRoutes);
 app.use('/api/ai', aiLimiter, aiRoutes);
 app.use('/api/pricing', pricingRoutes);
+app.use('/api/hotels', hotelsRoutes);
 if (process.env.NODE_ENV !== 'production') {
   app.use('/api/preview', previewRoutes);
 }

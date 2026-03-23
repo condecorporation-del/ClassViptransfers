@@ -1,0 +1,726 @@
+[
+  {
+    "nombre": "Cabo Azul Resort",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Casa Costa Azul",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Casa Natalia",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Club La Costa",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Drift San José",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "El Encanto In and Suites Hotel Boutique",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "El Zalate Rentals",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "GR Solaris Lighthouse Los Cabos",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Holiday Inn",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Hotel and Suites Las Palmas",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Hyatt Place Los Cabos",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Hyatt Ziva Los Cabos",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Krystal",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "La Jolla",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Las Mañanitas",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Las Olas",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Marisol",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Mikonos",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Mira Vista",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Park Royal Hotels and Resorts",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Posada Real Los Cabos",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Punto Nima",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Royal Decameron Los Cabos",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Royal Solaris",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Sampaguita Villas Baja",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "San Jose del Cabo Downtown/Centro",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Santa María del Cabo",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Six two four urban beach",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "The Club at Presidente Los Cabos",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "The Grand Mayan Los Cabos",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Tropicana Inn Hotel and Restaurant",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Viceroy Los Cabos",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Vidanta Los Cabos",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Worldmark Coral Baja",
+    "zona": "San José del Cabo"
+  },
+  {
+    "nombre": "Baja Point",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Cabo Del Sol Residential Area",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Cabo Surf Hotel and Spa",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Casa Florencia",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Chileno Bay Resort and Residences",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Club Regina Los Cabos",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Dreams Los Cabos Suites Golf Resort and Spa",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "El Dorado Residential Area",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Four Seasons Resort and Residences Cabo San Lucas at Cabo Del Sol",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Garza Blanca Resort and Spa Los Cabos",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Grand Fiesta Americana Los Cabos",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Grand Velas Boutique",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Grand Velas Los Cabos",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Hacienda Del Mar",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Hilton Los Cabos",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "La Marina Inn",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Las Ventanas al Paraíso",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Le Blanc Spa Resort Los Cabos",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Live Aqua Private Residences Los Cabos",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Mar Del Cabo by VELAS RESORTS",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Maravilla Los Cabos",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Marbella Suites en la Playa",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Marella Cabo",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Marquis Los Cabos Resort and Spa",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Montage Los Cabos",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "One and Only Palmilla",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Paradisus Los Cabos",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Park Hyatt Los Cabos at Cabo del Sol",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Querencia Residential Area",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Riu Palace Cabo San Lucas",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Sheraton Grand Los Cabos",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Soho House Los Cabos",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Solaz, a Luxury Collection Resort, Los Cabos",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "The Westin Resort and Spa",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Villa del Mar Palmilla",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Zoetry Casa Del Mar Los Cabos",
+    "zona": "Corredor"
+  },
+  {
+    "nombre": "Bahia Hotel and Beach Club",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Blarney Castle Inn",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Breathless Cabo San Lucas Resort and Spa",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Cabo Inn",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Cabo San Lucas Downtown/Centro",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Cabo Vista Hotel",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Cachet Beach Hotel Los Cabos",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Casa Dorada Los Cabos, Resort and Spa",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Casa Pablito",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "City Express Plus by Marriott Cabo San Lucas",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "City Express Suites by Marriott Cabo San Lucas",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Club Cascadas de Baja",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Comfort Inn and Suites Los Cabos",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Corazón Cabo Resort and Spa",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "El Ameyal",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Esperanza an Auberge Resort",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Estancia Real Los Cabos",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Fairfield Inn Los Cabos",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Grand Solmar Lands End Resort and Spa",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Hacienda Beach Club and Residences",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Hacienda Encantada Resort and Residences",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Holiday Inn Express Cabo San Lucas",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Kadun Hotel Boutique",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Los Cabos Golf Resort",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Los Milagros",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Los Patios",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Mar De Cortez",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Marbella Suites en la Playa",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Marina Cabo Plaza",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Marina Fiesta Resort and Spa",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Marina Sol Resort",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Marina View Villas",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Mayan Monkey Los Cabos",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Me Cabo",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Medano Hotel and Suites",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Misiones Del Cabo",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Montecristo Residential Area",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Pedregal Residential Area",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Playa Grande Resort",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Portofino Condos in Pedregal",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Pueblo Bonito Blanco Los Cabos Beach Resort",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Pueblo Bonito Pacifica Golf and Spa Resort",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Pueblo Bonito Rosé Resort and Spa",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Pueblo Bonito Sunset Beach Golf and Spa Resort",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Punta Ballena Area",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Quinta Del Sol",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Riu Palace Baja California",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Riu Santa Fe",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "San Angel Suites",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Sandos Finisterra Los Cabos",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Santa Fé Cabo San Lucas",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Seven Crown Express and Suites",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Siesta Suites Boutique",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Sirena Del Mar",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Solmar Resort",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Sunrock Hotel and Suites Los Cabos",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Terrasol",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Tesoro Los Cabos",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "The Bungalows Hotel",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "The Cape Hotel",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "The Residences at Hacienda Encantada",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "The Ridge at Playa Grande Luxury Villas",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Villa del Arco Beach Resort and Spa Cabo San Lucas",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Villa Del Palmar Beach Resort and Spa Cabo San Lucas",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Villa Finca Tezal",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Villa La Estancia Cabo San Lucas",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Villa Serena",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Vista Azul",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Vista Encantada Spa Resort and Residences",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Waldorf Astoria Los Cabos Pedregal",
+    "zona": "Cabo San Lucas"
+  },
+  {
+    "nombre": "Costa Palmas",
+    "zona": "East Cape"
+  },
+  {
+    "nombre": "Four Seasons Resort Los Cabos at Costa Palmas",
+    "zona": "East Cape"
+  },
+  {
+    "nombre": "Los Barriles",
+    "zona": "East Cape"
+  },
+  {
+    "nombre": "Palmas del Cortez",
+    "zona": "East Cape"
+  },
+  {
+    "nombre": "Rancho Buena Vista",
+    "zona": "East Cape"
+  },
+  {
+    "nombre": "Rancho Leonero",
+    "zona": "East Cape"
+  },
+  {
+    "nombre": "Vidanta East Cape",
+    "zona": "East Cape"
+  },
+  {
+    "nombre": "Acre Resort",
+    "zona": "Puerto Los Cabos"
+  },
+  {
+    "nombre": "Hampton Inn and Suites by Hilton Los Cabos",
+    "zona": "Puerto Los Cabos"
+  },
+  {
+    "nombre": "Hotel El Ganzo",
+    "zona": "Puerto Los Cabos"
+  },
+  {
+    "nombre": "JW Marriott Los Cabos Beach Resort and Spa",
+    "zona": "Puerto Los Cabos"
+  },
+  {
+    "nombre": "Puerta Del Sol",
+    "zona": "Puerto Los Cabos"
+  },
+  {
+    "nombre": "Puerto Los Cabos Residential Area",
+    "zona": "Puerto Los Cabos"
+  },
+  {
+    "nombre": "Secrets Puerto Los Cabos Golf and Spa Resort",
+    "zona": "Puerto Los Cabos"
+  },
+  {
+    "nombre": "Zadun, a Ritz Carlton Reserve",
+    "zona": "Puerto Los Cabos"
+  },
+  {
+    "nombre": "Guaycura Boutique Hotel Beach Club and Spa",
+    "zona": "Todos Santos"
+  },
+  {
+    "nombre": "Hotel California",
+    "zona": "Todos Santos"
+  },
+  {
+    "nombre": "Kimpton Mas Olas Resort and Spa",
+    "zona": "Todos Santos"
+  },
+  {
+    "nombre": "Pescadero",
+    "zona": "Todos Santos"
+  },
+  {
+    "nombre": "Punta Pescadero Paradise",
+    "zona": "Todos Santos"
+  },
+  {
+    "nombre": "Todos Santos",
+    "zona": "Todos Santos"
+  },
+  {
+    "nombre": "Araiza Palmira Hotel",
+    "zona": "La Paz"
+  },
+  {
+    "nombre": "City Express by Marriott La Paz",
+    "zona": "La Paz"
+  },
+  {
+    "nombre": "Club El Moro",
+    "zona": "La Paz"
+  },
+  {
+    "nombre": "Club Hotel Cantamar",
+    "zona": "La Paz"
+  },
+  {
+    "nombre": "Grand Plaza La Paz",
+    "zona": "La Paz"
+  },
+  {
+    "nombre": "Hotel Indigo La Paz Puerta Cortés",
+    "zona": "La Paz"
+  },
+  {
+    "nombre": "Hotel Perla",
+    "zona": "La Paz"
+  },
+  {
+    "nombre": "Hyatt Place La Paz",
+    "zona": "La Paz"
+  },
+  {
+    "nombre": "La Concha Beach Resort",
+    "zona": "La Paz"
+  },
+  {
+    "nombre": "La Paz",
+    "zona": "La Paz"
+  },
+  {
+    "nombre": "Marina Fiesta Resort and Spa",
+    "zona": "La Paz"
+  },
+  {
+    "nombre": "One La Paz",
+    "zona": "La Paz"
+  },
+  {
+    "nombre": "Posada de las Flores La Paz",
+    "zona": "La Paz"
+  },
+  {
+    "nombre": "Seven Crown La Paz - Centro",
+    "zona": "La Paz"
+  },
+  {
+    "nombre": "Seven Crown La Paz - Malecon",
+    "zona": "La Paz"
+  },
+  {
+    "nombre": "Diamante Cabo San Lucas Resort",
+    "zona": "Diamante"
+  },
+  {
+    "nombre": "Grand Solmar Pacific Dunes Golf and Spa",
+    "zona": "Diamante"
+  },
+  {
+    "nombre": "Hard Rock Los Cabos",
+    "zona": "Diamante"
+  },
+  {
+    "nombre": "Nobu Los Cabos",
+    "zona": "Diamante"
+  },
+  {
+    "nombre": "Residencial Diamante",
+    "zona": "Diamante"
+  }
+]

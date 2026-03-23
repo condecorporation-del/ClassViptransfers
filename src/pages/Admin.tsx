@@ -48,22 +48,25 @@ function DashboardTab() {
   ];
 
   return (
-    <div className="space-y-6">
-      <h1 className="font-display text-3xl font-bold">Dashboard</h1>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">Overview of today&apos;s activity</p>
+      </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((c) => (
-          <div key={c.label} className="glass-card rounded-xl p-5 border border-border">
-            <div className={`mb-2 ${c.color}`}>{c.icon}</div>
-            <p className="text-2xl font-bold">{c.value}</p>
-            <p className="text-sm text-muted-foreground mt-1">{c.label}</p>
+          <div key={c.label} className="group relative rounded-2xl border border-border bg-card p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:border-gold/20">
+            <div className={`inline-flex p-2.5 rounded-xl bg-muted/60 ${c.color} mb-4`}>{c.icon}</div>
+            <p className="text-2xl font-bold tracking-tight">{c.value}</p>
+            <p className="text-sm font-medium text-muted-foreground mt-1">{c.label}</p>
           </div>
         ))}
       </div>
 
-      <div className="glass-card rounded-xl p-5 border border-border">
-        <p className="text-sm text-muted-foreground flex items-center gap-2">
-          <CheckCircle2 size={16} className="text-emerald-500" />
-          Stats are calculated for today's date. Go to <strong className="text-foreground">Bookings</strong> to filter by week, month, or search by customer.
+      <div className="rounded-xl border border-emerald-200/60 bg-emerald-50/80 px-5 py-4">
+        <p className="text-sm text-emerald-800/90 flex items-center gap-2">
+          <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+          Stats are calculated for today&apos;s date. Go to <strong className="text-emerald-900 font-semibold">Bookings</strong> to filter by week, month, or search by customer.
         </p>
       </div>
     </div>
@@ -139,6 +142,7 @@ function QuickBookingTab() {
     notes: '',
   });
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('paypal');
+  const [showDepartureInfo, setShowDepartureInfo] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string; code?: string; detail?: string } | null>(null);
 
@@ -149,7 +153,11 @@ function QuickBookingTab() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.customerName || !form.customerEmail || !form.customerPhone || !form.arrivalDate || !form.hotelName) {
+    const name = form.customerName?.trim();
+    const email = form.customerEmail?.trim();
+    const phone = form.customerPhone?.trim();
+    const hotel = form.hotelName?.trim();
+    if (!name || !email || !phone || !form.arrivalDate || !hotel) {
       setResult({ success: false, message: 'Required: customer info, arrival date, and hotel / destination.' });
       return;
     }
@@ -162,30 +170,30 @@ function QuickBookingTab() {
       const body = {
         type: 'TRANSPORTATION',
         customer: {
-          name: form.customerName,
-          email: form.customerEmail,
-          phone: form.customerPhone,
+          name: name!,
+          email: email!,
+          phone: phone!,
           language: 'en',
         },
         bookingDate: new Date(form.arrivalDate + 'T12:00:00').toISOString(),
         bookingTime: form.arrivalTime || undefined,
-        flightNumber: form.arrivalFlight || undefined,
-        arrivalTime: form.arrivalTime || undefined,
-        departureFlightNumber: form.departureFlight || undefined,
-        departureTime: form.departureTime || undefined,
+        flightNumber: form.arrivalFlight?.trim() || undefined,
+        arrivalTime: form.arrivalTime?.trim() || undefined,
+        departureFlightNumber: form.departureFlight?.trim() || undefined,
+        departureTime: form.departureTime?.trim() || undefined,
         pickupLocation: 'SJD Airport',
-        dropoffLocation: form.hotelName,
+        dropoffLocation: hotel!,
         passengers: parseInt(form.passengers) || 1,
         serviceType: 'private',
         tripType: form.tripType,
-        notes: form.notes || undefined,
+        notes: form.notes?.trim() || undefined,
         status: paymentMethod === 'cash' ? 'CONFIRMED' : 'OFFLINE_HOLD',
         sendConfirmation: paymentMethod === 'cash',
         sendPaymentLink: paymentMethod === 'paypal',
         items: [
           {
             type: 'TRANSPORTATION',
-            name: `Private Transfer — ${form.hotelName} (${tripLabel})`,
+            name: `Private Transfer — ${hotel} (${tripLabel})`,
             quantity: 1,
             unitPrice: priceNum,
           },
@@ -213,6 +221,7 @@ function QuickBookingTab() {
           arrivalDate: '', arrivalTime: '', arrivalFlight: '',
           departureDate: '', departureTime: '', departureFlight: '', notes: '',
         });
+        setShowDepartureInfo(false);
         setPaymentMethod('paypal');
       } else {
         setResult({ success: false, message: json.error || 'Failed to create booking.' });
@@ -312,8 +321,8 @@ function QuickBookingTab() {
           </div>
         </FormSection>
 
-        {/* ── Departure (always show for round trip; also show if any departure field filled) ── */}
-        {(form.tripType === 'roundtrip' || form.departureTime || form.departureFlight) && (
+        {/* ── Departure (always show for round trip; also show if explicitly expanded or any departure field filled) ── */}
+        {(form.tripType === 'roundtrip' || showDepartureInfo || form.departureTime || form.departureFlight) && (
           <FormSection title="Departure" icon="🛫">
             <div className="grid sm:grid-cols-3 gap-3">
               {form.tripType === 'roundtrip' && (
@@ -338,10 +347,10 @@ function QuickBookingTab() {
         )}
 
         {/* Show departure section trigger for one-way if not yet visible */}
-        {form.tripType === 'oneway' && !form.departureTime && !form.departureFlight && (
+        {form.tripType === 'oneway' && !showDepartureInfo && !form.departureTime && !form.departureFlight && (
           <button
             type="button"
-            onClick={() => setForm(p => ({ ...p, departureFlight: ' ' }))}
+            onClick={() => setShowDepartureInfo(true)}
             className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
           >
             + Add departure flight info
@@ -403,7 +412,7 @@ function QuickBookingTab() {
         {/* Submit */}
         <button
           type="submit"
-          disabled={submitting || !form.customerName || !form.customerEmail || !form.hotelName || !form.arrivalDate}
+          disabled={submitting || !form.customerName?.trim() || !form.customerEmail?.trim() || !form.customerPhone?.trim() || !form.hotelName?.trim() || !form.arrivalDate}
           className="w-full py-3.5 rounded-xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ background: 'linear-gradient(135deg, #D4AF37, #F5C842)', color: '#0A1628' }}
         >
@@ -467,9 +476,9 @@ const Admin = () => {
   ];
 
   return (
-    <div className="min-h-screen pt-28 flex flex-col md:flex-row">
+    <div className="min-h-screen pt-20 flex flex-col md:flex-row">
       {/* Mobile: horizontal scrollable tabs */}
-      <div className="md:hidden overflow-x-auto overscroll-x-contain touch-pan-x border-b border-border bg-card sticky top-20 z-30">
+      <div className="md:hidden overflow-x-auto overscroll-x-contain touch-pan-x border-b border-border bg-card sticky top-16 z-30">
         <div className="flex gap-1 p-2 min-w-min">
           {sidebarItems.map((item) => (
             <button
@@ -487,42 +496,36 @@ const Admin = () => {
       </div>
 
       {/* Sidebar - desktop */}
-      <aside className="w-60 navy-gradient text-off-white p-4 hidden md:block flex-shrink-0">
+      <aside className="w-64 hidden md:flex md:flex-col flex-shrink-0 bg-[hsl(var(--navy))] border-r border-white/5">
         {email && (
-          <div className="mb-6 pb-4 border-b border-white/10">
-            <p className="text-xs text-off-white/60 mb-1">Logged in as</p>
-            <p className="text-sm font-semibold text-gold">{email}</p>
+          <div className="p-5 border-b border-white/10">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-off-white/50 mb-1.5">Logged in as</p>
+            <p className="text-sm font-semibold text-off-white truncate pr-2">{email}</p>
             <button
               onClick={logout}
-              className="mt-2 text-xs text-off-white/60 hover:text-off-white flex items-center gap-1 transition-colors"
+              className="mt-3 flex items-center gap-2 text-xs text-off-white/60 hover:text-off-white transition-colors"
             >
-              <LogOut size={12} /> Logout
+              <LogOut size={14} strokeWidth={2} /> Logout
             </button>
           </div>
         )}
-        <div className="space-y-1">
-          {sidebarItems.map(item => (
+        <nav className="flex-1 p-4 space-y-0.5 overflow-y-auto">
+          {sidebarItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors ${
+              className={`w-full flex items-center gap-3 pl-5 pr-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                 activeTab === item.id
-                  ? 'bg-white/10 text-gold font-semibold'
-                  : 'text-off-white/60 hover:text-off-white hover:bg-white/5'
+                  ? 'bg-white/12 text-gold shadow-lg shadow-black/10'
+                  : 'text-off-white/70 hover:text-off-white hover:bg-white/6'
               }`}
+              style={activeTab === item.id ? { borderLeft: '3px solid hsl(42 78% 50%)' } : undefined}
             >
-              {item.icon} {item.label}
+              <span className={activeTab === item.id ? 'text-gold' : 'text-off-white/60'}>{item.icon}</span>
+              {item.label}
             </button>
           ))}
-        </div>
-        <a
-          href={`${getApiBaseUrl() || window.location.origin}/api/preview/booking-email`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-off-white/60 hover:text-off-white hover:bg-white/5 transition-colors"
-        >
-          <Mail size={18} /> Preview email
-        </a>
+        </nav>
       </aside>
 
       {/* Main content */}

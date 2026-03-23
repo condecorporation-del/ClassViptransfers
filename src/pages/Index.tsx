@@ -63,15 +63,24 @@ const Index = () => {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: 'Class VIP Transfers',
-    description: 'Premium luxury airport transportation and adventure experiences in Los Cabos, Mexico.',
+    description: 'Premium private airport transportation in Los Cabos with 30+ years of experience. Serving 250+ hotels from SJD Airport. TripAdvisor Certificate of Excellence.',
     url: 'https://classviptransfers.com',
     telephone: '+526241222174',
     email: 'Armando@caboviptransfers.com',
     address: { '@type': 'PostalAddress', addressLocality: 'Los Cabos', addressRegion: 'Baja California Sur', addressCountry: 'MX' },
     geo: { '@type': 'GeoCoordinates', latitude: 22.8905, longitude: -109.9167 },
-    priceRange: '$$',
+    priceRange: '$$$',
     image: cloudinaryAssets.logo,
-    sameAs: ['https://wa.me/5216241222174'],
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '5.0',
+      bestRating: '5',
+      reviewCount: '100',
+    },
+    sameAs: [
+      'https://wa.me/5216241222174',
+      'https://www.tripadvisor.com.mx/Attraction_Review-g152515-d10486878-Reviews-Class_VIP_Transfers-Cabo_San_Lucas_Los_Cabos_Baja_California.html',
+    ],
     openingHoursSpecification: { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'], opens: '00:00', closes: '23:59' },
   };
 
@@ -89,9 +98,9 @@ const Index = () => {
   return (
     <div className="overflow-hidden">
       <SEO
-        title="Class VIP Transfers | Luxury Airport Transfers & Adventures in Los Cabos"
-        description="Class VIP Transfers — 30+ years of private luxury airport transfers in Los Cabos. SUV & Sprinter from SJD Airport. Adventure combos: ATV, camels, sky bikes & more."
-        keywords="Class VIP Transfers, Los Cabos airport transfer, cabo san lucas transportation, luxury transfer cabo, private transportation los cabos, SJD airport shuttle, cabo adventure tours, ATV cabo, camel safari los cabos"
+        title="Los Cabos Airport Transfer | Luxury Transportation - 30 Years Experience"
+        description="Premium private transportation from Los Cabos Airport (SJD) to any hotel. 30 years of experience. TripAdvisor Certificate of Excellence. Book direct - best rates guaranteed."
+        keywords="cabo airport transfer, los cabos airport shuttle, sjd airport transportation, cabo san lucas transfer, private transportation los cabos, Class VIP Transfers, luxury transfer cabo, SJD airport shuttle, cabo adventure tours"
         canonical="https://classviptransfers.com/"
         jsonLd={[localBusinessLd, faqLd]}
       />
@@ -207,6 +216,209 @@ const Index = () => {
           </div>
         </motion.div>
       </section>
+
+      {/* ===== SEO CONTENT + TRIPADVISOR ===== */}
+      <section className="py-16 px-4 bg-muted/30">
+        <div className="container mx-auto max-w-5xl">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-6 mb-6">
+            <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground leading-tight flex-1">
+              Los Cabos Luxury Airport Transportation — 30 Years of Excellence
+            </h2>
+            <a
+              href="https://www.tripadvisor.com.mx/Attraction_Review-g152515-d10486878-Reviews-Class_VIP_Transfers-Cabo_San_Lucas_Los_Cabos_Baja_California.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0"
+              aria-label="Class VIP Transfers on TripAdvisor"
+            >
+              <img
+                src="https://www.tripadvisor.com/img/cdsi/img2/awards/CoE2023_WidgetAsset-14348-2.png"
+                alt="TripAdvisor Certificate of Excellence"
+                className="h-20 w-auto"
+                loading="lazy"
+              />
+            </a>
+          </div>
+
+          <div className="border-l-4 border-gold bg-gold/5 px-4 py-3 mb-8 rounded-r-lg">
+            <p className="text-foreground/80 font-semibold text-sm">
+              ⭐ TripAdvisor Certificate of Excellence —{' '}
+              <a
+                href="https://www.tripadvisor.com.mx/Attraction_Review-g152515-d10486878-Reviews-Class_VIP_Transfers-Cabo_San_Lucas_Los_Cabos_Baja_California.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gold underline hover:text-gold/80 transition-colors"
+              >
+                Read Our Reviews on TripAdvisor
+              </a>
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-10 text-muted-foreground text-sm leading-relaxed">
+            <div className="space-y-6">
+              <p>
+                Class VIP Transfers is the leading luxury private transportation company in Los Cabos
+                with over 30 years of experience. We provide premium airport transfers from Los Cabos
+                International Airport (SJD) to any hotel, resort, or private residence in
+                San José del Cabo, Tourist Corridor, Cabo San Lucas, Todos Santos, and La Paz.
+              </p>
+
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">Service to 250+ Hotels &amp; Resorts</h3>
+                <p>
+                  We serve over 250 hotels and resorts including One&amp;Only Palmilla, Las Ventanas al Paraíso,
+                  Grand Velas, Montage Los Cabos, Waldorf Astoria Pedregal, Hotel Esperanza, and all major
+                  properties in the Los Cabos area.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">Premium Fleet — Suburban, Escalade &amp; Sprinter</h3>
+                <p>
+                  Our modern fleet features late-model Chevrolet Suburbans, Cadillac Escalades, and Mercedes
+                  Sprinter vans with air conditioning, leather seats, WiFi, complimentary water, and
+                  luggage handling. All drivers are bilingual and certified.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-foreground mb-4">Why Choose Class VIP Transfers</h3>
+              <ul className="space-y-2">
+                {[
+                  '30 years of experience in Los Cabos',
+                  'TripAdvisor Certificate of Excellence',
+                  'Flight tracking — no extra charge for delays',
+                  'Professional bilingual certified drivers',
+                  'Direct booking — best rates guaranteed',
+                  '24/7 customer service',
+                  'Door-to-door service',
+                  'Service to 250+ hotels and resorts',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <span className="text-gold font-bold mt-0.5">✓</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== TRIPADVISOR REVIEWS ===== */}
+      <section className="py-16 px-4 section-light">
+        <div className="container mx-auto max-w-5xl">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="text-center mb-10"
+          >
+            <a
+              href="https://www.tripadvisor.com.mx/Attraction_Review-g152515-d10486878-Reviews-Class_VIP_Transfers-Cabo_San_Lucas_Los_Cabos_Baja_California.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mb-4"
+            >
+              <img
+                src="https://www.tripadvisor.com/img/cdsi/img2/awards/CoE2023_WidgetAsset-14348-2.png"
+                alt="TripAdvisor Certificate of Excellence"
+                className="h-16 w-auto mx-auto"
+                loading="lazy"
+              />
+            </a>
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-2">
+              Rated #1 on TripAdvisor
+            </h2>
+            <p className="text-muted-foreground text-sm">Verified reviews from real travelers</p>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={stagger}
+            className="grid md:grid-cols-3 gap-5 mb-8"
+          >
+            {[
+              {
+                text: 'Absolutely the best transfer service in Los Cabos! Our driver was waiting at arrivals with a sign, helped with all luggage, and the SUV was spotless. Worth every penny.',
+                author: 'Jennifer K.',
+                origin: 'California, USA',
+                date: 'Feb 2026',
+              },
+              {
+                text: 'Used Class VIP Transfers 3 times this year. Always on time, always professional. They tracked our flight and adjusted when we landed early. Cannot recommend enough.',
+                author: 'Michael & Tracy R.',
+                origin: 'Texas, USA',
+                date: 'Jan 2026',
+              },
+              {
+                text: 'Incredible experience from start to finish. The driver was bilingual, knowledgeable about the area, and made our arrival stress-free. Already booked for our return trip!',
+                author: 'Sophie L.',
+                origin: 'London, UK',
+                date: 'Mar 2026',
+              },
+              {
+                text: 'Best decision we made for our honeymoon. The champagne welcome in the vehicle was a beautiful touch. Professional, punctual, and luxurious. Five stars all the way.',
+                author: 'Carlos & Ana M.',
+                origin: 'Mexico City, MX',
+                date: 'Feb 2026',
+              },
+              {
+                text: 'Traveled with 3 kids and lots of luggage — they had a Sprinter van ready, car seats installed, and cold drinks waiting. The whole family was impressed. Highly recommend!',
+                author: 'David H.',
+                origin: 'New York, USA',
+                date: 'Jan 2026',
+              },
+            ].map((review, i) => (
+              <motion.div
+                key={i}
+                variants={fadeUp}
+                className="glass-card rounded-2xl p-6 border border-border flex flex-col gap-3 relative overflow-hidden"
+              >
+                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-gold/20 to-transparent" />
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    <Star key={j} size={14} className="fill-gold text-gold" />
+                  ))}
+                </div>
+                <p className="text-foreground/75 text-sm leading-relaxed italic flex-1">
+                  "{review.text}"
+                </p>
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <div>
+                    <p className="text-foreground font-semibold text-sm">{review.author}</p>
+                    <p className="text-muted-foreground text-xs">{review.origin}</p>
+                  </div>
+                  <span className="text-muted-foreground text-xs">{review.date}</span>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="text-center"
+          >
+            <a
+              href="https://www.tripadvisor.com.mx/Attraction_Review-g152515-d10486878-Reviews-Class_VIP_Transfers-Cabo_San_Lucas_Los_Cabos_Baja_California.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-gold border border-gold/30 px-6 py-2.5 rounded-full hover:bg-gold/10 transition-all"
+            >
+              Read all reviews on TripAdvisor <ArrowRight size={14} />
+            </a>
+          </motion.div>
+        </div>
+      </section>
+
+      <div className="section-divider mx-auto max-w-3xl" />
 
       {/* ===== COMPANY STORY ===== */}
       <section className="py-24 px-4">

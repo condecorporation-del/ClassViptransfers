@@ -190,7 +190,7 @@ QUIERO DEJAR LISTO A RESEND PARA QUE YA FUNCIONE CON LAS CREDENCIALES DEL CLIENT
 2. Agrega el dominio: `classviptransfers.com`
 3. Resend te dará registros DNS (TXT, CNAME) → se los mandas al admin del dominio
 4. Una vez verificado, cambia en Render:
-   - `EMAIL_FROM=reservations@classviptransfers.com`
+   - `   
    - `COMPANY_BOOKINGS_EMAIL=armando@classviptransfers.com`
 5. Prueba enviando email de test desde admin
 

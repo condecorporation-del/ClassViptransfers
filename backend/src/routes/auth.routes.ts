@@ -8,14 +8,15 @@ import rateLimit from 'express-rate-limit';
 const router = Router();
 const authController = new AuthController();
 
-// Rate limit login endpoint
+// Rate limit login endpoint (disabled in dev so you can test freely)
 const loginRateLimit = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per window
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 5 : 9999,
   message: 'Too many login attempts, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true,
+  skip: () => process.env.NODE_ENV !== 'production',
 });
 
 // POST /api/admin/auth/login

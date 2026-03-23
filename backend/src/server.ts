@@ -30,33 +30,32 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware - CORS with multiple allowed origins
-const allowedOrigins = [
-  process.env.CORS_ORIGIN || 'http://localhost:8080',
+const envOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+  : [];
+
+const defaultDevOrigins = [
   'http://localhost:5173',
   'http://localhost:8080',
   'http://localhost:8081',
   'http://localhost:8899',
-  // Production domains
-  'https://classviptransfers.com',
-  'https://www.classviptransfers.com',
-  // Netlify previews
-  'https://classvip.netlify.app',
 ];
+
+const allowedOrigins = [...new Set([...envOrigins, ...defaultDevOrigins])];
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow server-to-server (no origin) and all listed origins
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    // Allow any Netlify preview deploy
     if (origin.endsWith('.netlify.app')) return callback(null, true);
-    // In development allow everything
     if (process.env.NODE_ENV !== 'production') return callback(null, true);
 
     console.warn(`[CORS] Blocked origin: ${origin}`);
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(cookieParser());
 app.use(express.json());
@@ -65,7 +64,14 @@ app.use(express.urlencoded({ extended: true }));
 // Rate limiters
 const bookingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'Too many booking requests, please try again later.' }, standardHeaders: true, legacyHeaders: false });
 const paypalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many payment requests, please try again later.' }, standardHeaders: true, legacyHeaders: false });
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { error: 'Too many login attempts, please try again later.' }, standardHeaders: true, legacyHeaders: false });
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 10 : 9999,
+  message: { error: 'Too many login attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV !== 'production',
+});
 const aiLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, message: { error: 'Too many requests, please slow down.' }, standardHeaders: true, legacyHeaders: false });
 
 // Health check

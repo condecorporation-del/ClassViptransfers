@@ -39,6 +39,8 @@ interface Area {
   name: string;
   oneWayPriceCents: number;
   roundTripPriceCents: number;
+  sprinterOneWayPriceCents: number;
+  sprinterRoundTripPriceCents: number;
   isActive: boolean;
 }
 
@@ -181,7 +183,7 @@ export function PricingManager() {
     }
   };
 
-  const handleSaveArea = async (area: { name?: string; oneWayPriceCents?: number; roundTripPriceCents?: number }) => {
+  const handleSaveArea = async (area: { name?: string; oneWayPriceCents?: number; roundTripPriceCents?: number; sprinterOneWayPriceCents?: number; sprinterRoundTripPriceCents?: number }) => {
     try {
       const url = editingArea
         ? getAdminUrl(`/api/admin/pricing/areas/${editingArea.id}`)
@@ -342,8 +344,10 @@ export function PricingManager() {
               <thead className="bg-muted">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">One-way (USD)</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Round-trip (USD)</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">1–5 pax One-way</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">1–5 pax Round-trip</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">6+ pax One-way</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">6+ pax Round-trip</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
                 </tr>
@@ -354,6 +358,8 @@ export function PricingManager() {
                     <td className="px-4 py-3 text-sm font-medium">{area.name}</td>
                     <td className="px-4 py-3 text-sm">${(area.oneWayPriceCents / 100).toFixed(0)}</td>
                     <td className="px-4 py-3 text-sm">${(area.roundTripPriceCents / 100).toFixed(0)}</td>
+                    <td className="px-4 py-3 text-sm">{area.sprinterOneWayPriceCents > 0 ? `$${(area.sprinterOneWayPriceCents / 100).toFixed(0)}` : '—'}</td>
+                    <td className="px-4 py-3 text-sm">{area.sprinterRoundTripPriceCents > 0 ? `$${(area.sprinterRoundTripPriceCents / 100).toFixed(0)}` : '—'}</td>
                     <td className="px-4 py-3 text-sm">{area.isActive ? 'Active' : 'Inactive'}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
@@ -810,13 +816,15 @@ function AreaForm({
   onCancel,
 }: {
   area: Area | null;
-  onSave: (area: { name?: string; oneWayPriceCents?: number; roundTripPriceCents?: number }) => void;
+  onSave: (area: { name?: string; oneWayPriceCents?: number; roundTripPriceCents?: number; sprinterOneWayPriceCents?: number; sprinterRoundTripPriceCents?: number }) => void;
   onCancel: () => void;
 }) {
   const [formData, setFormData] = useState({
     name: area?.name || '',
     oneWayPrice: area ? area.oneWayPriceCents / 100 : 0,
     roundTripPrice: area ? area.roundTripPriceCents / 100 : 0,
+    sprinterOneWayPrice: area ? area.sprinterOneWayPriceCents / 100 : 0,
+    sprinterRoundTripPrice: area ? area.sprinterRoundTripPriceCents / 100 : 0,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -825,14 +833,16 @@ function AreaForm({
       name: formData.name.trim(),
       oneWayPriceCents: Math.round(formData.oneWayPrice * 100),
       roundTripPriceCents: Math.round(formData.roundTripPrice * 100),
+      sprinterOneWayPriceCents: Math.round(formData.sprinterOneWayPrice * 100),
+      sprinterRoundTripPriceCents: Math.round(formData.sprinterRoundTripPrice * 100),
     });
   };
 
   return (
     <div className="border rounded-lg p-6 bg-card space-y-4">
       <h3 className="text-lg font-semibold">{area ? 'Edit Area' : 'New Area'}</h3>
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="sm:col-span-2">
           <label className="block text-sm font-medium mb-1">Name</label>
           <input
             type="text"
@@ -844,7 +854,7 @@ function AreaForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">One-way price (USD)</label>
+          <label className="block text-sm font-medium mb-1">1–5 pax · One-way (USD)</label>
           <input
             type="number"
             min={0}
@@ -856,7 +866,7 @@ function AreaForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Round-trip price (USD)</label>
+          <label className="block text-sm font-medium mb-1">1–5 pax · Round-trip (USD)</label>
           <input
             type="number"
             min={0}
@@ -865,6 +875,30 @@ function AreaForm({
             value={formData.roundTripPrice || ''}
             onChange={(e) => setFormData({ ...formData, roundTripPrice: Number(e.target.value) || 0 })}
             className="w-full px-3 py-2 border rounded-lg"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">6+ pax · One-way (USD)</label>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={formData.sprinterOneWayPrice || ''}
+            onChange={(e) => setFormData({ ...formData, sprinterOneWayPrice: Number(e.target.value) || 0 })}
+            className="w-full px-3 py-2 border rounded-lg"
+            placeholder="0 = same as 1–5 pax"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">6+ pax · Round-trip (USD)</label>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={formData.sprinterRoundTripPrice || ''}
+            onChange={(e) => setFormData({ ...formData, sprinterRoundTripPrice: Number(e.target.value) || 0 })}
+            className="w-full px-3 py-2 border rounded-lg"
+            placeholder="0 = same as 1–5 pax"
           />
         </div>
         <div className="sm:col-span-3 flex gap-2">

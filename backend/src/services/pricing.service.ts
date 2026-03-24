@@ -421,12 +421,18 @@ export class PricingService {
   /**
    * Get transport price in cents for an area and trip type (for booking calculation)
    */
-  async getTransportPriceByArea(areaId: string, tripType: 'oneway' | 'roundtrip') {
+  async getTransportPriceByArea(areaId: string, tripType: 'oneway' | 'roundtrip', passengers: number = 1) {
     const area = await prisma.area.findFirst({
       where: { id: areaId, isActive: true },
     });
     if (!area) throw new Error('Area not found or inactive');
-    const totalCents = tripType === 'roundtrip' ? area.roundTripPriceCents : area.oneWayPriceCents;
+    const isSprinter = passengers >= 6;
+    let totalCents: number;
+    if (isSprinter && area.sprinterOneWayPriceCents > 0) {
+      totalCents = tripType === 'roundtrip' ? area.sprinterRoundTripPriceCents : area.sprinterOneWayPriceCents;
+    } else {
+      totalCents = tripType === 'roundtrip' ? area.roundTripPriceCents : area.oneWayPriceCents;
+    }
     return { totalCents, area };
   }
 
@@ -434,6 +440,8 @@ export class PricingService {
     name: string;
     oneWayPriceCents: number;
     roundTripPriceCents: number;
+    sprinterOneWayPriceCents?: number;
+    sprinterRoundTripPriceCents?: number;
     isActive?: boolean;
   }) {
     return await prisma.area.create({
@@ -441,6 +449,8 @@ export class PricingService {
         name: data.name,
         oneWayPriceCents: data.oneWayPriceCents,
         roundTripPriceCents: data.roundTripPriceCents,
+        sprinterOneWayPriceCents: data.sprinterOneWayPriceCents ?? 0,
+        sprinterRoundTripPriceCents: data.sprinterRoundTripPriceCents ?? 0,
         isActive: data.isActive ?? true,
       },
     });
@@ -452,6 +462,8 @@ export class PricingService {
       name?: string;
       oneWayPriceCents?: number;
       roundTripPriceCents?: number;
+      sprinterOneWayPriceCents?: number;
+      sprinterRoundTripPriceCents?: number;
       isActive?: boolean;
     }
   ) {

@@ -101,11 +101,11 @@ export default function HotelPage() {
     },
     {
       q: `What vehicles are available for transfers to ${hotel.name}?`,
-      a: `We offer Chevrolet Suburban or Cadillac Escalade for 1–5 passengers, and Mercedes Sprinter Van for groups of 6–14. All vehicles include AC, leather seats, WiFi, and cold beverages.`,
+      a: `We operate luxury Mercedes Sprinter Vans, comfortable for groups of 1–14 passengers. All vehicles include AC, leather seats, WiFi, and cold beverages.`,
     },
     {
       q: `Is the transfer price to ${hotel.name} per person or per vehicle?`,
-      a: `The price is per vehicle, not per person. A one-way transfer to ${hotel.name} starts from $${price} USD for up to 5 passengers in an SUV, making it very affordable for families and groups.`,
+      a: `The price is per vehicle, not per person. A one-way transfer to ${hotel.name} starts from $${price} USD, making it very affordable for families and groups.`,
     },
   ];
 
@@ -228,8 +228,8 @@ export default function HotelPage() {
             </p>
             <p className="text-muted-foreground leading-relaxed">
               Your professional bilingual driver will meet you at arrivals holding a sign with your name,
-              assist with all luggage, and take you directly to {hotel.name} in a late-model luxury SUV
-              or Sprinter van — fully air-conditioned with cold beverages waiting.
+              assist with all luggage, and take you directly to {hotel.name} in a late-model luxury
+              Mercedes Sprinter van — fully air-conditioned with cold beverages waiting.
             </p>
           </motion.div>
 
@@ -240,8 +240,7 @@ export default function HotelPage() {
             <p className="text-muted-foreground leading-relaxed mb-6">{zoneDesc}</p>
             <div className="flex flex-col gap-3">
               {[
-                { icon: <Car size={16} />, label: 'Suburban / Escalade', detail: '1–5 passengers' },
-                { icon: <Car size={16} />, label: 'Sprinter Van', detail: '6–14 passengers' },
+                { icon: <Car size={16} />, label: 'Mercedes Sprinter Van', detail: '1–14 passengers' },
               ].map((v) => (
                 <div key={v.label} className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 border border-border">
                   <span className="text-gold">{v.icon}</span>

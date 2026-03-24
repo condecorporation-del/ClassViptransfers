@@ -526,7 +526,7 @@ export class PricingController {
    */
   async createArea(req: Request, res: Response) {
     try {
-      const { name, oneWayPriceCents, roundTripPriceCents, isActive } = req.body;
+      const { name, oneWayPriceCents, roundTripPriceCents, sprinterOneWayPriceCents, sprinterRoundTripPriceCents, isActive } = req.body;
       if (!name || oneWayPriceCents == null || roundTripPriceCents == null) {
         return res.status(400).json({
           success: false,
@@ -537,6 +537,8 @@ export class PricingController {
         name: String(name).trim(),
         oneWayPriceCents: parseInt(oneWayPriceCents, 10),
         roundTripPriceCents: parseInt(roundTripPriceCents, 10),
+        sprinterOneWayPriceCents: sprinterOneWayPriceCents != null ? parseInt(sprinterOneWayPriceCents, 10) : 0,
+        sprinterRoundTripPriceCents: sprinterRoundTripPriceCents != null ? parseInt(sprinterRoundTripPriceCents, 10) : 0,
         isActive: isActive !== false,
       });
       await createAuditLog({
@@ -562,11 +564,13 @@ export class PricingController {
     try {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
       if (!id) return res.status(400).json({ success: false, error: 'Area ID is required' });
-      const { name, oneWayPriceCents, roundTripPriceCents, isActive } = req.body;
+      const { name, oneWayPriceCents, roundTripPriceCents, sprinterOneWayPriceCents, sprinterRoundTripPriceCents, isActive } = req.body;
       const area = await pricingService.updateArea(id, {
         ...(name != null && { name: String(name).trim() }),
         ...(oneWayPriceCents != null && { oneWayPriceCents: parseInt(oneWayPriceCents, 10) }),
         ...(roundTripPriceCents != null && { roundTripPriceCents: parseInt(roundTripPriceCents, 10) }),
+        ...(sprinterOneWayPriceCents != null && { sprinterOneWayPriceCents: parseInt(sprinterOneWayPriceCents, 10) }),
+        ...(sprinterRoundTripPriceCents != null && { sprinterRoundTripPriceCents: parseInt(sprinterRoundTripPriceCents, 10) }),
         ...(typeof isActive === 'boolean' && { isActive }),
       });
       await createAuditLog({

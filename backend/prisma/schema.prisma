@@ -444,13 +444,15 @@ model Hotel {
 }
 
 model Area {
-  id                 String   @id @default(cuid())
-  name               String   @unique
-  oneWayPriceCents   Int      // Price in cents for one-way
-  roundTripPriceCents Int     // Price in cents for round-trip
-  isActive           Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                          String   @id @default(cuid())
+  name                        String   @unique
+  oneWayPriceCents            Int      // Price in cents for one-way (1-5 passengers)
+  roundTripPriceCents         Int      // Price in cents for round-trip (1-5 passengers)
+  sprinterOneWayPriceCents    Int      @default(0) // Price for 6+ passengers one-way
+  sprinterRoundTripPriceCents Int      @default(0) // Price for 6+ passengers round-trip
+  isActive                    Boolean  @default(true)
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
 
   @@index([isActive])
 }

@@ -113,7 +113,7 @@ const Book = () => {
     zoneFrom: '',
     zoneTo: '',
     selectedHotel: null as { id: string; name: string; zone: string } | null,
-    vehicleClass: 'SUV' as 'SUV' | 'SPRINTER',
+    vehicleClass: 'SPRINTER' as 'SUV' | 'SPRINTER',
     arrivalDate: null as Date | null,
     departureDate: null as Date | null,
     flightNumber: '',
@@ -316,12 +316,20 @@ const Book = () => {
     });
   };
 
-  // Transport price from selected area + trip type (no hardcoded prices)
+  // Transport price from selected area + trip type
+  // 1-5 passengers → SUV price (oneWayPriceCents / roundTripPriceCents)
+  // 6+ passengers  → Sprinter price (sprinterOneWayPriceCents / sprinterRoundTripPriceCents)
   const transferPrice = useMemo(() => {
     if (!data.serviceType || !data.areaId || !data.tripType || !selectedArea) return 0;
-    const cents = data.tripType === 'roundtrip' ? selectedArea.roundTripPriceCents : selectedArea.oneWayPriceCents;
+    const isSprinter = data.passengers >= 6;
+    let cents: number;
+    if (isSprinter && selectedArea.sprinterOneWayPriceCents > 0) {
+      cents = data.tripType === 'roundtrip' ? selectedArea.sprinterRoundTripPriceCents : selectedArea.sprinterOneWayPriceCents;
+    } else {
+      cents = data.tripType === 'roundtrip' ? selectedArea.roundTripPriceCents : selectedArea.oneWayPriceCents;
+    }
     return cents / 100;
-  }, [data.serviceType, data.areaId, data.tripType, selectedArea]);
+  }, [data.serviceType, data.areaId, data.tripType, data.passengers, selectedArea]);
 
   const activitiesPrice = useMemo(() => {
     if (data.activities.length === 0) return 0;
@@ -330,7 +338,15 @@ const Book = () => {
     return 0;
   }, [data.activities, data.comboMode, data.passengers]);
 
-  const total = transferPrice + activitiesPrice;
+  const extrasPrice = useMemo(() => {
+    return data.extras.reduce((acc, code) => {
+      const ex = pricingExtras.find(e => e.code === code);
+      const cents = ex?.priceCents ?? 0;
+      return acc + cents / 100;
+    }, 0);
+  }, [data.extras, pricingExtras]);
+
+  const total = transferPrice + activitiesPrice + extrasPrice;
 
   // Create booking and redirect to checkout
   const handlePayPalCheckout = async () => {
@@ -396,6 +412,21 @@ const Book = () => {
             }
           });
         }
+      }
+
+      // Add extras as line items
+      if (data.extras.length > 0) {
+        data.extras.forEach(code => {
+          const ex = pricingExtras.find(e => e.code === code);
+          if (ex && ex.priceCents > 0) {
+            items.push({
+              type: 'EXTRA',
+              name: ex.label,
+              quantity: 1,
+              unitPrice: ex.priceCents / 100,
+            });
+          }
+        });
       }
 
       // Create booking payload (strip undefined to avoid validation issues)
@@ -1008,8 +1039,7 @@ const Book = () => {
                 <div className="flex items-center gap-4">
                   <motion.button type="button"
                     onClick={() => setData((d) => {
-                      const minPax = d.serviceType === 'private' && d.vehicleClass === 'SPRINTER' ? 6 : 1;
-                      return { ...d, passengers: Math.max(minPax, d.passengers - 1) };
+                      return { ...d, passengers: Math.max(1, d.passengers - 1) };
                     })}
                     whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
                     className="w-11 h-11 rounded-xl border-2 border-border bg-muted/40 flex items-center justify-center hover:border-gold/60 hover:bg-gold/5 transition-all font-bold">
@@ -1028,8 +1058,7 @@ const Book = () => {
                   </div>
                   <motion.button type="button"
                     onClick={() => setData((d) => {
-                      const maxPax = d.serviceType === 'private' && d.vehicleClass === 'SUV' ? 5 : 14;
-                      return { ...d, passengers: Math.min(maxPax, d.passengers + 1) };
+                      return { ...d, passengers: Math.min(14, d.passengers + 1) };
                     })}
                     whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
                     className="w-11 h-11 rounded-xl border-2 border-border bg-muted/40 flex items-center justify-center hover:border-gold/60 hover:bg-gold/5 transition-all font-bold">
@@ -1038,47 +1067,6 @@ const Book = () => {
                 </div>
               </div>
 
-              {/* Vehicle selector as clean cards */}
-              {data.serviceType === 'private' && (
-                <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-foreground/60 uppercase tracking-wide">
-                    {lang === 'es' ? 'Tipo de vehículo' : 'Vehicle type'}
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {([
-                      { vc: 'SUV' as const, pax: '1–5', desc: lang === 'es' ? 'Hasta 5 pasajeros' : 'Up to 5 passengers', icon: '🚙' },
-                      { vc: 'SPRINTER' as const, pax: '6–14', desc: lang === 'es' ? '6 a 14 pasajeros' : '6 to 14 passengers', icon: '🚐' },
-                    ]).map(({ vc, pax, desc, icon }) => (
-                      <button key={vc} type="button"
-                        onClick={() => setData((d) => {
-                          const next = { ...d, vehicleClass: vc };
-                          if (vc === 'SPRINTER' && d.passengers < 6) next.passengers = 6;
-                          return next;
-                        })}
-                        className={cn(
-                          'rounded-xl p-4 text-left border-2 transition-all relative',
-                          data.vehicleClass === vc ? 'border-gold bg-gold/5' : 'border-border hover:border-gold/40 bg-muted/20'
-                        )}>
-                        <span className="text-2xl block mb-2">{icon}</span>
-                        <p className="font-bold text-sm text-foreground">{vc}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
-                        {data.vehicleClass === vc && (
-                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full gold-gradient flex items-center justify-center">
-                            <Check size={10} className="text-navy" />
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  {data.vehicleClass === 'SUV' && data.passengers >= 5 && (
-                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                      className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mt-1">
-                      <AlertCircle size={12} />
-                      {lang === 'es' ? 'Para 6 o más pasajeros, elige Sprinter.' : 'For 6+ passengers, choose Sprinter.'}
-                    </motion.p>
-                  )}
-                </div>
-              )}
             </motion.div>
 
             {/* Transfer Points — minimal, only show if no hotel auto-filled */}
@@ -1531,7 +1519,7 @@ const Book = () => {
                 <ReviewRow icon="🗺️" label={lang === 'es' ? 'Ruta' : 'Route'}
                   value={data.route === 'airport-hotel' ? (lang === 'es' ? 'Aeropuerto → Hotel' : 'Airport → Hotel') : (lang === 'es' ? 'Hotel → Aeropuerto' : 'Hotel → Airport')} />
                 <ReviewRow icon="🏨" label="Hotel" value={data.selectedHotel?.name || '—'} />
-                <ReviewRow icon="🚙" label={lang === 'es' ? 'Vehículo' : 'Vehicle'} value={data.vehicleClass} />
+                <ReviewRow icon="🚐" label={lang === 'es' ? 'Vehículo' : 'Vehicle'} value="Sprinter" />
                 <ReviewRow icon="📅" label={lang === 'es' ? 'Llegada' : 'Arrival'}
                   value={data.arrivalDate ? `${format(data.arrivalDate, 'MMM d, yyyy')}${data.arrivalTime ? ` · ${data.arrivalTime}` : ''}` : '—'} />
                 {data.tripType === 'roundtrip' && data.departureDate && (
@@ -1631,16 +1619,10 @@ const Book = () => {
                   </div>
                 )}
 
-                {data.extras.length > 0 && (
+                {extrasPrice > 0 && (
                   <div className="flex justify-between items-center text-sm pt-2 border-t border-border">
                     <span className="font-semibold text-foreground">{lang === 'es' ? 'Extras' : 'Add-ons'}</span>
-                    <span className="font-bold text-foreground">
-                      ${data.extras.reduce((acc, code) => {
-                        const ex = pricingExtras.find(e => e.code === code);
-                        const cents = code === 'LUXURY_WELCOME' ? 10000 : (ex?.priceCents ?? 0);
-                        return acc + (cents / 100);
-                      }, 0).toFixed(0)}
-                    </span>
+                    <span className="font-bold text-foreground">${extrasPrice.toFixed(0)}</span>
                   </div>
                 )}
 

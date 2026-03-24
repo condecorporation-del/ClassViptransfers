@@ -58,6 +58,8 @@ export interface AreaPublic {
   name: string;
   oneWayPriceCents: number;
   roundTripPriceCents: number;
+  sprinterOneWayPriceCents: number;
+  sprinterRoundTripPriceCents: number;
   isActive: boolean;
 }
 

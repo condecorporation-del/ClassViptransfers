@@ -40,8 +40,13 @@ export const useAdminAuth = () => {
       } else {
         setAuth({ authenticated: false, email: null, loading: false });
       }
-    } catch (error) {
-      setAuth({ authenticated: false, email: null, loading: false });
+    } catch {
+      // In local development, bypass auth when backend is unreachable
+      if (import.meta.env.DEV) {
+        setAuth({ authenticated: true, email: 'dev@local', loading: false });
+      } else {
+        setAuth({ authenticated: false, email: null, loading: false });
+      }
     }
   };
 

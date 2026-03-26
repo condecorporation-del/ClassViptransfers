@@ -523,6 +523,15 @@ export class AdminController {
       const input = manualBookingSchema.parse(req.body);
       const userId = req.headers['x-user-id'] as string | undefined;
       const userEmail = req.headers['x-user-email'] as string | undefined;
+      const emailMeta: {
+        mode: 'payment-link' | 'confirmation' | 'none';
+        customerSent: boolean;
+        companySent: boolean;
+      } = {
+        mode: 'none',
+        customerSent: false,
+        companySent: false,
+      };
 
       const booking = await bookingService.createManualBooking(
         input,
@@ -532,8 +541,11 @@ export class AdminController {
 
       // Option A: send PayPal payment link (pending-payment email)
       if (input.sendPaymentLink && !input.sendConfirmation) {
+        emailMeta.mode = 'payment-link';
         try {
-          await emailService.sendBookingReceived(booking);
+          const sent = await emailService.sendBookingReceived(booking);
+          emailMeta.customerSent = sent.customerSent;
+          emailMeta.companySent = sent.companySent;
         } catch (emailError) {
           console.error('Failed to send payment link email:', emailError);
         }
@@ -541,8 +553,11 @@ export class AdminController {
 
       // Option B: mark as paid in cash — send confirmation immediately
       if (input.sendConfirmation) {
+        emailMeta.mode = 'confirmation';
         try {
-          await emailService.sendConfirmationEmails(booking, false, { manualConfirm: true });
+          const sent = await emailService.sendConfirmationEmails(booking, false, { manualConfirm: true });
+          emailMeta.customerSent = sent.customerSent;
+          emailMeta.companySent = sent.companySent;
         } catch (emailError) {
           console.error('Failed to send confirmation emails:', emailError);
         }
@@ -560,7 +575,10 @@ export class AdminController {
 
       res.status(201).json({
         success: true,
-        data: booking,
+        data: {
+          ...booking,
+          email: emailMeta,
+        },
       });
     } catch (error: any) {
       console.error('Create manual booking error:', error);

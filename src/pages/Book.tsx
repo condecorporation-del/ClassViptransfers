@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Car, Minus, Plus, Plane, MessageCircle, CalendarDays, Clock, MapPin, Sparkles, Shield, ChevronUp, AlertCircle, User, Mail, Phone as PhoneIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Car, Minus, Plus, Plane, MessageCircle, CalendarDays, Clock, MapPin, Sparkles, Shield, ChevronUp, AlertCircle, User, Mail, Phone as PhoneIcon, Lock, CreditCard } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
@@ -12,6 +12,7 @@ import { LuxurySpinner } from '@/components/ui/luxury-spinner';
 import { TrustBadges } from '@/components/trust/TrustBadges';
 import { getApiBaseUrl } from '@/lib/api';
 import { SEO } from '@/components/SEO';
+import { cloudinaryAssets } from '@/lib/cloudinary-assets';
 
 const steps = ['info', 'details', 'extras', 'review'] as const;
 
@@ -33,19 +34,19 @@ const ZONE_MATCHES = (zoneA: string, zoneB: string) =>
   );
 
 const upsellActivities = [
-  { id: 'camel',      key: 'activity.camel',      emoji: '🐫', duration: '2h', price: 120, photo: 'https://cactustours.com.mx/wp-content/uploads/2024/03/Cactus-tours-camel-ride-miniatura.webp' },
-  { id: 'horseback',  key: 'activity.horseback',  emoji: '🐎', duration: '2h', price: 120, photo: 'https://cactustours.com.mx/wp-content/uploads/2025/01/357A7620.webp' },
-  { id: 'atv',        key: 'activity.atv',        emoji: '🏍️', duration: '2h', price: 120, photo: 'https://cactustours.com.mx/wp-content/uploads/2024/03/3_Beach-and-Dunes-ATV.webp' },
-  { id: 'skyBikes',   key: 'activity.skyBikes',   emoji: '🚲', duration: '2h', price: 96,  photo: 'https://cactustours.com.mx/wp-content/uploads/2024/11/DJI_0065.webp' },
-  { id: 'rzr',        key: 'activity.rzr',        emoji: '🏎️', duration: '2h', price: 205, photo: 'https://cactustours.com.mx/wp-content/uploads/2024/08/2_Side-by-side-Adventure--scaled.webp' },
+  { id: 'camel',      key: 'activity.camel',      emoji: '🐫', duration: '2h', price: 120, photo: cloudinaryAssets.activities.camel },
+  { id: 'horseback',  key: 'activity.horseback',  emoji: '🐎', duration: '2h', price: 120, photo: cloudinaryAssets.activities.horseback },
+  { id: 'atv',        key: 'activity.atv',        emoji: '🏍️', duration: '2h', price: 120, photo: cloudinaryAssets.activities.atv },
+  { id: 'skyBikes',   key: 'activity.skyBikes',   emoji: '🚲', duration: '2h', price: 96,  photo: cloudinaryAssets.activities.skybikes },
+  { id: 'rzr',        key: 'activity.rzr',        emoji: '🏎️', duration: '2h', price: 205, photo: cloudinaryAssets.activities.utv },
 ];
 
 // 4-photo collage used in activity CTA and combo cards
 const ACTIVITY_COLLAGE = [
-  'https://cactustours.com.mx/wp-content/uploads/2024/03/3_Beach-and-Dunes-ATV.webp',
-  'https://cactustours.com.mx/wp-content/uploads/2024/08/2_Side-by-side-Adventure--scaled.webp',
-  'https://cactustours.com.mx/wp-content/uploads/2024/03/Cactus-tours-camel-ride-miniatura.webp',
-  'https://cactustours.com.mx/wp-content/uploads/2024/11/DJI_0065.webp',
+  cloudinaryAssets.activities.atv,
+  cloudinaryAssets.activities.utv,
+  cloudinaryAssets.activities.camel,
+  cloudinaryAssets.activities.skybikes,
 ];
 
 // Backend codes: BOOSTER, OVERSIZE_LUGGAGE, LUXURY_WELCOME, etc.
@@ -175,15 +176,22 @@ const Book = () => {
     setDateStepErrors(validateDateStep());
   }, [data.arrivalDate, data.departureDate, data.flightNumber, data.departureFlightNumber, data.tripType, data.departureTime, data.pickupTime, t]);
 
-  // Suggest pickup time 3h before departure when departure time changes (roundtrip)
+  // Auto-suggest pickup 3h before departure (roundtrip + hotel-airport oneway)
   useEffect(() => {
-    if (data.tripType !== 'roundtrip' || !data.departureTime) return;
+    const isDep = data.route === 'hotel-airport' && data.tripType !== 'roundtrip';
+    const isRoundtrip = data.tripType === 'roundtrip';
+    if (!isDep && !isRoundtrip) return;
+    if (!data.departureTime) return;
     const depM = timeToMinutes(data.departureTime);
     if (depM === null) return;
-    const suggestedPickM = Math.max(0, depM - 180);
-    const suggested = minutesToTime(suggestedPickM);
-    setData((d) => ({ ...d, pickupTime: suggested }));
-  }, [data.tripType, data.departureTime]);
+    const suggested = minutesToTime(Math.max(0, depM - 180));
+    if (isRoundtrip) {
+      setData((d) => ({ ...d, pickupTime: suggested }));
+    } else {
+      // hotel-airport oneway: arrivalTime = pickup time (3h before flight)
+      setData((d) => ({ ...d, arrivalTime: suggested }));
+    }
+  }, [data.route, data.tripType, data.departureTime]);
 
   useEffect(() => {
     getExtras().then(setPricingExtras);
@@ -348,7 +356,7 @@ const Book = () => {
 
   const total = transferPrice + activitiesPrice + extrasPrice;
 
-  // Create booking and redirect to checkout
+  // Create booking and redirect to Stripe checkout
   const handlePayPalCheckout = async () => {
     if (!reviewValidation.valid && reviewValidation.firstInvalidStepIndex !== null) {
       const sectionKey = `book.step.${steps[reviewValidation.firstInvalidStepIndex]}`;
@@ -420,7 +428,7 @@ const Book = () => {
           const ex = pricingExtras.find(e => e.code === code);
           if (ex && ex.priceCents > 0) {
             items.push({
-              type: 'EXTRA',
+              type: 'ADDON',
               name: ex.label,
               quantity: 1,
               unitPrice: ex.priceCents / 100,
@@ -456,6 +464,7 @@ const Book = () => {
       }
       if (data.flightNumber) bookingPayload.flightNumber = data.flightNumber;
       if (data.arrivalTime) bookingPayload.arrivalTime = data.arrivalTime;
+      if (data.tripType === 'roundtrip' && data.departureDate) bookingPayload.departureDate = data.departureDate.toISOString();
       if (data.departureFlightNumber) bookingPayload.departureFlightNumber = data.departureFlightNumber;
       if (data.departureTime) bookingPayload.departureTime = data.departureTime;
       if (data.tripType === 'roundtrip' && data.pickupTime) bookingPayload.pickupTime = data.pickupTime;
@@ -539,7 +548,9 @@ const Book = () => {
   const reviewValidation = useMemo(() => {
     if (!data.customerName.trim() || !data.customerEmail.trim() || !data.customerPhone.trim()) return { valid: false, firstInvalidStepIndex: 0 };
     if (!data.tripType || !data.route || !data.areaId) return { valid: false, firstInvalidStepIndex: 0 };
-    if (!data.arrivalDate || Object.values(dateStepErrors).some(Boolean)) return { valid: false, firstInvalidStepIndex: 1 };
+    const isDep = data.route === 'hotel-airport' && data.tripType !== 'roundtrip';
+    const dateOk = isDep ? !!data.departureDate : !!data.arrivalDate;
+    if (!dateOk || Object.values(dateStepErrors).some(Boolean)) return { valid: false, firstInvalidStepIndex: 1 };
     if (data.tripType === 'roundtrip') {
       if (!data.departureDate || !data.departureTime?.trim() || !data.pickupTime?.trim()) return { valid: false, firstInvalidStepIndex: 1 };
     }
@@ -812,7 +823,8 @@ const Book = () => {
           </div>
         );
       }
-      case 'details':
+      case 'details': {
+        const isDep = data.route === 'hotel-airport' && data.tripType !== 'roundtrip';
         return (
           <div className="space-y-7">
             {/* Header */}
@@ -825,7 +837,8 @@ const Book = () => {
               </p>
             </div>
 
-            {/* Arrival section */}
+            {/* Arrival section — only for airport-hotel or roundtrip */}
+            {!isDep && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
               className="rounded-2xl border-2 border-border bg-background p-5 space-y-4">
               <div className="flex items-center gap-2 mb-1">
@@ -905,9 +918,10 @@ const Book = () => {
                 </div>
               </div>
             </motion.div>
+            )}
 
-            {/* Departure section — only for roundtrip */}
-            {data.tripType === 'roundtrip' && (
+            {/* Departure section — for hotel-airport oneway OR roundtrip */}
+            {(isDep || data.tripType === 'roundtrip') && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                 className="rounded-2xl border-2 border-border bg-background p-5 space-y-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -915,13 +929,15 @@ const Book = () => {
                     <Plane size={14} className="text-gold rotate-180" />
                   </div>
                   <h3 className="font-bold text-sm text-foreground uppercase tracking-wide">
-                    {lang === 'es' ? 'Salida' : 'Departure'}
+                    {isDep
+                      ? (lang === 'es' ? 'Vuelo de Salida' : 'Departure Flight')
+                      : (lang === 'es' ? 'Salida' : 'Departure')}
                   </h3>
                 </div>
 
-                <div className="grid sm:grid-cols-4 gap-3">
+                <div className="grid sm:grid-cols-3 gap-3">
                   {/* Departure date */}
-                  <div className="sm:col-span-2">
+                  <div className="sm:col-span-1">
                     <label className="block text-xs font-semibold text-foreground/60 mb-2 uppercase tracking-wide">
                       {lang === 'es' ? 'Fecha' : 'Date'}
                     </label>
@@ -940,8 +956,8 @@ const Book = () => {
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar mode="single" selected={data.departureDate ?? undefined}
-                          onSelect={(d) => d && setData({ ...data, departureDate: d })}
-                          disabled={(d) => d < (data.arrivalDate ?? new Date())}
+                          onSelect={(d) => d && setData({ ...data, departureDate: d, ...(isDep ? { arrivalDate: d } : {}) })}
+                          disabled={(d) => d < (isDep ? new Date() : (data.arrivalDate ?? new Date()))}
                           initialFocus className="p-3 pointer-events-auto" />
                       </PopoverContent>
                     </Popover>
@@ -952,7 +968,7 @@ const Book = () => {
                     )}
                   </div>
 
-                  {/* Departure flight */}
+                  {/* Departure flight number */}
                   <div>
                     <label className="block text-xs font-semibold text-foreground/60 mb-2 uppercase tracking-wide">
                       {lang === 'es' ? 'N° vuelo' : 'Flight no.'}
@@ -973,10 +989,12 @@ const Book = () => {
                     )}
                   </div>
 
-                  {/* Departure time */}
+                  {/* Departure time (flight departure time) */}
                   <div>
                     <label className="block text-xs font-semibold text-foreground/60 mb-2 uppercase tracking-wide">
-                      {lang === 'es' ? 'Hora vuelo' : 'Flight time'}
+                      {isDep
+                        ? (lang === 'es' ? 'Hora de vuelo' : 'Flight departure time')
+                        : (lang === 'es' ? 'Hora vuelo' : 'Flight time')}
                     </label>
                     <div className="flex items-center gap-2 bg-muted/40 border-2 border-border rounded-xl px-3 py-3 focus-within:border-gold/60 transition-all">
                       <Clock size={16} className="text-gold shrink-0" />
@@ -987,8 +1005,22 @@ const Book = () => {
                   </div>
                 </div>
 
-                {/* Pickup time — shown after departure time is set */}
-                {data.departureTime && (
+                {/* Pickup hint — for hotel-airport oneway: read-only auto-calculated */}
+                {isDep && data.departureTime && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                    <div className="flex items-center gap-3 bg-gold/5 border border-gold/25 rounded-xl px-4 py-3">
+                      <Clock size={14} className="text-gold shrink-0" />
+                      <p className="text-sm text-foreground/80">
+                        {lang === 'es'
+                          ? `Recogida en hotel a las ${data.arrivalTime || '—'} (3 horas antes de tu vuelo)`
+                          : `Hotel pickup at ${data.arrivalTime || '—'} (3 hours before your flight)`}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Pickup time — roundtrip only: editable */}
+                {!isDep && data.departureTime && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
                     <div className="flex items-center gap-3 bg-gold/5 border border-gold/25 rounded-xl px-4 py-3 mb-3">
                       <Plane size={14} className="text-gold shrink-0" />
@@ -1027,7 +1059,7 @@ const Book = () => {
                   <Car size={14} className="text-gold" />
                 </div>
                 <h3 className="font-bold text-sm text-foreground uppercase tracking-wide">
-                  {lang === 'es' ? 'Pasajeros y Vehículo' : 'Passengers & Vehicle'}
+                  {lang === 'es' ? 'Pasajeros' : 'Passengers'}
                 </h3>
               </div>
 
@@ -1112,6 +1144,7 @@ const Book = () => {
             </div>
           </div>
         );
+      }
       case 'extras':
         return (
           <div className="space-y-7">
@@ -1481,7 +1514,7 @@ const Book = () => {
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}
               className="rounded-2xl border border-border bg-background overflow-hidden">
               <div className="flex items-center gap-2 px-5 py-3 bg-muted/40 border-b border-border">
-                <span className="text-base">👤</span>
+                <User size={14} className="text-foreground/50" />
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
                   {lang === 'es' ? 'Tus datos' : 'Your details'}
                 </h3>
@@ -1492,11 +1525,11 @@ const Book = () => {
                   </button>
                 )}
               </div>
-              <div className="px-5 py-4 grid sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
-                <ReviewRow icon="📛" label={lang === 'es' ? 'Nombre' : 'Name'} value={data.customerName || '—'} />
-                <ReviewRow icon="✉️" label="Email" value={data.customerEmail || '—'} />
-                <ReviewRow icon="📱" label={lang === 'es' ? 'Teléfono' : 'Phone'} value={data.customerPhone || '—'} />
-                <ReviewRow icon="👥" label={lang === 'es' ? 'Pasajeros' : 'Passengers'} value={`${data.passengers} ${data.passengers === 1 ? (lang === 'es' ? 'persona' : 'person') : (lang === 'es' ? 'personas' : 'people')}`} />
+              <div className="px-5 py-4 grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                <ReviewRow label={lang === 'es' ? 'Nombre' : 'Name'} value={data.customerName || '—'} />
+                <ReviewRow label="Email" value={data.customerEmail || '—'} />
+                <ReviewRow label={lang === 'es' ? 'Teléfono' : 'Phone'} value={data.customerPhone || '—'} />
+                <ReviewRow label={lang === 'es' ? 'Pasajeros' : 'Passengers'} value={`${data.passengers} ${data.passengers === 1 ? (lang === 'es' ? 'persona' : 'person') : (lang === 'es' ? 'personas' : 'people')}`} />
               </div>
             </motion.div>
 
@@ -1504,7 +1537,7 @@ const Book = () => {
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
               className="rounded-2xl border border-border bg-background overflow-hidden">
               <div className="flex items-center gap-2 px-5 py-3 bg-muted/40 border-b border-border">
-                <span className="text-base">✈️</span>
+                <Plane size={14} className="text-foreground/50" />
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
                   {lang === 'es' ? 'Tu traslado' : 'Your transfer'}
                 </h3>
@@ -1513,23 +1546,22 @@ const Book = () => {
                   {lang === 'es' ? 'Editar' : 'Edit'}
                 </button>
               </div>
-              <div className="px-5 py-4 grid sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
-                <ReviewRow icon="🔄" label={lang === 'es' ? 'Tipo' : 'Type'}
+              <div className="px-5 py-4 grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                <ReviewRow label={lang === 'es' ? 'Tipo' : 'Type'}
                   value={data.tripType === 'roundtrip' ? (lang === 'es' ? 'Ida y Vuelta' : 'Round Trip') : (lang === 'es' ? 'Solo Ida' : 'One Way')} />
-                <ReviewRow icon="🗺️" label={lang === 'es' ? 'Ruta' : 'Route'}
+                <ReviewRow label={lang === 'es' ? 'Ruta' : 'Route'}
                   value={data.route === 'airport-hotel' ? (lang === 'es' ? 'Aeropuerto → Hotel' : 'Airport → Hotel') : (lang === 'es' ? 'Hotel → Aeropuerto' : 'Hotel → Airport')} />
-                <ReviewRow icon="🏨" label="Hotel" value={data.selectedHotel?.name || '—'} />
-                <ReviewRow icon="🚐" label={lang === 'es' ? 'Vehículo' : 'Vehicle'} value="Sprinter" />
-                <ReviewRow icon="📅" label={lang === 'es' ? 'Llegada' : 'Arrival'}
+                <ReviewRow label="Hotel" value={data.selectedHotel?.name || '—'} />
+                <ReviewRow label={lang === 'es' ? 'Llegada' : 'Arrival'}
                   value={data.arrivalDate ? `${format(data.arrivalDate, 'MMM d, yyyy')}${data.arrivalTime ? ` · ${data.arrivalTime}` : ''}` : '—'} />
                 {data.tripType === 'roundtrip' && data.departureDate && (
-                  <ReviewRow icon="📅" label={lang === 'es' ? 'Salida' : 'Departure'}
+                  <ReviewRow label={lang === 'es' ? 'Salida' : 'Departure'}
                     value={`${format(data.departureDate, 'MMM d, yyyy')}${data.departureTime ? ` · ${data.departureTime}` : ''}`} />
                 )}
-                {data.flightNumber && <ReviewRow icon="🛫" label={lang === 'es' ? 'Vuelo llegada' : 'Arrival flight'} value={data.flightNumber} />}
-                {data.departureFlightNumber && <ReviewRow icon="🛬" label={lang === 'es' ? 'Vuelo salida' : 'Dep. flight'} value={data.departureFlightNumber} />}
-                <ReviewRow icon="📍" label={lang === 'es' ? 'Recogida' : 'Pickup'} value={data.pickup || '—'} />
-                <ReviewRow icon="🏁" label={lang === 'es' ? 'Destino' : 'Dropoff'} value={data.dropoff || '—'} />
+                {data.flightNumber && <ReviewRow label={lang === 'es' ? 'Vuelo llegada' : 'Arrival flight'} value={data.flightNumber} />}
+                {data.departureFlightNumber && <ReviewRow label={lang === 'es' ? 'Vuelo salida' : 'Dep. flight'} value={data.departureFlightNumber} />}
+                <ReviewRow label={lang === 'es' ? 'Recogida' : 'Pickup'} value={data.pickup || '—'} />
+                <ReviewRow label={lang === 'es' ? 'Destino' : 'Dropoff'} value={data.dropoff || '—'} />
               </div>
             </motion.div>
 
@@ -1538,7 +1570,7 @@ const Book = () => {
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
                 className="rounded-2xl border border-border bg-background overflow-hidden">
                 <div className="flex items-center gap-2 px-5 py-3 bg-muted/40 border-b border-border">
-                  <span className="text-base">✨</span>
+                  <Sparkles size={14} className="text-foreground/50" />
                   <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
                     {lang === 'es' ? 'Extras seleccionados' : 'Selected extras'}
                   </h3>
@@ -1548,18 +1580,15 @@ const Book = () => {
                   </button>
                 </div>
                 <div className="px-5 py-4 space-y-2 text-sm">
-                  {data.extras.map(code => {
-                    const meta = ADDON_META[code];
-                    return (
-                      <div key={code} className="flex items-center gap-2">
-                        <span>{meta?.emoji ?? '•'}</span>
-                        <span className="text-foreground font-medium">{getExtraLabel(code)}</span>
-                      </div>
-                    );
-                  })}
+                  {data.extras.map(code => (
+                    <div key={code} className="flex items-center gap-2">
+                      <Check size={13} className="text-gold shrink-0" />
+                      <span className="text-foreground font-medium">{getExtraLabel(code)}</span>
+                    </div>
+                  ))}
                   {data.activities.length > 0 && (
                     <div className="flex items-center gap-2">
-                      <span>🎯</span>
+                      <Check size={13} className="text-gold shrink-0" />
                       <span className="text-foreground font-medium">
                         {data.comboMode === 'crazy' ? 'Crazy Combo' : 'Combo'} — {data.activities.map(id => {
                           const act = upsellActivities.find(a => a.id === id);
@@ -1569,10 +1598,7 @@ const Book = () => {
                     </div>
                   )}
                   {data.specialNote.trim() && (
-                    <div className="flex items-start gap-2 mt-1">
-                      <span>📝</span>
-                      <span className="text-muted-foreground italic text-xs">{data.specialNote}</span>
-                    </div>
+                    <p className="text-muted-foreground italic text-xs pt-1">{data.specialNote}</p>
                   )}
                 </div>
               </motion.div>
@@ -1582,7 +1608,7 @@ const Book = () => {
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
               className="rounded-2xl border-2 border-gold/30 bg-background overflow-hidden">
               <div className="flex items-center gap-2 px-5 py-3 bg-gold/5 border-b border-gold/20">
-                <span className="text-base">💳</span>
+                <CreditCard size={14} className="text-gold/70" />
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
                   {lang === 'es' ? 'Desglose de precios' : 'Price breakdown'}
                 </h3>
@@ -1634,28 +1660,66 @@ const Book = () => {
               </div>
             </motion.div>
 
-            {/* ── CTA: Pay with PayPal ── */}
+            {/* ── CTA: Stripe Checkout ── */}
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-              className="space-y-4">
-              <TrustBadges compact />
+              className="space-y-3">
 
-              <motion.button
+              {/* Security trust bar */}
+              <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+                <div className="flex items-center gap-1.5 text-foreground/60">
+                  <Shield size={13} className="text-green-600" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wide">
+                    {lang === 'es' ? 'SSL Cifrado' : 'SSL Encrypted'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-foreground/60">
+                  <Lock size={13} className="text-[#635BFF]" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wide">
+                    {lang === 'es' ? 'Pagos seguros vía' : 'Secure payments via'}
+                  </span>
+                  <span className="text-[13px] font-bold italic" style={{ color: '#635BFF', letterSpacing: '-0.3px' }}>stripe</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-foreground/60">
+                  <CreditCard size={13} />
+                  <span className="text-[11px] font-semibold uppercase tracking-wide">
+                    {lang === 'es' ? 'Cifrado 256-bit' : '256-bit encryption'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Pay button */}
+              <button
                 onClick={handlePayPalCheckout}
                 disabled={creatingBooking || !reviewValidation.valid}
-                whileHover={reviewValidation.valid && !creatingBooking ? { scale: 1.02 } : {}}
-                whileTap={reviewValidation.valid && !creatingBooking ? { scale: 0.98 } : {}}
-                className={cn(
-                  'w-full py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all',
-                  'bg-[#0070ba] hover:bg-[#005ea6] text-white',
-                  'shadow-xl shadow-[#0070ba]/20',
-                  'disabled:opacity-40 disabled:cursor-not-allowed'
-                )}>
-                {creatingBooking ? (
-                  <><LuxurySpinner size={22} /> {lang === 'es' ? 'Procesando...' : 'Processing...'}</>
-                ) : (
-                  <><Shield size={20} /> {t('book.review.paypal')}</>
-                )}
-              </motion.button>
+                className="w-full rounded-2xl overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed transition-shadow hover:shadow-[0_16px_48px_rgba(212,175,55,0.45)] focus:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+                style={{ boxShadow: '0 8px 28px rgba(212,175,55,0.28)' }}
+              >
+                <div className="px-6 py-4 flex items-center justify-between"
+                  style={{ background: 'linear-gradient(135deg, #D4AF37 0%, #F5C842 60%, #D4AF37 100%)' }}>
+                  <div className="flex items-center gap-3">
+                    {creatingBooking
+                      ? <LuxurySpinner size={20} />
+                      : <Lock size={20} style={{ color: '#0A1628' }} />}
+                    <span className="font-bold text-lg tracking-wide" style={{ color: '#0A1628' }}>
+                      {creatingBooking
+                        ? (lang === 'es' ? 'Procesando...' : 'Processing...')
+                        : (lang === 'es' ? 'Pagar Ahora' : 'Pay Now')}
+                    </span>
+                  </div>
+                  <span className="font-display font-bold text-xl" style={{ color: '#0A1628' }}>
+                    ${total} USD
+                  </span>
+                </div>
+                <div className="py-2 flex items-center justify-center gap-2"
+                  style={{ background: '#071524', borderTop: '1px solid rgba(212,175,55,0.18)' }}>
+                  <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.03em' }}>
+                    {lang === 'es' ? 'Protegido por' : 'Secured by'}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 700, fontStyle: 'italic', color: '#635BFF', letterSpacing: '-0.3px' }}>
+                    stripe
+                  </span>
+                </div>
+              </button>
 
               {bookingError && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -1667,13 +1731,6 @@ const Book = () => {
                     {lang === 'es' ? 'Reservar por WhatsApp' : 'Book via WhatsApp'}
                   </a>
                 </motion.div>
-              )}
-
-              {!bookingError && !creatingBooking && (
-                <p className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1.5">
-                  <Shield size={12} className="text-gold" />
-                  {lang === 'es' ? 'Pago 100% seguro · Procesado por PayPal' : '100% secure payment · Processed by PayPal'}
-                </p>
               )}
             </motion.div>
           </div>
@@ -1699,7 +1756,7 @@ const Book = () => {
     <div className="pt-28 pb-36 lg:pb-24 px-4 min-h-screen bg-gradient-to-b from-background to-muted/30">
       <SEO
         title="Book Your Transfer"
-        description="Book your private luxury airport transfer in Los Cabos in minutes. Choose your vehicle, route, date, and extras. Secure payment via PayPal."
+        description="Book your private luxury airport transfer in Los Cabos in minutes. Choose your vehicle, route, date, and extras. Secure payment via Stripe."
         keywords="book cabo transfer, reserve los cabos transportation, cabo airport pickup, private driver reservation los cabos"
         canonical="https://classviptransfers.com/book"
         jsonLd={{
@@ -2023,13 +2080,10 @@ const Row = ({ label, value, gold, bold, className }: { label: string; value: st
   </div>
 );
 
-const ReviewRow = ({ icon, label, value }: { icon: string; label: string; value: string }) => (
-  <div className="flex items-start gap-3">
-    <span className="text-base mt-0.5">{icon}</span>
-    <div className="min-w-0">
-      <p className="text-[11px] font-bold text-foreground/50 uppercase tracking-widest leading-none mb-1">{label}</p>
-      <p className="text-[15px] font-semibold text-foreground leading-snug">{value}</p>
-    </div>
+const ReviewRow = ({ label, value }: { label: string; value: string }) => (
+  <div className="min-w-0">
+    <p className="text-[10px] font-semibold text-foreground/40 uppercase tracking-widest mb-0.5">{label}</p>
+    <p className="text-[14px] font-medium text-foreground">{value}</p>
   </div>
 );
 

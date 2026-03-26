@@ -88,8 +88,12 @@ export default function AdminLogin() {
       <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gold/5 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10">
-        <div className="text-center mb-6">
-          <img src={cloudinaryAssets.logo} alt="Class VIP Transfers" className="h-20 mx-auto drop-shadow-[0_6px_24px_rgba(212,175,55,0.5)]" />
+        <div className="text-center mb-7">
+          <img
+            src={cloudinaryAssets.logo}
+            alt="Class VIP Transfers"
+            className="h-32 md:h-36 mx-auto drop-shadow-[0_8px_28px_rgba(212,175,55,0.55)]"
+          />
         </div>
 
         <div className="rounded-3xl p-6 md:p-8 shadow-2xl" style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(22px)', border: '1px solid rgba(212,175,55,0.18)' }}>

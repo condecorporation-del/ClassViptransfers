@@ -673,33 +673,53 @@ const Book = () => {
 
               {/* Route direction */}
               {data.tripType && (
-                <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   {[
-                    { id: 'airport-hotel' as const, label: lang === 'es' ? 'Aeropuerto → Hotel' : 'Airport → Hotel', icon: '✈️' },
-                    { id: 'hotel-airport' as const, label: lang === 'es' ? 'Hotel → Aeropuerto' : 'Hotel → Airport', icon: '🏨' },
-                  ].map(s => (
-                    <button key={s.id} type="button"
+                    {
+                      id: 'airport-hotel' as const,
+                      label: lang === 'es' ? 'Aeropuerto → Hotel' : 'Airport → Hotel',
+                      sub: lang === 'es' ? 'Llegada a destino' : 'Arrival transfer',
+                    },
+                    {
+                      id: 'hotel-airport' as const,
+                      label: lang === 'es' ? 'Hotel → Aeropuerto' : 'Hotel → Airport',
+                      sub: lang === 'es' ? 'Salida al aeropuerto' : 'Departure transfer',
+                    },
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
                       onClick={() => { setData({ ...data, route: s.id }); setSelectedZoneForHotel(null); }}
                       className={cn(
-                        'rounded-xl p-4 text-left border-2 transition-all',
+                        'rounded-2xl p-4 text-left border-2 transition-all duration-200',
+                        'shadow-sm hover:shadow-md',
                         data.route === s.id
-                          ? 'border-gold bg-gold/5'
-                          : 'border-border hover:border-gold/40 bg-background'
-                      )}>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{s.icon}</span>
-                          <p className="font-semibold text-sm text-foreground leading-tight">{s.label}</p>
+                          ? 'border-gold/60 bg-gradient-to-br from-[hsl(var(--navy))/9] via-[hsl(var(--navy))/5] to-gold/10 shadow-[0_8px_24px_rgba(7,26,43,0.10)]'
+                          : 'border-border/70 hover:border-gold/40 bg-gradient-to-br from-white to-[hsl(var(--sand-light))/70]'
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-2.5">
+                          <span className={cn(
+                            'inline-flex items-center justify-center w-8 h-8 rounded-xl shrink-0',
+                            data.route === s.id ? 'bg-gold/20 text-gold' : 'bg-[hsl(var(--navy))/8] text-[hsl(var(--navy))/70]'
+                          )}>
+                            <Plane size={15} />
+                          </span>
+                          <div>
+                            <p className="font-semibold text-sm text-foreground leading-tight">{s.label}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
+                          </div>
                         </div>
                         {data.route === s.id && (
-                          <div className="w-5 h-5 rounded-full gold-gradient flex items-center justify-center shrink-0">
+                          <div className="w-5 h-5 rounded-full gold-gradient flex items-center justify-center shrink-0 mt-0.5">
                             <Check size={11} className="text-navy" />
                           </div>
                         )}
                       </div>
                     </button>
                   ))}
-                </motion.div>
+                </div>
               )}
             </div>
 

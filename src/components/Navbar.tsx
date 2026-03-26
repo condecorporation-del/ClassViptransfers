@@ -31,7 +31,7 @@ const Navbar = () => {
   const isDarkHero = isHome && !scrolled;
 
   const navBg = isDarkHero
-    ? 'bg-gradient-to-b from-navy/75 to-transparent'
+    ? 'bg-gradient-to-b from-navy/40 to-transparent'
     : 'bg-white/98 backdrop-blur-xl border-b border-border/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]';
 
   const textColor = isDarkHero ? 'text-off-white' : 'text-foreground';
@@ -39,12 +39,12 @@ const Navbar = () => {
   const activeText = 'text-gold';
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 overflow-visible ${navBg}`}>
-      <div className="container mx-auto px-4 h-16 md:h-20 flex items-center justify-between overflow-visible">
-        <Link to="/" className="flex-shrink-0 overflow-visible flex items-center group">
+      <div className="container mx-auto px-4 h-16 md:h-[124px] flex items-center justify-between overflow-visible">
+        <Link to="/" className="flex-shrink-0 overflow-visible flex items-center group ml-10 md:ml-12">
           <img
             src={cloudinaryAssets.logo}
             alt="Class VIP Transfers"
-            className="logo h-24 md:h-[140px] w-auto object-contain drop-shadow-[0_0_30px_rgba(212,175,55,0.6)] brightness-[1.1] transition-transform duration-300 group-hover:scale-[1.02]"
+            className="h-16 md:h-[156px] w-auto object-contain md:translate-x-2 md:translate-y-2 drop-shadow-[0_6px_30px_rgba(212,175,55,0.7)] brightness-[1.16] transition-transform duration-300 group-hover:scale-[1.04]"
           />
         </Link>
 
@@ -103,7 +103,7 @@ const Navbar = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-t border-border/40 bg-white/98 backdrop-blur-xl overflow-hidden"
+            className="md:hidden border-t border-border/40 bg-white overflow-hidden"
           >
             <div className="max-h-[calc(100vh-5rem)] overflow-y-auto px-6 py-5 flex flex-col gap-1">
               {links.map(link => (

@@ -30,7 +30,7 @@ const content = {
       },
       {
         heading: '6. Your Rights',
-        body: `You have the right to:\n• Access the personal data we hold about you.\n• Request correction of inaccurate data.\n• Request deletion of your data (subject to legal retention requirements).\n• Withdraw consent for communications at any time.\n\nTo exercise these rights, contact us at Armando@caboviptransfers.com or via WhatsApp at +52 624 122 2174.`,
+        body: `You have the right to:\n• Access the personal data we hold about you.\n• Request correction of inaccurate data.\n• Request deletion of your data (subject to legal retention requirements).\n• Withdraw consent for communications at any time.\n\nTo exercise these rights, contact us at Armando@classviptransfers.com or via WhatsApp at +52 624 122 2174.`,
       },
       {
         heading: '7. Data Retention',
@@ -46,7 +46,7 @@ const content = {
       },
       {
         heading: '10. Contact',
-        body: `For questions or concerns about this privacy policy:\n• Email: Armando@caboviptransfers.com\n• WhatsApp: +52 624 122 2174\n• Address: Los Cabos, Baja California Sur, Mexico`,
+        body: `For questions or concerns about this privacy policy:\n• Email: Armando@classviptransfers.com\n• WhatsApp: +52 624 122 2174\n• Address: Los Cabos, Baja California Sur, Mexico`,
       },
     ],
   },
@@ -76,7 +76,7 @@ const content = {
       },
       {
         heading: '6. Tus Derechos',
-        body: `Tienes derecho a:\n• Acceder a los datos personales que tenemos sobre ti.\n• Solicitar la corrección de datos inexactos.\n• Solicitar la eliminación de tus datos (sujeto a requisitos legales de retención).\n• Retirar el consentimiento para comunicaciones en cualquier momento.\n\nPara ejercer estos derechos, contáctanos a Armando@caboviptransfers.com o por WhatsApp al +52 624 122 2174.`,
+        body: `Tienes derecho a:\n• Acceder a los datos personales que tenemos sobre ti.\n• Solicitar la corrección de datos inexactos.\n• Solicitar la eliminación de tus datos (sujeto a requisitos legales de retención).\n• Retirar el consentimiento para comunicaciones en cualquier momento.\n\nPara ejercer estos derechos, contáctanos a Armando@classviptransfers.com o por WhatsApp al +52 624 122 2174.`,
       },
       {
         heading: '7. Retención de Datos',
@@ -92,7 +92,7 @@ const content = {
       },
       {
         heading: '10. Contacto',
-        body: `Para preguntas o dudas sobre esta política de privacidad:\n• Email: Armando@caboviptransfers.com\n• WhatsApp: +52 624 122 2174\n• Dirección: Los Cabos, Baja California Sur, México`,
+        body: `Para preguntas o dudas sobre esta política de privacidad:\n• Email: Armando@classviptransfers.com\n• WhatsApp: +52 624 122 2174\n• Dirección: Los Cabos, Baja California Sur, México`,
       },
     ],
   },

@@ -22,7 +22,7 @@ const content = {
       },
       {
         heading: '4. Cancellation Policy',
-        body: `• Cancellations made more than 48 hours before the service: full refund.\n• Cancellations made between 24 and 48 hours before the service: 50% refund.\n• Cancellations made less than 24 hours before the service or no-shows: no refund.\n• To cancel, contact us via WhatsApp at +52 624 122 2174 or email Armando@caboviptransfers.com with your booking reference.`,
+        body: `• Cancellations made more than 48 hours before the service: full refund.\n• Cancellations made between 24 and 48 hours before the service: 50% refund.\n• Cancellations made less than 24 hours before the service or no-shows: no refund.\n• To cancel, contact us via WhatsApp at +52 624 122 2174 or email Armando@classviptransfers.com with your booking reference.`,
       },
       {
         heading: '5. Modifications',
@@ -68,7 +68,7 @@ const content = {
       },
       {
         heading: '4. Política de Cancelación',
-        body: `• Cancelaciones con más de 48 horas de anticipación: reembolso total.\n• Cancelaciones entre 24 y 48 horas antes del servicio: reembolso del 50%.\n• Cancelaciones con menos de 24 horas o no presentarse: sin reembolso.\n• Para cancelar, contáctanos por WhatsApp al +52 624 122 2174 o email a Armando@caboviptransfers.com con tu número de reservación.`,
+        body: `• Cancelaciones con más de 48 horas de anticipación: reembolso total.\n• Cancelaciones entre 24 y 48 horas antes del servicio: reembolso del 50%.\n• Cancelaciones con menos de 24 horas o no presentarse: sin reembolso.\n• Para cancelar, contáctanos por WhatsApp al +52 624 122 2174 o email a Armando@classviptransfers.com con tu número de reservación.`,
       },
       {
         heading: '5. Modificaciones',

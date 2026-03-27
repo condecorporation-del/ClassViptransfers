@@ -4,14 +4,6 @@
  */
 
 export const AI_KNOWLEDGE = {
-  vehicles: [
-    'SUV Premium',
-    'Suburban (8 pax)',
-    'Escalade Luxury',
-    'Sedan Ejecutivo',
-    'Van',
-    'Sprinter',
-  ],
   activities: [
     'Camel Ride',
     'ATV Adventure',
@@ -78,15 +70,15 @@ export const AI_KNOWLEDGE = {
     'Asistencia con equipaje',
   ],
   benefits: [
-    'All our vehicles include welcome drinks for you and your family.',
+    'All transfers include complimentary welcome drinks for you and your family.',
     'Our drivers speak Spanish, English and French.',
-    'Free WiFi in all our vehicles.',
+    'Free WiFi included in every transfer.',
     'Flexibility: you can change times without penalty.',
   ],
   benefitsEs: [
-    'Todos nuestros vehículos incluyen bebidas de bienvenida para ti y tu familia.',
+    'Todos nuestros traslados incluyen bebidas de bienvenida para ti y tu familia.',
     'Nuestros conductores hablan español, inglés y francés.',
-    'WiFi gratis en todos nuestros vehículos.',
+    'WiFi gratis incluido en cada traslado.',
     'Flexibilidad: puedes cambiar horarios sin penalidad.',
   ],
   contact: {
@@ -98,7 +90,6 @@ export const AI_KNOWLEDGE = {
 export function getKnowledgeForPrompt(locale: 'en' | 'es'): string {
   const k = AI_KNOWLEDGE;
   const isEs = locale === 'es';
-  const vehicles = k.vehicles.join(', ');
   const activities = isEs ? k.activitiesEs.join(', ') : k.activities.join(', ');
   const locations = k.locations.join(', ');
   const hotels = k.hotels.join(', ');
@@ -110,22 +101,20 @@ export function getKnowledgeForPrompt(locale: 'en' | 'es'): string {
   const priceTable = `San José $${p.transportSjdToSanJose}, Puerto Los Cabos $${p.transportSjdToPortLosCabos}, Corridor $${p.transportSjdToCorridor}, Cabo San Lucas $${p.transportSjdToCabo}, Pacific $${p.transportSjdToPacific}, East Cape $${p.transportSjdToEastCape}`;
 
   return isEs
-    ? `CATÁLOGO VEHÍCULOS: ${vehicles}
-ACTIVIDADES: ${activities}
+    ? `ACTIVIDADES: ${activities}
 UBICACIONES: ${locations}
 HOTELES PRINCIPALES: ${hotels}
 EXTRAS INCLUIDOS: ${extras}
-PRECIOS TRANSPORTE (SUV solo ida desde SJD): ${priceTable}. Ida y vuelta = precio x${p.roundTripMultiplier}. Sprinter (6-14 pax) tiene precio diferente.
+PRECIOS TRANSPORTE (solo ida desde SJD): ${priceTable}. Ida y vuelta = precio x${p.roundTripMultiplier}.
 ACTIVIDADES COMBO: Combo (2 actividades) $${p.comboPrice} USD/persona, Crazy Combo (3 actividades) $${p.crazyComboPrice} USD/persona. Entrada parque $${p.parkFeePerPerson}/persona.
 BENEFICIOS (menciona siempre): ${benefits.join(' ')}
 CONTACTO: WhatsApp ${k.contact.whatsapp} | ${k.contact.email}
 IMPORTANTE: Eres un asistente informativo. NO hagas reservaciones. Cuando el cliente quiera reservar, indícale que contacte por WhatsApp o email.`
-    : `VEHICLE CATALOG: ${vehicles}
-ACTIVITIES: ${activities}
+    : `ACTIVITIES: ${activities}
 KEY LOCATIONS: ${locations}
 MAIN HOTELS: ${hotels}
 INCLUDED EXTRAS: ${extras}
-TRANSPORT PRICES (SUV one-way from SJD): ${priceTable}. Round trip = price x${p.roundTripMultiplier}. Sprinter (6-14 pax) has different pricing.
+TRANSPORT PRICES (one-way from SJD): ${priceTable}. Round trip = price x${p.roundTripMultiplier}.
 ACTIVITY COMBOS: Combo (2 activities) $${p.comboPrice} USD/person, Crazy Combo (3 activities) $${p.crazyComboPrice} USD/person. Park fee $${p.parkFeePerPerson}/person.
 BENEFITS (always mention): ${benefits.join(' ')}
 CONTACT: WhatsApp ${k.contact.whatsapp} | ${k.contact.email}

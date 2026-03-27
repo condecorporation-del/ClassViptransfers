@@ -4,45 +4,46 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ArrowRight, Check, MessageCircle, ChevronDown, Shield, Users, MapPin, Clock } from 'lucide-react';
 import { SEO } from '@/components/SEO';
+import { cloudinaryAssets, activityCollagePresets } from '@/lib/cloudinary-assets';
 
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } };
 const stagger = { visible: { transition: { staggerChildren: 0.1 } } };
 
-// Activity cards data — photos from Cactus Tours (official partner)
+// Activity cards — images hosted on Cloudinary (same assets as homepage / book)
 const activities = [
   {
     emoji: '🏍️',
     titleKey: 'activity.atv',
     descKey: 'activity.atv.desc',
-    image: 'https://cactustours.com.mx/wp-content/uploads/2024/03/3_Beach-and-Dunes-ATV.webp',
+    image: cloudinaryAssets.activities.atv,
     tag: 'Adrenaline',
   },
   {
     emoji: '🐫',
     titleKey: 'activity.camel',
     descKey: 'activity.camel.desc',
-    image: 'https://cactustours.com.mx/wp-content/uploads/2024/03/Cactus-tours-camel-ride-miniatura.webp',
+    image: cloudinaryAssets.activities.camel,
     tag: 'Classic',
   },
   {
     emoji: '🐎',
     titleKey: 'activity.horseback',
     descKey: 'activity.horseback.desc',
-    image: 'https://cactustours.com.mx/wp-content/uploads/2025/01/357A7620.webp',
+    image: cloudinaryAssets.activities.horseback,
     tag: 'Scenic',
   },
   {
     emoji: '🚲',
     titleKey: 'activity.skyBikes',
     descKey: 'activity.skyBikes.desc',
-    image: 'https://cactustours.com.mx/wp-content/uploads/2024/11/DJI_0065.webp',
+    image: cloudinaryAssets.activities.skybikes,
     tag: '🏆 World Record',
   },
   {
     emoji: '🏎️',
     titleKey: 'activity.rzr',
     descKey: 'activity.rzr.desc',
-    image: 'https://cactustours.com.mx/wp-content/uploads/2024/08/2_Side-by-side-Adventure--scaled.webp',
+    image: cloudinaryAssets.activities.utv,
     tag: 'Off-Road',
   },
 ];
@@ -64,12 +65,7 @@ const combos = [
     price: '$100',
     badge: null,
     highlight: false,
-    collage: [
-      'https://cactustours.com.mx/wp-content/uploads/2024/03/3_Beach-and-Dunes-ATV.webp',
-      'https://cactustours.com.mx/wp-content/uploads/2024/03/Cactus-tours-camel-ride-miniatura.webp',
-      'https://cactustours.com.mx/wp-content/uploads/2025/01/357A7620.webp',
-      'https://cactustours.com.mx/wp-content/uploads/2024/11/DJI_0065.webp',
-    ],
+    collage: [...activityCollagePresets.combo2],
   },
   {
     titleKey: 'activities.combo.3.title',
@@ -77,22 +73,11 @@ const combos = [
     price: '$125',
     badge: 'activities.combo.badge',
     highlight: true,
-    collage: [
-      'https://cactustours.com.mx/wp-content/uploads/2024/08/2_Side-by-side-Adventure--scaled.webp',
-      'https://cactustours.com.mx/wp-content/uploads/2024/03/3_Beach-and-Dunes-ATV.webp',
-      'https://cactustours.com.mx/wp-content/uploads/2024/03/Cactus-tours-camel-ride-miniatura.webp',
-      'https://cactustours.com.mx/wp-content/uploads/2024/11/DJI_0065.webp',
-    ],
+    collage: [...activityCollagePresets.combo3],
   },
 ];
 
-const heroImages = [
-  'https://cactustours.com.mx/wp-content/uploads/2024/03/3_Beach-and-Dunes-ATV.webp',
-  'https://cactustours.com.mx/wp-content/uploads/2024/03/Cactus-tours-camel-ride-miniatura.webp',
-  'https://cactustours.com.mx/wp-content/uploads/2025/01/357A7620.webp',
-  'https://cactustours.com.mx/wp-content/uploads/2024/11/DJI_0065.webp',
-  'https://cactustours.com.mx/wp-content/uploads/2024/08/2_Side-by-side-Adventure--scaled.webp',
-];
+const heroImages = [...activityCollagePresets.heroStrip];
 
 const activitiesLd = {
   '@context': 'https://schema.org',
@@ -101,7 +86,7 @@ const activitiesLd = {
   description: 'ATV rides, camel safaris, horseback riding, Sky Bikes (Guinness World Record), and RZR off-road adventures in Los Cabos, Mexico. Round-trip transportation included.',
   url: 'https://classviptransfers.com/activities',
   touristType: ['Adventure', 'Family', 'Outdoor'],
-  photo: 'https://cactustours.com.mx/wp-content/uploads/2024/03/3_Beach-and-Dunes-ATV.webp',
+  photo: cloudinaryAssets.activities.atv,
   address: {
     '@type': 'PostalAddress',
     addressLocality: 'Los Cabos',
@@ -162,7 +147,9 @@ const Activities = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1.2 }}
-            fetchPriority="high"
+            fetchPriority={currentHero === 0 ? 'high' : 'low'}
+            loading={currentHero === 0 ? 'eager' : 'lazy'}
+            decoding="async"
           />
         </AnimatePresence>
         <div className="absolute inset-0 bg-gradient-to-b from-navy/60 via-navy/40 to-navy/80" />
@@ -297,7 +284,6 @@ const Activities = () => {
                       {act.tag}
                     </span>
                   </div>
-                  <div className="absolute bottom-3 left-4 text-3xl">{act.emoji}</div>
                 </div>
                 <div className="p-5">
                   <h3 className="font-display text-lg font-bold mb-2 text-foreground">{t(act.titleKey)}</h3>

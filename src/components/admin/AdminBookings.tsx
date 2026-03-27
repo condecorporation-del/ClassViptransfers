@@ -202,88 +202,92 @@ export const AdminBookings = () => {
   return (
     <div className="space-y-5">
       {/* ── Toolbar ── */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Period buttons */}
-        <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
-          {(['today', 'week', 'month', 'custom'] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium capitalize transition-colors ${
-                period === p ? 'bg-gold text-navy' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {p === 'today' ? 'Today' : p === 'week' ? 'This Week' : p === 'month' ? 'This Month' : 'Custom'}
-            </button>
-          ))}
+      <div className="space-y-2.5">
+        {/* Row 1: period + actions */}
+        <div className="flex items-center gap-2">
+          {/* Period: scrollable on mobile */}
+          <div className="flex-1 overflow-x-auto scrollbar-none">
+            <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1 w-max min-w-full">
+              {(['today', 'week', 'month', 'custom'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={`px-3 py-1.5 rounded-md text-xs md:text-sm font-semibold whitespace-nowrap transition-colors ${
+                    period === p ? 'bg-gold text-navy' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {p === 'today' ? 'Today' : p === 'week' ? 'Week' : p === 'month' ? 'Month' : 'Custom'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button
+            onClick={fetchBookings}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gold/20 text-gold hover:bg-gold/30 text-xs font-semibold shrink-0"
+            title="Refresh"
+          >
+            <RefreshCw size={13} /><span className="hidden sm:inline">Refresh</span>
+          </button>
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border hover:bg-muted text-xs font-semibold shrink-0"
+            title="Export CSV"
+          >
+            <Download size={13} /><span className="hidden sm:inline">CSV</span>
+          </button>
         </div>
 
         {/* Custom date range */}
         {period === 'custom' && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="date" value={customFrom}
               onChange={(e) => setCustomFrom(e.target.value)}
-              className="px-2 py-1.5 rounded-lg border border-border bg-background text-sm"
+              className="px-2 py-1.5 rounded-lg border border-border bg-background text-sm flex-1 min-w-[130px]"
             />
-            <span className="text-muted-foreground text-sm">to</span>
+            <span className="text-muted-foreground text-sm">→</span>
             <input
               type="date" value={customTo}
               onChange={(e) => setCustomTo(e.target.value)}
-              className="px-2 py-1.5 rounded-lg border border-border bg-background text-sm"
+              className="px-2 py-1.5 rounded-lg border border-border bg-background text-sm flex-1 min-w-[130px]"
             />
             <button
               onClick={fetchBookings}
-              className="px-3 py-1.5 rounded-lg bg-gold/20 text-gold hover:bg-gold/30 text-sm"
+              className="px-3 py-1.5 rounded-lg bg-gold/20 text-gold hover:bg-gold/30 text-sm font-semibold"
             >
               Apply
             </button>
           </div>
         )}
 
-        {/* Status filter */}
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm"
-        >
-          <option value="">All statuses</option>
-          <option value="PENDING_PAYMENT">Pending Payment</option>
-          <option value="PAID">Paid</option>
-          <option value="CONFIRMED">Confirmed</option>
-          <option value="OFFLINE_HOLD">Offline Hold</option>
-          <option value="CANCELLED">Cancelled</option>
-          <option value="COMPLETED">Completed</option>
-          <option value="DRAFT">Draft</option>
-        </select>
-
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Name, email, CLASS2026..."
-            value={searchQ}
-            onChange={(e) => setSearchQ(e.target.value)}
-            onKeyDown={handleSearchKey}
-            className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm"
-          />
+        {/* Row 2: search + status */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Name, email, code…"
+              value={searchQ}
+              onChange={(e) => setSearchQ(e.target.value)}
+              onKeyDown={handleSearchKey}
+              className="w-full pl-8 pr-3 py-2 rounded-lg border border-border bg-background text-sm"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-2 py-2 rounded-lg border border-border bg-background text-xs md:text-sm shrink-0"
+          >
+            <option value="">All</option>
+            <option value="PENDING_PAYMENT">Pending</option>
+            <option value="PAID">Paid</option>
+            <option value="CONFIRMED">Confirmed</option>
+            <option value="OFFLINE_HOLD">Hold</option>
+            <option value="CANCELLED">Cancelled</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="DRAFT">Draft</option>
+          </select>
         </div>
-
-        {/* Actions */}
-        <button
-          onClick={fetchBookings}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold/20 text-gold hover:bg-gold/30 text-sm"
-        >
-          <RefreshCw size={14} /> Refresh
-        </button>
-        <button
-          onClick={exportCSV}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-sm"
-          title="Export to CSV"
-        >
-          <Download size={14} /> CSV
-        </button>
       </div>
 
       {/* ── Table ── */}
@@ -296,7 +300,41 @@ export const AdminBookings = () => {
       ) : (
         <div>
           <p className="text-xs text-muted-foreground mb-2">{total} booking{total !== 1 ? 's' : ''} found</p>
-          <div className="glass-card rounded-xl border border-border overflow-hidden overflow-x-auto">
+            {/* Mobile: card list */}
+          <div className="md:hidden space-y-2.5">
+            {bookings.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => fetchDetail(b.id)}
+                className="w-full text-left glass-card rounded-2xl border border-border p-4 hover:border-gold/30 active:scale-[0.99] transition-all"
+              >
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <span className="font-mono text-sm font-bold text-gold">
+                    {b.confirmationCode || b.id.slice(0, 8).toUpperCase()}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-semibold shrink-0 ${STATUS_COLORS[b.status] || 'bg-gray-100 text-gray-700'}`}>
+                    {b.status.replace(/_/g, ' ')}
+                  </span>
+                </div>
+                <p className="font-semibold text-sm text-foreground">{b.customer?.name || '—'}</p>
+                <p className="text-xs text-muted-foreground mb-2">{b.customer?.email}</p>
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-3 text-muted-foreground">
+                    <span>{fmt(b.bookingDate)}</span>
+                    {(b.arrivalTime || b.bookingTime) && (
+                      <span className="font-mono">{b.arrivalTime || b.bookingTime}</span>
+                    )}
+                    {b.flightNumber && <span>{b.flightNumber}</span>}
+                  </div>
+                  <span className="font-bold text-foreground">{fmtCents(b.totalAmount)}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden md:block glass-card rounded-xl border border-border overflow-hidden overflow-x-auto">
             <table className="w-full text-sm min-w-[780px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">

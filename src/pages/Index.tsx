@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ArrowRight, Star, ChevronDown, Trophy, Quote, Plane, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Star, ChevronDown, ChevronLeft, ChevronRight, Trophy, Plane, Sparkles, CheckCircle2 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
 import {
   Accordion,
@@ -10,7 +10,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { cloudinaryAssets } from '@/lib/cloudinary-assets';
+import { cloudinaryAssets, activityCollagePresets } from '@/lib/cloudinary-assets';
 
 const heroImages = cloudinaryAssets.hero;
 
@@ -29,14 +29,24 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.12 } },
 };
 
+const TRIPADVISOR_TESTIMONIAL_IDS = [1, 2, 3, 4, 5] as const;
+
 const Index = () => {
   const { t } = useLanguage();
   const [currentImage, setCurrentImage] = useState(0);
+  const [testimonialIndex, setTestimonialIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentImage(prev => (prev + 1) % heroImages.length);
     }, 7000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTestimonialIndex(prev => (prev + 1) % TRIPADVISOR_TESTIMONIAL_IDS.length);
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -53,12 +63,6 @@ const Index = () => {
     { num: '03', titleKey: 'howItWorks.step3.title', descKey: 'howItWorks.step3.desc', icon: <Sparkles size={24} /> },
   ];
 
-  const testimonials = [
-    { name: 'Sarah M.', location: t('testimonial.1.location'), key: 'testimonial.1.text', rating: 5 },
-    { name: 'James & Lisa R.', location: t('testimonial.2.location'), key: 'testimonial.2.text', rating: 5 },
-    { name: 'Carlos G.', location: t('testimonial.3.location'), key: 'testimonial.3.text', rating: 5 },
-  ];
-
   const localBusinessLd = {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
@@ -66,7 +70,7 @@ const Index = () => {
     description: 'Premium private airport transportation in Los Cabos with 30+ years of experience. Serving 250+ hotels from SJD Airport. TripAdvisor Certificate of Excellence.',
     url: 'https://classviptransfers.com',
     telephone: '+526241222174',
-    email: 'Armando@caboviptransfers.com',
+    email: 'Armando@classviptransfers.com',
     address: { '@type': 'PostalAddress', addressLocality: 'Los Cabos', addressRegion: 'Baja California Sur', addressCountry: 'MX' },
     geo: { '@type': 'GeoCoordinates', latitude: 22.8905, longitude: -109.9167 },
     priceRange: '$$$',
@@ -121,7 +125,9 @@ const Index = () => {
               src={img}
               alt={`Los Cabos luxury ${i + 1}`}
               className="w-full h-full object-cover"
-              {...(i === 0 ? { fetchPriority: 'high' as const } : { loading: 'eager' as const })}
+              {...(i === 0
+                ? { fetchPriority: 'high' as const }
+                : { loading: 'lazy' as const, decoding: 'async' as const })}
             />
           </motion.div>
         ))}
@@ -129,7 +135,7 @@ const Index = () => {
         <div className="absolute inset-0 hero-overlay" />
         <div className="absolute inset-0 vignette" />
 
-        <div className="relative z-10 h-full flex flex-col items-center justify-center px-4 text-center">
+        <div className="relative z-10 h-full flex flex-col items-center justify-start pt-20 md:justify-center md:pt-0 px-4 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -217,209 +223,6 @@ const Index = () => {
         </motion.div>
       </section>
 
-      {/* ===== SEO CONTENT + TRIPADVISOR ===== */}
-      <section className="py-16 px-4 bg-muted/30">
-        <div className="container mx-auto max-w-5xl">
-          <div className="flex flex-col sm:flex-row sm:items-start gap-6 mb-6">
-            <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground leading-tight flex-1">
-              Los Cabos Luxury Airport Transportation — 30 Years of Excellence
-            </h2>
-            <a
-              href="https://www.tripadvisor.com.mx/Attraction_Review-g152515-d10486878-Reviews-Class_VIP_Transfers-Cabo_San_Lucas_Los_Cabos_Baja_California.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-shrink-0"
-              aria-label="Class VIP Transfers on TripAdvisor"
-            >
-              <img
-                src="https://www.tripadvisor.com/img/cdsi/img2/awards/CoE2023_WidgetAsset-14348-2.png"
-                alt="TripAdvisor Certificate of Excellence"
-                className="h-20 w-auto"
-                loading="lazy"
-              />
-            </a>
-          </div>
-
-          <div className="border-l-4 border-gold bg-gold/5 px-4 py-3 mb-8 rounded-r-lg">
-            <p className="text-foreground/80 font-semibold text-sm">
-              ⭐ TripAdvisor Certificate of Excellence —{' '}
-              <a
-                href="https://www.tripadvisor.com.mx/Attraction_Review-g152515-d10486878-Reviews-Class_VIP_Transfers-Cabo_San_Lucas_Los_Cabos_Baja_California.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gold underline hover:text-gold/80 transition-colors"
-              >
-                Read Our Reviews on TripAdvisor
-              </a>
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-10 text-muted-foreground text-sm leading-relaxed">
-            <div className="space-y-6">
-              <p>
-                Class VIP Transfers is the leading luxury private transportation company in Los Cabos
-                with over 30 years of experience. We provide premium airport transfers from Los Cabos
-                International Airport (SJD) to any hotel, resort, or private residence in
-                San José del Cabo, Tourist Corridor, Cabo San Lucas, Todos Santos, and La Paz.
-              </p>
-
-              <div>
-                <h3 className="font-semibold text-foreground mb-2">Service to 250+ Hotels &amp; Resorts</h3>
-                <p>
-                  We serve over 250 hotels and resorts including One&amp;Only Palmilla, Las Ventanas al Paraíso,
-                  Grand Velas, Montage Los Cabos, Waldorf Astoria Pedregal, Hotel Esperanza, and all major
-                  properties in the Los Cabos area.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-foreground mb-2">Premium Fleet — Suburban, Escalade &amp; Sprinter</h3>
-                <p>
-                  Our modern fleet features late-model Chevrolet Suburbans, Cadillac Escalades, and Mercedes
-                  Sprinter vans with air conditioning, leather seats, WiFi, complimentary water, and
-                  luggage handling. All drivers are bilingual and certified.
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-foreground mb-4">Why Choose Class VIP Transfers</h3>
-              <ul className="space-y-2">
-                {[
-                  '30 years of experience in Los Cabos',
-                  'TripAdvisor Certificate of Excellence',
-                  'Flight tracking — no extra charge for delays',
-                  'Professional bilingual certified drivers',
-                  'Direct booking — best rates guaranteed',
-                  '24/7 customer service',
-                  'Door-to-door service',
-                  'Service to 250+ hotels and resorts',
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <span className="text-gold font-bold mt-0.5">✓</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ===== TRIPADVISOR REVIEWS ===== */}
-      <section className="py-16 px-4 section-light">
-        <div className="container mx-auto max-w-5xl">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            className="text-center mb-10"
-          >
-            <a
-              href="https://www.tripadvisor.com.mx/Attraction_Review-g152515-d10486878-Reviews-Class_VIP_Transfers-Cabo_San_Lucas_Los_Cabos_Baja_California.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block mb-4"
-            >
-              <img
-                src="https://www.tripadvisor.com/img/cdsi/img2/awards/CoE2023_WidgetAsset-14348-2.png"
-                alt="TripAdvisor Certificate of Excellence"
-                className="h-16 w-auto mx-auto"
-                loading="lazy"
-              />
-            </a>
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-2">
-              Rated #1 on TripAdvisor
-            </h2>
-            <p className="text-muted-foreground text-sm">Verified reviews from real travelers</p>
-          </motion.div>
-
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="grid md:grid-cols-3 gap-5 mb-8"
-          >
-            {[
-              {
-                text: 'Absolutely the best transfer service in Los Cabos! Our driver was waiting at arrivals with a sign, helped with all luggage, and the SUV was spotless. Worth every penny.',
-                author: 'Jennifer K.',
-                origin: 'California, USA',
-                date: 'Feb 2026',
-              },
-              {
-                text: 'Used Class VIP Transfers 3 times this year. Always on time, always professional. They tracked our flight and adjusted when we landed early. Cannot recommend enough.',
-                author: 'Michael & Tracy R.',
-                origin: 'Texas, USA',
-                date: 'Jan 2026',
-              },
-              {
-                text: 'Incredible experience from start to finish. The driver was bilingual, knowledgeable about the area, and made our arrival stress-free. Already booked for our return trip!',
-                author: 'Sophie L.',
-                origin: 'London, UK',
-                date: 'Mar 2026',
-              },
-              {
-                text: 'Best decision we made for our honeymoon. The champagne welcome in the vehicle was a beautiful touch. Professional, punctual, and luxurious. Five stars all the way.',
-                author: 'Carlos & Ana M.',
-                origin: 'Mexico City, MX',
-                date: 'Feb 2026',
-              },
-              {
-                text: 'Traveled with 3 kids and lots of luggage — they had a Sprinter van ready, car seats installed, and cold drinks waiting. The whole family was impressed. Highly recommend!',
-                author: 'David H.',
-                origin: 'New York, USA',
-                date: 'Jan 2026',
-              },
-            ].map((review, i) => (
-              <motion.div
-                key={i}
-                variants={fadeUp}
-                className="glass-card rounded-2xl p-6 border border-border flex flex-col gap-3 relative overflow-hidden"
-              >
-                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-gold/20 to-transparent" />
-                <div className="flex gap-0.5">
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <Star key={j} size={14} className="fill-gold text-gold" />
-                  ))}
-                </div>
-                <p className="text-foreground/75 text-sm leading-relaxed italic flex-1">
-                  "{review.text}"
-                </p>
-                <div className="flex items-center justify-between pt-2 border-t border-border">
-                  <div>
-                    <p className="text-foreground font-semibold text-sm">{review.author}</p>
-                    <p className="text-muted-foreground text-xs">{review.origin}</p>
-                  </div>
-                  <span className="text-muted-foreground text-xs">{review.date}</span>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            className="text-center"
-          >
-            <a
-              href="https://www.tripadvisor.com.mx/Attraction_Review-g152515-d10486878-Reviews-Class_VIP_Transfers-Cabo_San_Lucas_Los_Cabos_Baja_California.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-gold border border-gold/30 px-6 py-2.5 rounded-full hover:bg-gold/10 transition-all"
-            >
-              Read all reviews on TripAdvisor <ArrowRight size={14} />
-            </a>
-          </motion.div>
-        </div>
-      </section>
-
-      <div className="section-divider mx-auto max-w-3xl" />
-
       {/* ===== COMPANY STORY ===== */}
       <section className="py-24 px-4">
         <div className="container mx-auto max-w-6xl">
@@ -490,12 +293,7 @@ const Index = () => {
               {/* Combo 2 — photo collage card */}
               {([
                 {
-                  collage: [
-                    'https://cactustours.com.mx/wp-content/uploads/2024/03/3_Beach-and-Dunes-ATV.webp',
-                    'https://cactustours.com.mx/wp-content/uploads/2024/03/Cactus-tours-camel-ride-miniatura.webp',
-                    'https://cactustours.com.mx/wp-content/uploads/2025/01/357A7620.webp',
-                    'https://cactustours.com.mx/wp-content/uploads/2024/11/DJI_0065.webp',
-                  ],
+                  collage: [...activityCollagePresets.combo2],
                   badge: null,
                   titleKey: 'home.activities.combo',
                   subtitleKey: 'home.activities.comboActivities',
@@ -505,12 +303,7 @@ const Index = () => {
                   highlight: false,
                 },
                 {
-                  collage: [
-                    'https://cactustours.com.mx/wp-content/uploads/2024/08/2_Side-by-side-Adventure--scaled.webp',
-                    'https://cactustours.com.mx/wp-content/uploads/2024/03/3_Beach-and-Dunes-ATV.webp',
-                    'https://cactustours.com.mx/wp-content/uploads/2024/03/Cactus-tours-camel-ride-miniatura.webp',
-                    'https://cactustours.com.mx/wp-content/uploads/2024/11/DJI_0065.webp',
-                  ],
+                  collage: [...activityCollagePresets.combo3],
                   badge: 'home.activities.bestValue',
                   titleKey: 'home.activities.crazyCombo',
                   subtitleKey: 'home.activities.crazyActivities',
@@ -599,38 +392,110 @@ const Index = () => {
 
       <div className="section-divider mx-auto max-w-3xl" />
 
-      {/* ===== TESTIMONIALS (sand bg) ===== */}
+      {/* ===== WHAT OUR GUESTS SAY (TripAdvisor-style carousel) ===== */}
       <section className="py-24 px-4 section-light">
-        <div className="container mx-auto max-w-5xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-16">
-            <span className="font-accent text-gold text-sm tracking-[0.3em] uppercase mb-3 block">Guest Reviews</span>
-            <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-bold mb-5 text-foreground">{t('testimonials.title')}</h2>
-            <p className="text-muted-foreground text-lg font-light">{t('testimonials.subtitle')}</p>
+        <div className="container mx-auto max-w-3xl">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="text-center mb-12"
+          >
+            <span className="font-accent text-gold text-xs tracking-[0.25em] uppercase mb-2 block">
+              {t('testimonials.title')}
+            </span>
+            <p className="text-muted-foreground text-sm">
+              {t('testimonials.subtitle')}
+            </p>
           </motion.div>
-          <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true }} className="grid md:grid-cols-3 gap-6">
-            {testimonials.map((test, i) => (
-              <motion.div key={i} variants={fadeUp}
-                className="glass-card rounded-2xl p-8 premium-card border border-border relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
-                <Quote size={28} className="text-gold/20 mb-4" />
-                <div className="flex gap-0.5 mb-4">
-                  {Array.from({ length: test.rating }).map((_, j) => (
-                    <Star key={j} size={14} className="fill-gold text-gold" />
-                  ))}
-                </div>
-                <p className="text-foreground/80 mb-6 italic leading-relaxed font-accent text-lg">"{t(test.key)}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full gold-gradient flex items-center justify-center text-secondary-foreground font-bold text-sm">
-                    {test.name.charAt(0)}
+
+          {/* Carousel track — slides horizontal */}
+          <div className="relative overflow-hidden">
+            <div
+              className="flex"
+              style={{
+                transform: `translateX(-${testimonialIndex * 100}%)`,
+                transition: 'transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+              }}
+            >
+              {TRIPADVISOR_TESTIMONIAL_IDS.map((id) => (
+                <div key={id} className="w-full shrink-0 px-2">
+                  <div
+                    className="rounded-xl border border-[#00AF87]/20 bg-white/60 backdrop-blur-sm p-8 shadow-sm"
+                    style={{ boxShadow: '0 2px 12px rgba(0,175,135,0.08)' }}
+                  >
+                    {/* TripAdvisor-style green rating bubbles */}
+                    <div className="flex justify-center gap-1.5 mb-6" aria-label="5 of 5 bubbles">
+                      {Array.from({ length: 5 }).map((_, j) => (
+                        <span
+                          key={j}
+                          className="w-4 h-4 rounded-full shrink-0"
+                          style={{ backgroundColor: '#00AF87' }}
+                          aria-hidden
+                        />
+                      ))}
+                    </div>
+                    <blockquote className="text-foreground/90 text-lg md:text-xl leading-relaxed font-light mb-5 text-center">
+                      &ldquo;{t(`testimonial.${id}.text`)}&rdquo;
+                    </blockquote>
+                    <p className="text-muted-foreground text-sm text-center">
+                      — {t(`testimonial.${id}.author`)}
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-gold font-semibold text-sm">{test.name}</p>
-                    <p className="text-muted-foreground text-xs">{test.location}</p>
-                  </div>
                 </div>
-              </motion.div>
+              ))}
+            </div>
+
+            {/* Prev / Next arrows */}
+            <button
+              type="button"
+              onClick={() => setTestimonialIndex((a) => (a - 1 + TRIPADVISOR_TESTIMONIAL_IDS.length) % TRIPADVISOR_TESTIMONIAL_IDS.length)}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 w-12 h-12 rounded-full bg-white/90 shadow-md border border-[#00AF87]/20 flex items-center justify-center text-[#00AF87] hover:bg-[#00AF87] hover:text-white transition-all"
+              aria-label={t('testimonials.prev')}
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setTestimonialIndex((a) => (a + 1) % TRIPADVISOR_TESTIMONIAL_IDS.length)}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 w-12 h-12 rounded-full bg-white/90 shadow-md border border-[#00AF87]/20 flex items-center justify-center text-[#00AF87] hover:bg-[#00AF87] hover:text-white transition-all"
+              aria-label={t('testimonials.next')}
+            >
+              <ChevronRight size={24} />
+            </button>
+          </div>
+
+          {/* Pagination dots — TripAdvisor green when active */}
+          <div className="flex items-center justify-center gap-2.5 mt-8">
+            {TRIPADVISOR_TESTIMONIAL_IDS.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setTestimonialIndex(i)}
+                className={`rounded-full transition-all duration-300 ${
+                  i === testimonialIndex
+                    ? 'w-8 h-2.5'
+                    : 'w-2.5 h-2.5 hover:opacity-80'
+                }`}
+                style={{
+                  backgroundColor: i === testimonialIndex ? '#00AF87' : 'rgba(0,175,135,0.3)',
+                }}
+                aria-label={`${t('testimonials.title')} ${i + 1}`}
+              />
             ))}
-          </motion.div>
+          </div>
+
+          <a
+            href="https://www.tripadvisor.com.mx/Attraction_Review-g152515-d10486878-Reviews-Class_VIP_Transfers-Cabo_San_Lucas_Los_Cabos_Baja_California.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 mt-8 text-sm font-semibold transition-colors"
+            style={{ color: '#00AF87' }}
+          >
+            {t('testimonials.tripAdvisorCta')}
+            <ArrowRight size={16} />
+          </a>
         </div>
       </section>
 

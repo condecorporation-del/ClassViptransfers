@@ -42,6 +42,10 @@ export default function HotelPage() {
       })
       .then((j) => {
         if (!j) return;
+        if (!j.success || !j.data) {
+          setStatus('notfound');
+          return;
+        }
         setHotel(j.data);
         setStatus('found');
       })

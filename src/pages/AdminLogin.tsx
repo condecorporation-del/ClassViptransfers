@@ -48,6 +48,9 @@ export default function AdminLogin() {
       let data: { success?: boolean; error?: string } = {};
       try { data = text ? JSON.parse(text) : {}; } catch { setError(`Invalid response (${response.status})`); return; }
       if (data.success) {
+        if ((data as any).token) {
+          localStorage.setItem('admin_token', (data as any).token);
+        }
         navigate('/admin');
       } else {
         setError(data.error || 'Login failed');

@@ -3,7 +3,7 @@ import { Phone, MessageCircle, Mail } from 'lucide-react';
 
 const PHONE = '+52 624 122 2174';
 const PHONE_RAW = '5216241222174';
-const EMAIL = 'Armando@caboviptransfers.com';
+const EMAIL = 'Armando@classviptransfers.com';
 
 export function ContactInfo({ inline = false }: { inline?: boolean }) {
   const { t } = useLanguage();

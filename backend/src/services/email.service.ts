@@ -8,6 +8,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import Handlebars from 'handlebars';
 import { PdfService } from './pdf.service';
+import { generateBookingToken } from '../controllers/booking.controller';
 
 interface BookingWithRelations extends Booking {
   customer: Customer;
@@ -630,7 +631,7 @@ export class EmailService {
       logoUrl: this.logoUrl,
       watermarkLogoUrl: this.watermarkLogoUrl,
       brandName: this.brandName,
-      paymentUrl: `${this.frontendUrl}/checkout?bookingId=${booking.id}`,
+      paymentUrl: `${this.frontendUrl}/checkout?bookingId=${booking.id}&bt=${generateBookingToken(booking.id)}`,
       paymentMethodText: '✓ Paid via PayPal',
       primaryColor: this.primaryColor,
       accentColor: this.accentColor,

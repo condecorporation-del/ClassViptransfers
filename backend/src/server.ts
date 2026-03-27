@@ -8,6 +8,7 @@ import { errorHandler } from './middleware/errorHandler';
 import bookingsRoutes from './routes/bookings.routes';
 import adminRoutes from './routes/admin.routes';
 import paypalRoutes from './routes/paypal.routes';
+import stripeRoutes from './routes/stripe.routes';
 import aiRoutes from './routes/ai.routes';
 import authRoutes from './routes/auth.routes';
 import pricingRoutes from './routes/pricing.routes';
@@ -59,6 +60,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(cookieParser());
+// Stripe webhook must receive raw body — register BEFORE express.json()
+app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -85,6 +88,7 @@ app.use('/api/bookings', bookingLimiter, bookingsRoutes);
 app.use('/api/admin/auth', authLimiter, authRoutes);
 app.use('/api/admin', adminRoutes); // Admin routes (protected by auth middleware)
 app.use('/api/paypal', paypalLimiter, paypalRoutes);
+app.use('/api/stripe', stripeRoutes);
 app.use('/api/ai', aiLimiter, aiRoutes);
 app.use('/api/pricing', pricingRoutes);
 app.use('/api/hotels', hotelsRoutes);

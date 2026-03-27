@@ -24,7 +24,10 @@ export const useAdminAuth = () => {
     try {
       const base = getApiBaseUrl();
       const url = base ? `${base}/api/admin/auth/me` : '/api/admin/auth/me';
-      const response = await fetch(url, { credentials: 'include' });
+      const localToken = localStorage.getItem('admin_token');
+      const headers: Record<string, string> = {};
+      if (localToken) headers['Authorization'] = `Bearer ${localToken}`;
+      const response = await fetch(url, { credentials: 'include', headers });
 
       if (response.ok) {
         const data = await response.json();
@@ -54,10 +57,11 @@ export const useAdminAuth = () => {
     try {
       const base = getApiBaseUrl();
       const url = base ? `${base}/api/admin/auth/logout` : '/api/admin/auth/logout';
-      await fetch(url, {
-        method: 'POST',
-        credentials: 'include',
-      });
+      const localToken = localStorage.getItem('admin_token');
+      const headers: Record<string, string> = {};
+      if (localToken) headers['Authorization'] = `Bearer ${localToken}`;
+      await fetch(url, { method: 'POST', credentials: 'include', headers });
+      localStorage.removeItem('admin_token');
       setAuth({ authenticated: false, email: null, loading: false });
       navigate('/admin/login');
     } catch (error) {
@@ -66,9 +70,10 @@ export const useAdminAuth = () => {
   };
 
   const getAuthHeaders = () => {
-    return {
-      'Content-Type': 'application/json',
-    };
+    const localToken = localStorage.getItem('admin_token');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (localToken) headers['Authorization'] = `Bearer ${localToken}`;
+    return headers;
   };
 
   return { ...auth, checkAuth, logout, getAuthHeaders };

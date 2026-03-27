@@ -26,7 +26,7 @@ interface Message {
 type ActivePanel = 'none' | 'book' | 'price';
 
 export const ChatWidget = () => {
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -174,10 +174,12 @@ export const ChatWidget = () => {
     sendMessage(q);
   };
 
-  // Contact links
-  const bookingMsg = encodeURIComponent(lang === 'es' ? 'Hola, quiero reservar mi traslado.' : 'Hi, I want to book my transfer.');
-  const smsLink = `sms:${SMS_PHONE}?&body=${bookingMsg}`;
-  const mailtoLink = `mailto:${EMAIL}?subject=${encodeURIComponent(lang === 'es' ? 'Reservar traslado' : 'Book transfer')}&body=${bookingMsg}`;
+  // Contact links — pre-filled booking form template
+  const bookingTemplate = t('chat.bookingTemplate');
+  const bookingMsgEnc = encodeURIComponent(bookingTemplate);
+  const whatsappBookingLink = `${WHATSAPP_LINK}?text=${bookingMsgEnc}`;
+  const smsLink = `sms:${SMS_PHONE}?body=${bookingMsgEnc}`;
+  const mailtoLink = `mailto:${EMAIL}?subject=${encodeURIComponent(t('chat.bookingEmailSubject'))}&body=${bookingMsgEnc}`;
 
   return (
     <>
@@ -324,7 +326,7 @@ export const ChatWidget = () => {
                   </div>
                   {msg.showBookingCta && msg.role === 'assistant' && (
                     <div className="flex gap-2 mt-2 ml-1 flex-wrap">
-                      <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer"
+                      <a href={whatsappBookingLink} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#25D366] text-white hover:bg-[#20bd5a] transition-colors">
                         <MessageCircle size={12} /> WhatsApp
                       </a>
@@ -373,7 +375,7 @@ export const ChatWidget = () => {
                       </span>
                       <ChevronRight size={16} />
                     </a>
-                    <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer"
+                    <a href={whatsappBookingLink} target="_blank" rel="noopener noreferrer"
                       className="flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-semibold bg-[#25D366] text-white hover:bg-[#20bd5a] transition-all hover:scale-[1.01]">
                       <span className="flex items-center gap-2">
                         <MessageCircle size={16} /> WhatsApp

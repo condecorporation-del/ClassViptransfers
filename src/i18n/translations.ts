@@ -84,15 +84,40 @@ export const translations: Record<string, { en: string; es: string }> = {
   'howItWorks.step3.title': { en: 'Ride', es: 'Disfruta' },
   'howItWorks.step3.desc': { en: 'Your driver awaits — enjoy a premium experience', es: 'Tu chofer te espera — disfruta una experiencia premium' },
 
-  // Testimonials
+  // Testimonials (TripAdvisor carousel)
   'testimonials.title': { en: 'What Our Guests Say', es: 'Lo Que Dicen Nuestros Huéspedes' },
   'testimonials.subtitle': { en: 'Trusted by thousands of travelers since 1994', es: 'La confianza de miles de viajeros desde 1994' },
-  'testimonial.1.text': { en: 'Incredible service! Our driver was waiting with a cold water and big smile. The Suburban was spotless. Highly recommend.', es: '¡Servicio increíble! Nuestro chofer nos esperaba con agua fría y una gran sonrisa. La Suburban estaba impecable. Muy recomendado.' },
-  'testimonial.1.location': { en: 'Austin, TX', es: 'Austin, TX' },
-  'testimonial.2.text': { en: "We've used Class VIP three times now. Always professional, always on time. The best transfer service in Cabo, period.", es: 'Ya usamos Class VIP tres veces. Siempre profesionales, siempre puntuales. El mejor servicio de transfer en Cabo, punto.' },
-  'testimonial.2.location': { en: 'Toronto, CA', es: 'Toronto, CA' },
-  'testimonial.3.text': { en: 'Excelente servicio, muy profesional. La Sprinter era nueva y cómoda. Lo recomiendo para grupos.', es: 'Excelente servicio, muy profesional. La Sprinter era nueva y cómoda. Lo recomiendo para grupos.' },
-  'testimonial.3.location': { en: 'CDMX, MX', es: 'CDMX, MX' },
+  'testimonials.tripAdvisorCta': { en: 'Read reviews on TripAdvisor', es: 'Ver opiniones en TripAdvisor' },
+  'testimonials.prev': { en: 'Previous review', es: 'Opinión anterior' },
+  'testimonials.next': { en: 'Next review', es: 'Siguiente opinión' },
+  'testimonial.1.text': {
+    en: 'The best transfer service in Los Cabos — professional, punctual, and luxurious.',
+    es: 'El mejor servicio de transfer en Los Cabos — profesional, puntual y de lujo.',
+  },
+  'testimonial.1.author': { en: 'Jennifer K., California USA', es: 'Jennifer K., California, EE. UU.' },
+  'testimonial.1.location': { en: 'California USA', es: 'California, EE. UU.' },
+  'testimonial.2.text': {
+    en: 'Absolutely the best! Our driver was waiting at arrivals with a sign, helped with all luggage. Worth every penny.',
+    es: '¡Absolutamente lo mejor! Nuestro chofer nos esperaba en llegadas con letrero, nos ayudó con el equipaje. Vale cada centavo.',
+  },
+  'testimonial.2.author': { en: 'Michael & Tracy R., Texas USA', es: 'Michael & Tracy R., Texas, EE. UU.' },
+  'testimonial.2.location': { en: 'Texas USA', es: 'Texas, EE. UU.' },
+  'testimonial.3.text': {
+    en: 'Incredible experience from start to finish. Bilingual driver, knowledgeable about the area. Already booked for our return!',
+    es: 'Experiencia increíble de principio a fin. Chofer bilingüe, conocedor del área. ¡Ya reservamos para el regreso!',
+  },
+  'testimonial.3.author': { en: 'Sophie L., London UK', es: 'Sophie L., Londres, Reino Unido' },
+  'testimonial.3.location': { en: 'London UK', es: 'Londres, Reino Unido' },
+  'testimonial.4.text': {
+    en: 'Best decision for our honeymoon. Champagne welcome was a beautiful touch. Professional, punctual, luxurious. Five stars.',
+    es: 'La mejor decisión para nuestra luna de miel. El champagne de bienvenida fue un detalle hermoso. Profesional, puntual, de lujo. Cinco estrellas.',
+  },
+  'testimonial.4.author': { en: 'Carlos & Ana M., Mexico City', es: 'Carlos & Ana M., Ciudad de México' },
+  'testimonial.5.text': {
+    en: 'Traveled with 3 kids — Sprinter van ready, car seats installed, cold drinks waiting. The whole family was impressed!',
+    es: 'Viajamos con 3 niños — Sprinter lista, sillas instaladas, bebidas frías. ¡Toda la familia quedó impresionada!',
+  },
+  'testimonial.5.author': { en: 'David H., New York USA', es: 'David H., Nueva York, EE. UU.' },
 
   // FAQ
   'faq.title': { en: 'Frequently Asked Questions', es: 'Preguntas Frecuentes' },
@@ -147,6 +172,29 @@ export const translations: Record<string, { en: string; es: string }> = {
   'pricing.viewPrices': { en: 'View prices by route', es: 'Ver precios por ruta' },
   'pricing.hidePrices': { en: 'Hide prices', es: 'Ocultar precios' },
   'floatingWhatsApp.msg': { en: "Hello! I'd like to get a quote for a transfer.", es: '¡Hola! Me gustaría cotizar un transfer.' },
+  'chat.bookingTemplate': {
+    en: `Hi! I'd like to book a transfer with Class VIP 🚗
+
+📍 Arrival date: 
+⏰ Arrival time: 
+✈️ Pick-up: (Airport / Hotel / Address)
+🏨 Drop-off: (Hotel / Address)
+👥 Passengers: 
+🛫 Flight # (if airport): 
+
+Thank you!`,
+    es: `¡Hola! Me gustaría reservar un traslado con Class VIP 🚗
+
+📍 Fecha de llegada: 
+⏰ Hora de llegada: 
+✈️ Recogida: (Aeropuerto / Hotel / Dirección)
+🏨 Destino: (Hotel / Dirección)
+👥 Pasajeros: 
+🛫 Nº de vuelo (si es aeropuerto): 
+
+¡Gracias!`,
+  },
+  'chat.bookingEmailSubject': { en: 'Book Transfer - Class VIP Transfers', es: 'Reservar Traslado - Class VIP Transfers' },
   'chat.shortcut.transport': { en: 'Book transportation', es: 'Reservar transporte' },
   'chat.shortcut.activities': { en: 'Book activities', es: 'Reservar actividades' },
   'chat.shortcut.quote': { en: 'Get a quote', es: 'Cotizar' },
@@ -326,8 +374,8 @@ export const translations: Record<string, { en: string; es: string }> = {
   'book.review.transferPrice': { en: 'Transfer Price', es: 'Precio Transfer' },
   'book.review.activitiesDeposit': { en: 'Activities Deposit', es: 'Depósito Actividades' },
   'book.review.total': { en: 'Total Due Now', es: 'Total a Pagar' },
-  'book.review.paypal': { en: 'Checkout with PayPal', es: 'Pagar con PayPal' },
-  'book.review.paypalDisabled': { en: 'PayPal checkout coming soon', es: 'Pago con PayPal próximamente' },
+  'book.review.paypal': { en: 'Secure Checkout', es: 'Pagar Ahora' },
+  'book.review.paypalDisabled': { en: 'Secure checkout', es: 'Pago seguro' },
 
   'book.summary': { en: 'Order Summary', es: 'Resumen del Pedido' },
   'book.summaryEmpty': { en: 'Select a service to begin', es: 'Selecciona un servicio para comenzar' },

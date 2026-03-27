@@ -21,10 +21,13 @@ export const useAdminAuth = () => {
   }, []);
 
   const checkAuth = async () => {
+    // Read localStorage safely (Safari private mode can throw)
+    let localToken: string | null = null;
+    try { localToken = localStorage.getItem('admin_token'); } catch { /* ignore */ }
+
     try {
       const base = getApiBaseUrl();
       const url = base ? `${base}/api/admin/auth/me` : '/api/admin/auth/me';
-      const localToken = localStorage.getItem('admin_token');
       const headers: Record<string, string> = {};
       if (localToken) headers['Authorization'] = `Bearer ${localToken}`;
       const response = await fetch(url, { credentials: 'include', headers });
@@ -32,18 +35,39 @@ export const useAdminAuth = () => {
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.data.authenticated) {
-          setAuth({
-            authenticated: true,
-            email: data.data.email,
-            loading: false,
-          });
+          setAuth({ authenticated: true, email: data.data.email, loading: false });
         } else {
+          // Server says not authenticated — clear stale token
+          try { localStorage.removeItem('admin_token'); } catch { /* ignore */ }
           setAuth({ authenticated: false, email: null, loading: false });
         }
       } else {
+        // If we have a fresh local token but the network call failed (e.g. cross-origin
+        // cookie issue on mobile Safari), trust the token for this session instead of
+        // immediately logging the user out.
+        if (localToken) {
+          // Decode payload without verifying signature — just check expiry
+          try {
+            const payload = JSON.parse(atob(localToken.split('.')[1]));
+            if (payload.exp && payload.exp * 1000 > Date.now()) {
+              setAuth({ authenticated: true, email: payload.email || null, loading: false });
+              return;
+            }
+          } catch { /* invalid token format */ }
+        }
         setAuth({ authenticated: false, email: null, loading: false });
       }
     } catch {
+      // Network error — if we have a valid (non-expired) local token, keep user logged in
+      if (localToken) {
+        try {
+          const payload = JSON.parse(atob(localToken.split('.')[1]));
+          if (payload.exp && payload.exp * 1000 > Date.now()) {
+            setAuth({ authenticated: true, email: payload.email || null, loading: false });
+            return;
+          }
+        } catch { /* invalid token */ }
+      }
       // In local development, bypass auth when backend is unreachable
       if (import.meta.env.DEV) {
         setAuth({ authenticated: true, email: 'dev@local', loading: false });

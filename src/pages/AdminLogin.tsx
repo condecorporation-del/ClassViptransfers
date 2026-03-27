@@ -22,8 +22,14 @@ export default function AdminLogin() {
     try {
       const base = getApiBaseUrl();
       const url = base ? `${base}/api/admin/auth/me` : '/api/admin/auth/me';
-      const response = await fetch(url, { credentials: 'include' });
-      if (response.ok) navigate('/admin');
+      const localToken = localStorage.getItem('admin_token');
+      const headers: Record<string, string> = {};
+      if (localToken) headers['Authorization'] = `Bearer ${localToken}`;
+      const response = await fetch(url, { credentials: 'include', headers });
+      if (response.ok) {
+        const data = await response.json().catch(() => null);
+        if (data?.success && data?.data?.authenticated) navigate('/admin');
+      }
     } catch (err) {
       console.debug('[AdminLogin] checkAuth error:', err);
     } finally {
@@ -49,7 +55,7 @@ export default function AdminLogin() {
       try { data = text ? JSON.parse(text) : {}; } catch { setError(`Invalid response (${response.status})`); return; }
       if (data.success) {
         if ((data as any).token) {
-          localStorage.setItem('admin_token', (data as any).token);
+          try { localStorage.setItem('admin_token', (data as any).token); } catch { /* Safari private mode */ }
         }
         navigate('/admin');
       } else {

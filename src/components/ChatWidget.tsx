@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Send, Mic, MicOff, Loader2, Headphones,
-  MessageCircle, Mail, Phone, ExternalLink, ChevronRight,
+  X, Send, Mic, MicOff, Headphones,
+  MessageCircle, ExternalLink,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getApiBaseUrl } from '@/lib/api';
@@ -10,8 +10,6 @@ const assistBg = 'https://res.cloudinary.com/dt9iyiorn/image/upload/v1774168334/
 
 const WHATSAPP_LINK = 'https://wa.me/5216241222174';
 const WHATSAPP_PHONE = '+52 624 122 2174';
-const EMAIL = 'Armando@classviptransfers.com';
-const SMS_PHONE = '+5262412222174';
 const BOOK_FORM = '/book';
 
 interface Message {
@@ -23,10 +21,8 @@ interface Message {
   showBookingCta?: boolean;
 }
 
-type ActivePanel = 'none' | 'book' | 'price';
-
 export const ChatWidget = () => {
-  const { lang, t } = useLanguage();
+  const { lang } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -34,13 +30,10 @@ export const ChatWidget = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showLabel, setShowLabel] = useState(true);
-  const [activePanel, setActivePanel] = useState<ActivePanel>('none');
-  const [priceInput, setPriceInput] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const priceInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -51,12 +44,6 @@ export const ChatWidget = () => {
     const timer = setTimeout(() => setShowLabel(false), 15000);
     return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    if (activePanel === 'price' && priceInputRef.current) {
-      setTimeout(() => priceInputRef.current?.focus(), 100);
-    }
-  }, [activePanel]);
 
   // ── Recording ────────────────────────────────────────────────────────────
 
@@ -155,31 +142,8 @@ export const ChatWidget = () => {
     if (!isLoading && input.trim()) sendMessage();
   };
 
-  const handlePriceSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!priceInput.trim()) return;
-    const q = lang === 'es'
-      ? `¿Cuánto cuesta el traslado a ${priceInput}?`
-      : `How much does a transfer to ${priceInput} cost?`;
-    setPriceInput('');
-    setActivePanel('none');
-    sendMessage(q);
-  };
-
-  const handleActivityShortcut = () => {
-    setActivePanel('none');
-    const q = lang === 'es'
-      ? '¿Qué actividades tienen y cuáles son los precios de los combos?'
-      : 'What activities do you offer and what are the combo prices?';
-    sendMessage(q);
-  };
-
-  // Contact links — pre-filled booking form template
-  const bookingTemplate = t('chat.bookingTemplate');
-  const bookingMsgEnc = encodeURIComponent(bookingTemplate);
-  const whatsappBookingLink = `${WHATSAPP_LINK}?text=${bookingMsgEnc}`;
-  const smsLink = `sms:${SMS_PHONE}?body=${bookingMsgEnc}`;
-  const mailtoLink = `mailto:${EMAIL}?subject=${encodeURIComponent(t('chat.bookingEmailSubject'))}&body=${bookingMsgEnc}`;
+  // WhatsApp booking link
+  const whatsappBookingLink = WHATSAPP_LINK;
 
   return (
     <>
@@ -287,52 +251,86 @@ export const ChatWidget = () => {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex-1 overflow-y-auto px-4 pt-3 pb-2 space-y-3">
               {messages.length === 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-center py-5"
+                  className="space-y-4"
                 >
-                  <div className="w-16 h-16 mx-auto mb-3 rounded-2xl flex items-center justify-center"
-                    style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.05))' }}>
-                    <Headphones size={30} className="text-gold/70" />
+                  {/* AI Agent intro */}
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center mt-0.5"
+                      style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.25), rgba(212,175,55,0.08))' }}>
+                      <Headphones size={16} className="text-gold" />
+                    </div>
+                    <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%]">
+                      <p className="text-sm leading-relaxed">
+                        {lang === 'es'
+                          ? '¡Hola! Soy el asistente virtual de Class VIP Transfers. ¿En qué puedo ayudarte hoy?'
+                          : "Hi! I'm the Class VIP Transfers virtual assistant. How can I help you today?"}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm font-semibold">
-                    {lang === 'es' ? '¡Hola! ¿En qué puedo ayudarte?' : "Hi! How can I assist you today?"}
-                  </p>
-                  <p className="text-xs mt-1.5 text-muted-foreground leading-relaxed">
-                    {lang === 'es'
-                      ? 'Pregúntame sobre precios, actividades y servicios en Los Cabos.'
-                      : 'Ask me about prices, activities, and services in Los Cabos.'}
-                  </p>
+
+                  {/* Suggestion chips */}
+                  <div className="pl-10">
+                    <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest mb-2">
+                      {lang === 'es' ? 'Preguntas frecuentes' : 'Suggested questions'}
+                    </p>
+                    <div className="flex flex-col gap-1.5">
+                      {(lang === 'es' ? [
+                        '¿Cuánto cuesta el traslado al aeropuerto?',
+                        '¿Cuánto tiempo antes debo salir?',
+                        '¿Qué actividades tienen disponibles?',
+                        '¿Cómo puedo hacer una reserva?',
+                      ] : [
+                        'How much is a transfer to the airport?',
+                        'How early should I be picked up?',
+                        'What activities do you offer?',
+                        'How do I make a reservation?',
+                      ]).map((q) => (
+                        <button
+                          key={q}
+                          onClick={() => sendMessage(q)}
+                          className="text-left text-[13px] px-3.5 py-2.5 rounded-xl border border-gold/20 bg-background hover:bg-gold/8 hover:border-gold/40 transition-all text-foreground/80 hover:text-foreground"
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </motion.div>
               )}
 
               {messages.map((msg) => (
                 <div key={msg.id}>
-                  <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                  <div className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {msg.role === 'assistant' && (
+                      <div className="w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center mb-0.5"
+                        style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.2), rgba(212,175,55,0.05))' }}>
+                        <Headphones size={13} className="text-gold" />
+                      </div>
+                    )}
+                    <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                       msg.role === 'user'
-                        ? 'text-navy font-medium'
-                        : 'bg-muted text-foreground'
+                        ? 'rounded-br-sm text-navy font-medium'
+                        : 'rounded-bl-sm bg-muted text-foreground'
                     }`}
-                      style={msg.role === 'user' ? {
-                        background: 'linear-gradient(135deg, #D4AF37, #F5C842)',
-                      } : {}}
+                      style={msg.role === 'user' ? { background: 'linear-gradient(135deg, #D4AF37, #F5C842)' } : {}}
                     >
                       {msg.content}
                     </div>
                   </div>
                   {msg.showBookingCta && msg.role === 'assistant' && (
-                    <div className="flex gap-2 mt-2 ml-1 flex-wrap">
+                    <div className="flex gap-2 mt-2 ml-9 flex-wrap">
                       <a href={whatsappBookingLink} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#25D366] text-white hover:bg-[#20bd5a] transition-colors">
                         <MessageCircle size={12} /> WhatsApp
                       </a>
                       <a href={BOOK_FORM}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gold/15 text-gold border border-gold/30 hover:bg-gold/25 transition-colors">
-                        <ExternalLink size={12} /> {lang === 'es' ? 'Reservar online' : 'Book online'}
+                        <ExternalLink size={12} /> {lang === 'es' ? 'Reservar' : 'Book online'}
                       </a>
                     </div>
                   )}
@@ -340,171 +338,50 @@ export const ChatWidget = () => {
               ))}
 
               {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-muted rounded-xl px-4 py-2.5 flex items-center gap-2">
-                    <Loader2 size={13} className="animate-spin text-gold" />
-                    <span className="text-xs text-muted-foreground">{lang === 'es' ? 'Pensando...' : 'Thinking...'}</span>
+                <div className="flex items-end gap-2 justify-start">
+                  <div className="w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center mb-0.5"
+                    style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.2), rgba(212,175,55,0.05))' }}>
+                    <Headphones size={13} className="text-gold" />
+                  </div>
+                  <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gold/60 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-gold/60 animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-gold/60 animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* ── Shortcut Panels ── */}
-
-            {/* Book Now panel */}
-            <AnimatePresence>
-              {activePanel === 'book' && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="border-t border-border/60 overflow-hidden"
-                >
-                  <div className="p-3 space-y-2">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
-                      {lang === 'es' ? '¿Cómo quieres reservar?' : 'How do you want to book?'}
-                    </p>
-                    <a href={BOOK_FORM}
-                      className="flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.01] active:scale-[0.99]"
-                      style={{ background: 'linear-gradient(135deg, #D4AF37, #F5C842)', color: '#0A1628' }}
-                    >
-                      <span className="flex items-center gap-2">
-                        <ExternalLink size={16} />
-                        {lang === 'es' ? 'Formulario online' : 'Online booking form'}
-                      </span>
-                      <ChevronRight size={16} />
-                    </a>
-                    <a href={whatsappBookingLink} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-semibold bg-[#25D366] text-white hover:bg-[#20bd5a] transition-all hover:scale-[1.01]">
-                      <span className="flex items-center gap-2">
-                        <MessageCircle size={16} /> WhatsApp
-                      </span>
-                      <ChevronRight size={16} />
-                    </a>
-                    <a href={mailtoLink}
-                      className="flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-semibold bg-muted hover:bg-muted/80 transition-all border border-border hover:scale-[1.01]">
-                      <span className="flex items-center gap-2">
-                        <Mail size={16} /> {lang === 'es' ? 'Email' : 'Email'}
-                      </span>
-                      <ChevronRight size={16} />
-                    </a>
-                    <a href={smsLink}
-                      className="flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-semibold bg-muted hover:bg-muted/80 transition-all border border-border hover:scale-[1.01]">
-                      <span className="flex items-center gap-2">
-                        <Phone size={16} /> iMessage / SMS
-                      </span>
-                      <ChevronRight size={16} />
-                    </a>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Price quote panel */}
-            <AnimatePresence>
-              {activePanel === 'price' && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="border-t border-border/60 overflow-hidden"
-                >
-                  <div className="p-3">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-                      {lang === 'es' ? '¿A qué hotel o zona?' : 'Which hotel or area?'}
-                    </p>
-                    <form onSubmit={handlePriceSubmit} className="flex gap-2">
-                      <input
-                        ref={priceInputRef}
-                        type="text"
-                        value={priceInput}
-                        onChange={e => setPriceInput(e.target.value)}
-                        placeholder={lang === 'es' ? 'ej. Riu Palace, Corridor...' : 'e.g. Pueblo Bonito, Corridor...'}
-                        className="flex-1 px-3 py-2.5 rounded-xl border border-gold/25 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-gold"
-                      />
-                      <button
-                        type="submit"
-                        disabled={!priceInput.trim() || isLoading}
-                        className="px-4 py-2.5 rounded-xl text-navy font-bold text-sm disabled:opacity-50 transition-all"
-                        style={{ background: 'linear-gradient(135deg, #D4AF37, #F5C842)' }}
-                      >
-                        {lang === 'es' ? 'Cotizar' : 'Quote'}
-                      </button>
-                    </form>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* ── Shortcut Buttons ── */}
-            <div className="border-t border-border/50 px-3 py-2 bg-muted/20">
-              <div className="flex flex-wrap gap-1.5">
-                {/* Book now */}
-                <button
-                  onClick={() => setActivePanel(p => p === 'book' ? 'none' : 'book')}
-                  disabled={isLoading}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all disabled:opacity-50 ${
-                    activePanel === 'book'
-                      ? 'bg-gold text-navy'
-                      : 'bg-[#25D366]/15 text-[#25D366] border border-[#25D366]/30 hover:bg-[#25D366] hover:text-white'
-                  }`}
-                >
-                  <Phone size={11} />
-                  {lang === 'es' ? 'Reservar ahora' : 'Book now'}
-                </button>
-
-                {/* Price quote */}
-                <button
-                  onClick={() => setActivePanel(p => p === 'price' ? 'none' : 'price')}
-                  disabled={isLoading}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all disabled:opacity-50 ${
-                    activePanel === 'price'
-                      ? 'bg-gold text-navy font-bold'
-                      : 'bg-navy/90 text-gold border border-gold/30 hover:bg-gold hover:text-navy'
-                  }`}
-                >
-                  💰 {lang === 'es' ? 'Cotizar precio' : 'Get a price'}
-                </button>
-
-                {/* Activities */}
-                <button
-                  onClick={handleActivityShortcut}
-                  disabled={isLoading}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-navy/90 text-gold border border-gold/30 hover:bg-gold hover:text-navy transition-all disabled:opacity-50"
-                >
-                  🏄 {lang === 'es' ? 'Actividades' : 'Activities'}
-                </button>
-              </div>
-            </div>
-
             {/* ── Input ── */}
-            <div className="border-t border-gold/15 p-3 bg-card/95">
-              <form onSubmit={handleSubmit} className="flex gap-2">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  placeholder={lang === 'es' ? 'Escribe tu pregunta...' : 'Ask anything about Los Cabos...'}
-                  className="flex-1 px-3.5 py-2.5 bg-background border border-gold/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold transition-colors"
-                  disabled={isLoading || isRecording}
-                />
-                <button
-                  type="button"
-                  onMouseDown={startRecording} onMouseUp={stopRecording}
-                  onTouchStart={startRecording} onTouchEnd={stopRecording}
-                  disabled={isLoading}
-                  className={`p-2.5 rounded-xl transition-colors ${isRecording ? 'bg-red-500 text-white' : 'bg-muted hover:bg-muted/80'}`}
-                >
-                  {isRecording ? <MicOff size={17} /> : <Mic size={17} />}
-                </button>
+            <div className="border-t border-gold/15 p-3 bg-card/95" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 0.75rem)' }}>
+              <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-2 px-3.5 py-2.5 bg-background border border-gold/20 rounded-2xl focus-within:ring-2 focus-within:ring-gold/40 focus-within:border-gold/50 transition-all">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    placeholder={lang === 'es' ? 'Escribe tu mensaje...' : 'Type your message...'}
+                    className="flex-1 bg-transparent text-sm focus:outline-none min-w-0"
+                    disabled={isLoading || isRecording}
+                  />
+                  <button
+                    type="button"
+                    onMouseDown={startRecording} onMouseUp={stopRecording}
+                    onTouchStart={startRecording} onTouchEnd={stopRecording}
+                    disabled={isLoading}
+                    className={`flex-shrink-0 p-1 rounded-lg transition-colors ${isRecording ? 'text-red-500' : 'text-muted-foreground/50 hover:text-gold'}`}
+                  >
+                    {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
+                  </button>
+                </div>
                 <button
                   type="submit"
                   disabled={isLoading || !input.trim() || isRecording}
-                  className="p-2.5 rounded-xl text-navy disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:brightness-110"
+                  className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-navy disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:brightness-110 active:scale-95"
                   style={{ background: 'linear-gradient(135deg, #D4AF37, #F5C842)' }}
                 >
-                  <Send size={17} />
+                  <Send size={16} />
                 </button>
               </form>
             </div>

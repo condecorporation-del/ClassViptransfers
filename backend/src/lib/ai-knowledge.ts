@@ -56,34 +56,34 @@ export const AI_KNOWLEDGE = {
     roundTripMultiplier: 1.8,
   },
   extras: [
-    'Free WiFi',
+    'Starlink WiFi (every unit)',
     'Welcome drinks',
     'Bilingual drivers (Spanish, English, French)',
     'Child seats',
     'Luggage assist',
   ],
   extrasEs: [
-    'WiFi gratis',
+    'WiFi Starlink (en todas las unidades)',
     'Bebidas de bienvenida',
     'Conductores bilingües (español, inglés, francés)',
     'Sillas infantiles',
     'Asistencia con equipaje',
   ],
   benefits: [
+    'Brand-new, comfortable units with Starlink WiFi on every transfer.',
     'All transfers include complimentary welcome drinks for you and your family.',
     'Our drivers speak Spanish, English and French.',
-    'Free WiFi included in every transfer.',
     'Flexibility: you can change times without penalty.',
   ],
   benefitsEs: [
+    'Unidades nuevas y confortables con WiFi Starlink en cada traslado.',
     'Todos nuestros traslados incluyen bebidas de bienvenida para ti y tu familia.',
     'Nuestros conductores hablan español, inglés y francés.',
-    'WiFi gratis incluido en cada traslado.',
     'Flexibilidad: puedes cambiar horarios sin penalidad.',
   ],
   contact: {
     whatsapp: '+52 624 122 2174',
-    email: 'Armando@caboviptransfers.com',
+    email: 'Armando@classviptransfers.com',
   },
 } as const;
 

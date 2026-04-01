@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Send, Mic, MicOff, Headphones,
-  MessageCircle, ExternalLink,
+  MessageCircle, ExternalLink, Mail, Phone,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getApiBaseUrl } from '@/lib/api';
@@ -10,6 +10,8 @@ const assistBg = 'https://res.cloudinary.com/dt9iyiorn/image/upload/v1774168334/
 
 const WHATSAPP_LINK = 'https://wa.me/5216241222174';
 const WHATSAPP_PHONE = '+52 624 122 2174';
+const IMESSAGE_LINK = 'sms:+15625551234'; // fallback SMS
+const EMAIL_LINK = 'mailto:Armando@classviptransfers.com';
 const BOOK_FORM = '/book';
 
 interface Message {
@@ -19,6 +21,8 @@ interface Message {
   timestamp: Date;
   isAudio?: boolean;
   showBookingCta?: boolean;
+  bookingOptionsMsg?: boolean;
+  quickAccessMsg?: boolean;
 }
 
 export const ChatWidget = () => {
@@ -30,6 +34,8 @@ export const ChatWidget = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showLabel, setShowLabel] = useState(true);
+  const [transferMode, setTransferMode] = useState(false);
+  const [transferHotel, setTransferHotel] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -164,6 +170,30 @@ export const ChatWidget = () => {
   // WhatsApp booking link
   const whatsappBookingLink = WHATSAPP_LINK;
 
+  const handleBookNowClick = () => {
+    setMessages(prev => [...prev, {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: lang === 'es'
+        ? 'Claro, estas son las 4 formas de hacer tu reservación con nosotros:'
+        : 'Of course! Here are the 4 ways to book your reservation with us:',
+      timestamp: new Date(),
+      bookingOptionsMsg: true,
+    }]);
+  };
+
+  const handleQuickAccessClick = () => {
+    setMessages(prev => [...prev, {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: lang === 'es'
+        ? '¡Con gusto te ayudo! ¿Sobre qué quieres saber?'
+        : 'Happy to help! What would you like to know?',
+      timestamp: new Date(),
+      quickAccessMsg: true,
+    }]);
+  };
+
   return (
     <>
       {/* ── Floating Button ── */}
@@ -293,32 +323,11 @@ export const ChatWidget = () => {
                     </div>
                   </div>
 
-                  {/* Suggestion chips */}
+                  {/* empty state hint */}
                   <div className="pl-10">
-                    <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest mb-2">
-                      {lang === 'es' ? 'Preguntas frecuentes' : 'Suggested questions'}
+                    <p className="text-[11px] text-muted-foreground/50 text-center">
+                      {lang === 'es' ? 'Usa los botones de abajo o escribe tu pregunta.' : 'Use the buttons below or type your question.'}
                     </p>
-                    <div className="flex flex-col gap-1.5">
-                      {(lang === 'es' ? [
-                        '¿Cuánto cuesta el traslado al aeropuerto?',
-                        '¿Cuánto tiempo antes debo salir?',
-                        '¿Qué actividades tienen disponibles?',
-                        '¿Cómo puedo hacer una reserva?',
-                      ] : [
-                        'How much is a transfer to the airport?',
-                        'How early should I be picked up?',
-                        'What activities do you offer?',
-                        'How do I make a reservation?',
-                      ]).map((q) => (
-                        <button
-                          key={q}
-                          onClick={() => sendMessage(q)}
-                          className="text-left text-[13px] px-3.5 py-2.5 rounded-xl border border-gold/20 bg-background hover:bg-gold/8 hover:border-gold/40 transition-all text-foreground/80 hover:text-foreground"
-                        >
-                          {q}
-                        </button>
-                      ))}
-                    </div>
                   </div>
                 </motion.div>
               )}
@@ -342,15 +351,123 @@ export const ChatWidget = () => {
                       {msg.content}
                     </div>
                   </div>
+
+                  {/* Booking options — shown after bot reply when user clicks Book Now */}
+                  {msg.bookingOptionsMsg && msg.role === 'assistant' && (
+                    <div className="ml-9 mt-2 space-y-1.5">
+                      <a href={BOOK_FORM}
+                        className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border-2 border-gold bg-gold/10 hover:bg-gold/20 transition-colors">
+                        <span className="text-base">🌐</span>
+                        <div>
+                          <p className="text-[13px] font-bold text-foreground">{lang === 'es' ? 'Reservación en línea' : 'Online reservation'}</p>
+                          <p className="text-[10px] text-muted-foreground">{lang === 'es' ? 'Rápido · Seguro · Confirmación inmediata' : 'Fast · Secure · Instant confirmation'}</p>
+                        </div>
+                      </a>
+                      <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-[#25D366]/40 bg-[#25D366]/8 hover:bg-[#25D366]/15 transition-colors">
+                        <span className="text-base">💬</span>
+                        <div>
+                          <p className="text-[13px] font-bold text-foreground">WhatsApp</p>
+                          <p className="text-[10px] text-muted-foreground">{lang === 'es' ? 'Escríbenos directo' : 'Message us directly'} · {WHATSAPP_PHONE}</p>
+                        </div>
+                      </a>
+                      <a href={EMAIL_LINK}
+                        className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-border bg-muted/50 hover:bg-muted transition-colors">
+                        <span className="text-base">📧</span>
+                        <div>
+                          <p className="text-[13px] font-bold text-foreground">Email</p>
+                          <p className="text-[10px] text-muted-foreground">Armando@classviptransfers.com</p>
+                        </div>
+                      </a>
+                      <a href={IMESSAGE_LINK}
+                        className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-[#34AADC]/30 bg-[#34AADC]/8 hover:bg-[#34AADC]/15 transition-colors">
+                        <span className="text-base">📱</span>
+                        <div>
+                          <p className="text-[13px] font-bold text-foreground">iMessage / SMS</p>
+                          <p className="text-[10px] text-muted-foreground">+52 624 122 2174</p>
+                        </div>
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Quick access chips — shown after bot reply when user clicks Quick Access */}
+                  {msg.quickAccessMsg && msg.role === 'assistant' && (
+                    <div className="ml-9 mt-2 space-y-1.5">
+                      {!transferMode ? (
+                        <button onClick={() => setTransferMode(true)}
+                          className="w-full text-left flex items-center gap-2 text-[13px] px-3.5 py-2.5 rounded-xl border border-gold/20 bg-background hover:bg-gold/8 hover:border-gold/40 transition-all text-foreground/80">
+                          <span className="text-base">✈️</span>
+                          <span>{lang === 'es' ? '¿Cuánto cuesta mi traslado?' : 'How much is my transfer?'}</span>
+                        </button>
+                      ) : (
+                        <div className="rounded-xl border border-gold/40 bg-gold/5 p-3 space-y-2">
+                          <p className="text-[11px] text-gold font-semibold">
+                            {lang === 'es' ? '¿A qué hotel o zona vas?' : 'Your hotel or destination?'}
+                          </p>
+                          <input
+                            autoFocus
+                            value={transferHotel}
+                            onChange={e => setTransferHotel(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' && transferHotel.trim()) {
+                                sendMessage(lang === 'es' ? `¿Cuánto cuesta el traslado del aeropuerto SJD al ${transferHotel}?` : `How much is the transfer from SJD airport to ${transferHotel}?`);
+                                setTransferMode(false); setTransferHotel('');
+                              }
+                              if (e.key === 'Escape') { setTransferMode(false); setTransferHotel(''); }
+                            }}
+                            placeholder={lang === 'es' ? 'Ej: Grand Solmar, Cabo San Lucas...' : 'E.g. Grand Solmar, Cabo San Lucas...'}
+                            className="w-full bg-background border border-gold/30 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-gold/40"
+                          />
+                          <div className="flex gap-1.5">
+                            <button onClick={() => {
+                              if (transferHotel.trim()) {
+                                sendMessage(lang === 'es' ? `¿Cuánto cuesta el traslado del aeropuerto SJD al ${transferHotel}?` : `How much is the transfer from SJD airport to ${transferHotel}?`);
+                                setTransferMode(false); setTransferHotel('');
+                              }
+                            }}
+                              className="flex-1 py-1.5 rounded-lg text-[12px] font-bold text-navy"
+                              style={{ background: 'linear-gradient(135deg, #D4AF37, #F5C842)' }}>
+                              {lang === 'es' ? 'Consultar precio' : 'Get price'}
+                            </button>
+                            <button onClick={() => { setTransferMode(false); setTransferHotel(''); }}
+                              className="px-3 py-1.5 rounded-lg text-[12px] text-muted-foreground border border-border hover:bg-muted transition-colors">✕</button>
+                          </div>
+                        </div>
+                      )}
+                      {(lang === 'es' ? [
+                        { icon: '🏄', text: '¿Qué actividades y tours ofrecen?' },
+                        { icon: '💰', text: '¿Tienen paquetes o descuentos?' },
+                        { icon: '📋', text: '¿Qué incluye el servicio?' },
+                      ] : [
+                        { icon: '🏄', text: 'What activities and tours do you offer?' },
+                        { icon: '💰', text: 'Do you have packages or discounts?' },
+                        { icon: '📋', text: 'What is included in the service?' },
+                      ]).map(q => (
+                        <button key={q.text} onClick={() => sendMessage(q.text)}
+                          className="w-full text-left flex items-center gap-2 text-[13px] px-3.5 py-2.5 rounded-xl border border-gold/20 bg-background hover:bg-gold/8 hover:border-gold/40 transition-all text-foreground/80">
+                          <span className="text-base">{q.icon}</span><span>{q.text}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {msg.showBookingCta && msg.role === 'assistant' && (
-                    <div className="flex gap-2 mt-2 ml-9 flex-wrap">
+                    <div className="mt-2 ml-9 flex gap-2 flex-wrap">
+                      <a href={BOOK_FORM}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border-2 border-gold bg-gold text-navy hover:bg-gold/90 transition-colors">
+                        <ExternalLink size={12} /> {lang === 'es' ? 'Reservar online' : 'Reserve online'}
+                      </a>
                       <a href={whatsappBookingLink} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#25D366] text-white hover:bg-[#20bd5a] transition-colors">
                         <MessageCircle size={12} /> WhatsApp
                       </a>
-                      <a href={BOOK_FORM}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gold/15 text-gold border border-gold/30 hover:bg-gold/25 transition-colors">
-                        <ExternalLink size={12} /> {lang === 'es' ? 'Reservar' : 'Book online'}
+                      <a href={EMAIL_LINK}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-muted border border-border hover:bg-muted/80 transition-colors text-foreground">
+                        <Mail size={12} /> Email
+                      </a>
+                      <a href={IMESSAGE_LINK}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#34AADC]/10 border border-[#34AADC]/30 text-[#34AADC] hover:bg-[#34AADC]/20 transition-colors">
+                        <Phone size={12} /> iMessage / SMS
                       </a>
                     </div>
                   )}
@@ -373,8 +490,29 @@ export const ChatWidget = () => {
               <div ref={messagesEndRef} />
             </div>
 
+            {/* ── Shortcut buttons ── */}
+            <div className="border-t border-gold/15 px-3 pt-2.5 pb-2 bg-card/95 flex items-center gap-2.5">
+              <button
+                onClick={handleBookNowClick}
+                className="flex items-center gap-2.5 px-4.5 py-2.5 rounded-full text-[13px] font-semibold tracking-wide text-[#0A1628] transition-all hover:-translate-y-[1px] active:translate-y-0 active:scale-[0.99] border border-[#D4AF37]/70 shadow-[0_3px_10px_rgba(12,22,40,0.12)]"
+                style={{ background: 'linear-gradient(135deg, #F6DE8A 0%, #E8C35A 55%, #D4AF37 100%)' }}
+              >
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#0A1628]/10 border border-[#0A1628]/15">
+                  <ExternalLink size={12} />
+                </span>
+                {lang === 'es' ? 'Book Now' : 'Book Now'}
+              </button>
+              <button
+                onClick={handleQuickAccessClick}
+                className="flex items-center gap-2.5 px-4.5 py-2.5 rounded-full text-[13px] font-semibold border border-[#1C2B44]/25 bg-[#0F1E34]/[0.04] text-[#1C2B44] hover:bg-[#0F1E34]/[0.08] hover:border-[#1C2B44]/40 hover:-translate-y-[1px] active:translate-y-0 active:scale-[0.99] transition-all shadow-[0_2px_8px_rgba(12,22,40,0.08)]"
+              >
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[11px] text-[#B7902A]">⚡</span>
+                {lang === 'es' ? 'Acceso rápido' : 'Quick Access'}
+              </button>
+            </div>
+
             {/* ── Input ── */}
-            <div className="border-t border-gold/15 p-3 bg-card/95" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 0.75rem)' }}>
+            <div className="px-3 pb-3 bg-card/95" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 0.75rem)' }}>
               <form onSubmit={handleSubmit} className="flex items-center gap-2">
                 <div className="flex-1 flex items-center gap-2 px-3.5 py-2.5 bg-background border border-gold/20 rounded-2xl focus-within:ring-2 focus-within:ring-gold/40 focus-within:border-gold/50 transition-all">
                   <input

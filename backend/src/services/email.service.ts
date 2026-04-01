@@ -13,7 +13,8 @@ import { generateBookingToken } from '../controllers/booking.controller';
 /** Single brand logo for all reservation emails (override with EMAIL_LOGO_URL if needed) */
 const CLASS_VIP_EMAIL_LOGO =
   'https://res.cloudinary.com/dt9iyiorn/image/upload/v1775026128/LOGO_CLASS_TIO_hzcxdc.png';
-const STRIPE_BADGE_IMG_URL = 'https://stripe.com/img/v3/badges/stripe-badge-blurple.png';
+const STRIPE_BADGE_IMG_URL =
+  'https://res.cloudinary.com/dt9iyiorn/image/upload/v1775031157/stripe_logo_kzjdiz.png';
 
 function subtractThreeHoursFromDepartureTime(depTime: string): string | null {
   if (!depTime || typeof depTime !== 'string') return null;

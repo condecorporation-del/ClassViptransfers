@@ -41,3 +41,13 @@ deno.lock
 # macOS system files
 .DS_Store
 **/.DS_Store
+
+# Claude AI agent worktrees and session data
+.claude/
+
+# Internal dev planning docs (keep local, not part of codebase)
+planes de trabajo/
+AI_KNOWLEDGE_BASE.md
+CLOUDINARY_README.md
+PLAN_LOGO_E_ICONO.md
+WORKPLAN_CAMBIOS_DRASTICOS.md

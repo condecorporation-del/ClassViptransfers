@@ -45,10 +45,16 @@ const defaultDevOrigins = [
 
 const allowedOrigins = [...new Set([...envOrigins, ...defaultDevOrigins])];
 
+const hardcodedProductionOrigins = [
+  'https://classviptransfers.com',
+  'https://www.classviptransfers.com',
+];
+
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (hardcodedProductionOrigins.includes(origin)) return callback(null, true);
     if (origin.endsWith('.netlify.app')) return callback(null, true);
     if (process.env.NODE_ENV !== 'production') return callback(null, true);
 

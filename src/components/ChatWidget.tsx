@@ -34,6 +34,7 @@ export const ChatWidget = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const [panelBottom, setPanelBottom] = useState<number | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -44,6 +45,25 @@ export const ChatWidget = () => {
     const timer = setTimeout(() => setShowLabel(false), 15000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Reposition panel when mobile keyboard appears (iOS visualViewport API)
+  useEffect(() => {
+    if (!isOpen) { setPanelBottom(null); return; }
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const keyboardHeight = window.innerHeight - vv.height - vv.offsetTop;
+      setPanelBottom(keyboardHeight > 50 ? keyboardHeight + 8 : null);
+    };
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    update();
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+      setPanelBottom(null);
+    };
+  }, [isOpen]);
 
   // ── Recording ────────────────────────────────────────────────────────────
 
@@ -221,6 +241,7 @@ export const ChatWidget = () => {
             exit={{ opacity: 0, y: 28, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 300, damping: 28 }}
             className="fixed bottom-[72px] sm:bottom-[76px] md:bottom-[80px] right-4 md:right-6 z-[9998] w-[calc(100vw-2rem)] max-w-[420px] h-[min(580px,82vh)] bg-card border border-gold/25 rounded-2xl shadow-[0_32px_72px_-8px_rgba(0,0,0,0.4),0_0_0_1px_rgba(212,175,55,0.15)] flex flex-col overflow-hidden"
+            style={panelBottom !== null ? { bottom: `${panelBottom}px` } : undefined}
           >
             {/* Header */}
             <div

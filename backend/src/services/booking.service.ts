@@ -6,6 +6,22 @@ import { PricingService } from './pricing.service';
 
 const pricingService = new PricingService();
 
+/** Mexico IVA 16% — subtotal is pre-tax line items; total = subtotal + tax */
+const MX_IVA = 0.16;
+function applyMxIvaFromSubtotal(subtotalCents: number): { subtotalCents: number; taxCents: number; totalCents: number } {
+  const sub = Math.max(0, Math.round(subtotalCents));
+  const tax = Math.round(sub * MX_IVA);
+  return { subtotalCents: sub, taxCents: tax, totalCents: sub + tax };
+}
+
+/** When admin sets final total including IVA, split back for storage */
+function splitTotalIncludingIva(finalTotalCents: number): { subtotalCents: number; taxCents: number; totalCents: number } {
+  const total = Math.max(0, Math.round(finalTotalCents));
+  const sub = Math.round(total / (1 + MX_IVA));
+  const tax = total - sub;
+  return { subtotalCents: sub, taxCents: tax, totalCents: total };
+}
+
 // Extras allowed only for shuttle (no personalized/kits)
 const SHUTTLE_ALLOWED_EXTRA_CODES = new Set([
   'OVERSIZE_LUGGAGE', 'EXTRA_STOP', 'GROCERY_STOP', 'BABY_SEAT', 'BOOSTER',
@@ -186,7 +202,8 @@ export class BookingService {
     if (totalAmount < 0) {
       throw new Error('Booking total cannot be negative');
     }
-    console.log('[Booking] Final total (cents):', totalAmount);
+    const { subtotalCents, taxCents, totalCents } = applyMxIvaFromSubtotal(totalAmount);
+    console.log('[Booking] Subtotal (pre-IVA) cents:', totalAmount, '| IVA 16%:', taxCents, '| Total:', totalCents);
 
     // Create or find customer by email
     let customer = await prisma.customer.findFirst({
@@ -253,10 +270,21 @@ export class BookingService {
         serviceType: input.serviceType,
         tripType: input.tripType,
         route: input.route,
-        totalAmount,
-        subtotalAmount: totalAmount,
+        totalAmount: totalCents,
+        subtotalAmount: subtotalCents,
+        taxAmount: taxCents,
         notes: input.notes,
-        metadata: input.metadata || {},
+        metadata: (() => {
+          const base =
+            input.metadata && typeof input.metadata === 'object' && !Array.isArray(input.metadata)
+              ? { ...input.metadata }
+              : {};
+          if (input.departureDate) {
+            const dd = input.departureDate;
+            base.departureDate = dd instanceof Date ? dd.toISOString() : String(dd);
+          }
+          return base;
+        })(),
         items: {
           create: items.map((item) => {
             const unitCents = moneyToCents(item.unitPrice);
@@ -818,12 +846,14 @@ export class BookingService {
       },
     });
 
+    const split = splitTotalIncludingIva(newTotalCents);
     // Update booking total
     const updated = await prisma.booking.update({
       where: { id: bookingId },
       data: {
-        totalAmount: newTotalCents,
-        subtotalAmount: newTotalCents,
+        totalAmount: split.totalCents,
+        subtotalAmount: split.subtotalCents,
+        taxAmount: split.taxCents,
       },
       include: {
         customer: true,
@@ -838,7 +868,7 @@ export class BookingService {
       entityId: bookingId,
       userId,
       userEmail,
-      description: `Price override: $${(originalAmount / 100).toFixed(2)} → $${(newTotalCents / 100).toFixed(2)}`,
+      description: `Price override: $${(originalAmount / 100).toFixed(2)} → $${(newTotalCents / 100).toFixed(2)} (incl. IVA breakdown)`,
       changes: {
         totalAmount: { from: originalAmount, to: newTotalCents },
         reason,
@@ -865,17 +895,19 @@ export class BookingService {
       throw new Error('Cannot remove override for paid/confirmed booking');
     }
 
-    // Calculate original total from items
-    const computedTotal = booking.items.reduce((sum, item) => {
+    // Calculate original subtotal from items (pre-tax)
+    const computedSubtotal = booking.items.reduce((sum, item) => {
       return sum + item.totalPrice;
     }, 0);
+    const { subtotalCents, taxCents, totalCents } = applyMxIvaFromSubtotal(computedSubtotal);
 
     // Update booking
     const updated = await prisma.booking.update({
       where: { id: bookingId },
       data: {
-        totalAmount: computedTotal,
-        subtotalAmount: computedTotal,
+        totalAmount: totalCents,
+        subtotalAmount: subtotalCents,
+        taxAmount: taxCents,
       },
       include: {
         customer: true,
@@ -890,9 +922,9 @@ export class BookingService {
       entityId: bookingId,
       userId,
       userEmail,
-      description: `Price override removed: Reverted to computed total $${(computedTotal / 100).toFixed(2)}`,
+      description: `Price override removed: Reverted to computed total $${(totalCents / 100).toFixed(2)} (incl. IVA)`,
       changes: {
-        totalAmount: { from: booking.totalAmount, to: computedTotal },
+        totalAmount: { from: booking.totalAmount, to: totalCents },
       },
     });
 
@@ -907,10 +939,11 @@ export class BookingService {
     status: 'OFFLINE_HOLD' | 'CONFIRMED' = 'OFFLINE_HOLD',
     totalOverride?: number
   ) {
-    // Calculate total (use override if provided)
-    const totalAmount = totalOverride || input.items.reduce((sum, item) => {
+    // Subtotal pre-IVA (use override if provided = subtotal in cents)
+    const subtotalPre = totalOverride ?? input.items.reduce((sum, item) => {
       return sum + moneyToCents(item.unitPrice) * item.quantity;
     }, 0);
+    const { subtotalCents, taxCents, totalCents } = applyMxIvaFromSubtotal(subtotalPre);
 
     // Create or find customer
     let customer = await prisma.customer.findFirst({
@@ -972,10 +1005,21 @@ export class BookingService {
         serviceType: input.serviceType,
         tripType: input.tripType,
         route: input.route,
-        totalAmount,
-        subtotalAmount: totalAmount,
+        totalAmount: totalCents,
+        subtotalAmount: subtotalCents,
+        taxAmount: taxCents,
         notes: input.notes,
-        metadata: input.metadata || {},
+        metadata: (() => {
+          const base =
+            input.metadata && typeof input.metadata === 'object' && !Array.isArray(input.metadata)
+              ? { ...input.metadata }
+              : {};
+          if (input.departureDate) {
+            const dd = input.departureDate;
+            base.departureDate = dd instanceof Date ? dd.toISOString() : String(dd);
+          }
+          return base;
+        })(),
         ...(status === 'CONFIRMED' && { confirmedAt: new Date() }),
         items: {
           create: input.items.map(item => ({

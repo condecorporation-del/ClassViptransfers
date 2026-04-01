@@ -369,8 +369,18 @@ export class AdminController {
         dropoffLocation: 'Hotel Zone, Cabo San Lucas',
         flightNumber: 'AA1234',
         arrivalTime: '10:30 AM',
+        departureFlightNumber: 'AA567',
+        departureTime: '2:00 PM',
+        departureAirline: 'American Airlines',
         passengers: 2,
-        totalAmount: 12500, // $125.00 in cents
+        totalAmount: 12500,
+        subtotalAmount: 10776,
+        taxAmount: 1724,
+        tripType: 'roundtrip',
+        route: 'airport-hotel',
+        confirmationCode: 'CLASS-PRV-001',
+        metadata: { departureDate: '2026-04-20T12:00:00.000Z' },
+        payments: [{ provider: 'STRIPE', status: 'COMPLETED' }],
         notes: 'Please arrive 15 minutes early. Special dietary requirements noted.',
         internalNotes: 'VIP customer - assign experienced driver',
         items: [
@@ -390,16 +400,18 @@ export class AdminController {
       };
 
       const emailService = new EmailService();
-      const data = (emailService as any).formatBookingData(mockBooking);
-      Object.assign(data, {
-        companyEmailTitle: 'New Booking Confirmed',
-        companyStatusBadge: 'CONFIRMED',
-        companyStatusBadgeColor: '#10B981',
-        companyPaymentStatusText: '✓ Confirmed',
-        companyPaymentStatusColor: '#10B981',
-      });
+      const data = emailService.getFormatBookingData(mockBooking as any);
+      if (templateType === 'company') {
+        Object.assign(data, {
+          companyEmailTitle: 'New Booking Confirmed',
+          companyStatusBadge: 'CONFIRMED',
+          companyStatusBadgeColor: '#10B981',
+          companyPaymentStatusText: '✓ Confirmed',
+          companyPaymentStatusColor: '#10B981',
+        });
+      }
       const templateName = templateType === 'company' ? 'company-confirmed' : 'customer-confirmed';
-      const html = (emailService as any).renderTemplate(templateName, data);
+      const html = emailService.renderEmailTemplate(templateName, data as Record<string, unknown>);
 
       res.setHeader('Content-Type', 'text/html');
       res.send(html);

@@ -32,6 +32,12 @@ export const createBookingSchema = z.object({
   departureFlightNumber: z.string().optional(),
   departureTime: z.string().optional(),
   pickupTime: z.string().optional(),
+  /** Return leg date (round trip) — stored in booking.metadata.departureDate */
+  departureDate: z.union([
+    z.string().datetime(),
+    z.date(),
+    z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid date format'),
+  ]).optional(),
   passengers: z.number().int().min(1).default(1),
   serviceType: z.enum(['private', 'shuttle']).optional(),
   tripType: z.enum(['oneway', 'roundtrip']).optional(),

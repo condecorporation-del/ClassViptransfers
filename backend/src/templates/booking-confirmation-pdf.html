@@ -291,6 +291,16 @@
               <td style="text-align:right;font-weight:600;color:#0c4a6e;">{{priceText}}</td>
             </tr>
             {{/each}}
+            {{#if hasTaxBreakdown}}
+            <tr>
+              <td style="color:#64748b;">Subtotal (before tax)</td>
+              <td style="text-align:right;color:#475569;">{{subtotalBeforeTaxText}}</td>
+            </tr>
+            <tr>
+              <td style="color:#64748b;">IVA (16% — México)</td>
+              <td style="text-align:right;color:#475569;">{{taxIvaText}}</td>
+            </tr>
+            {{/if}}
           </tbody>
           <tfoot>
             <tr class="total-row">
@@ -304,10 +314,13 @@
           <div>
             <div class="payment-label">Payment Method · Método de Pago</div>
             <div class="payment-value">{{paymentMethodText}}</div>
+            {{#if showStripeIcon}}
+            <div style="margin-top:8px;"><img src="{{stripeBadgeUrl}}" alt="Stripe" width="96" height="24" style="height:24px;width:auto;" /></div>
+            {{/if}}
           </div>
           <div style="text-align:right;">
             <div class="payment-label">Total Paid</div>
-            <div style="font-size:16px;font-weight:900;color:#003087;">{{totalPaidText}}</div>
+            <div style="font-size:16px;font-weight:900;color:#071A2B;">{{totalPaidText}}</div>
           </div>
         </div>
       </div>

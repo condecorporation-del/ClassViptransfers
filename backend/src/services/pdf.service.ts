@@ -81,8 +81,6 @@ export class PdfService {
   async generateBookingConfirmationPdf(bookingId: string): Promise<Buffer> {
     const booking = (await this.bookingService.getBookingById(bookingId)) as BookingWithRelations;
     const data = this.emailService.getFormatBookingData(booking);
-    // Ensure payment method text for PDF (default confirmed)
-    (data as any).paymentMethodText = (data as any).paymentMethodText || '✓ Paid via PayPal';
 
     const html = this.renderPdfTemplate(data);
 

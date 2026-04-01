@@ -58,6 +58,9 @@
             <td style="background:#f0fdf4;border:1.5px solid #22c55e;border-radius:10px;padding:16px 28px;text-align:center;">
               <p style="margin:0 0 3px;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#15803d;font-weight:700;">✓ Reservation Confirmed · Reservación Confirmada</p>
               <p style="margin:0;font-size:26px;font-weight:900;color:#071A2B;letter-spacing:3px;font-family:monospace;">{{bookingIdShort}}</p>
+              {{#if confirmationCode}}
+              <p style="margin:8px 0 0;font-size:13px;font-weight:600;color:#64748b;letter-spacing:1px;">{{confirmationCode}}</p>
+              {{/if}}
             </td>
           </tr>
         </table>
@@ -165,12 +168,53 @@
                   </td>
                 </tr>
                 {{/if}}
+                {{#if hasTripMeta}}
+                <tr>
+                  <td width="50%" style="padding:0 12px 10px 0;vertical-align:top;" class="col">
+                    <p style="margin:0 0 2px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Trip type · Tipo de viaje</p>
+                    <p style="margin:0;font-size:14px;color:#1e293b;">{{#if tripTypeLabel}}{{tripTypeLabel}}{{else}}—{{/if}}</p>
+                  </td>
+                  <td width="50%" style="padding:0 0 10px;vertical-align:top;" class="col">
+                    <p style="margin:0 0 2px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Route · Ruta</p>
+                    <p style="margin:0;font-size:14px;color:#1e293b;">{{#if routeLabel}}{{routeLabel}}{{else}}—{{/if}}</p>
+                  </td>
+                </tr>
+                {{/if}}
+                {{#if departureDateFormatted}}
+                <tr>
+                  <td colspan="2" style="padding:0 0 10px;">
+                    <p style="margin:0 0 2px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Return / departure day · Día de salida</p>
+                    <p style="margin:0;font-size:14px;font-weight:600;color:#1e293b;">{{departureDateFormatted}}</p>
+                  </td>
+                </tr>
+                {{/if}}
               </table>
             </td>
           </tr>
         </table>
       </td>
     </tr>
+
+    {{#if hasServicesPurchased}}
+    <tr>
+      <td style="padding:0 24px 20px;" class="ep">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;">
+          <tr><td style="padding:11px 18px;background:#071A2B;"><p style="margin:0;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#D9AE5F;font-weight:700;">📋 Services purchased · Servicios</p></td></tr>
+          <tr>
+            <td style="padding:14px 18px;">
+              {{#each servicesPurchased}}
+              {{#unless @first}}<div style="height:10px;"></div>{{/unless}}
+              <p style="margin:0 0 6px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#64748b;font-weight:700;">{{category}}</p>
+              {{#each lines}}
+              <p style="margin:0 0 4px;font-size:13px;color:#1e293b;">• {{this}}</p>
+              {{/each}}
+              {{/each}}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    {{/if}}
 
     <!-- ── PRICE BREAKDOWN ── -->
     <tr>
@@ -188,6 +232,18 @@
                 </tr>
               </table>
               {{/each}}
+              {{#if hasTaxBreakdown}}
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top:8px;padding-top:8px;border-top:1px dashed #e2e8f0;">
+                <tr>
+                  <td style="font-size:13px;color:#64748b;padding:4px 0;">Subtotal (before tax) · Subtotal</td>
+                  <td align="right" style="font-size:13px;font-weight:600;color:#475569;padding:4px 0;white-space:nowrap;">{{subtotalBeforeTaxText}}</td>
+                </tr>
+                <tr>
+                  <td style="font-size:13px;color:#64748b;padding:4px 0;">IVA (16% — México)</td>
+                  <td align="right" style="font-size:13px;font-weight:600;color:#475569;padding:4px 0;white-space:nowrap;">{{taxIvaText}}</td>
+                </tr>
+              </table>
+              {{/if}}
               <!-- Total -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-top:2px solid #071A2B;margin-top:8px;">
                 <tr>
@@ -200,10 +256,12 @@
                 <tr>
                   <td style="padding:12px 16px;">
                     <p style="margin:0 0 2px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Payment Method · Método de Pago</p>
-                    <p style="margin:0;font-size:14px;font-weight:600;color:#003087;">{{paymentMethodText}}</p>
+                    <p style="margin:0;font-size:14px;font-weight:600;color:#1e293b;">{{paymentMethodText}}</p>
                   </td>
-                  <td align="right" style="padding:12px 16px;">
-                    <img src="https://www.paypalobjects.com/webstatic/en_US/i/buttons/PP_logo_h_100x26.png" alt="PayPal" width="80" height="21" style="display:block;height:21px;width:80px;" />
+                  <td align="right" style="padding:12px 16px;vertical-align:middle;">
+                    {{#if showStripeIcon}}
+                    <img src="{{stripeBadgeUrl}}" alt="Stripe" width="96" height="24" style="display:block;height:24px;width:auto;max-width:120px;margin-left:auto;" />
+                    {{/if}}
                   </td>
                 </tr>
               </table>
@@ -301,6 +359,7 @@
               <p style="margin:0 0 10px;">
                 <a href="mailto:Armando@classviptransfers.com" style="color:rgba(255,255,255,0.65);text-decoration:none;font-size:12px;">Armando@classviptransfers.com</a>
               </p>
+              <p style="margin:0 0 8px;font-size:10px;color:rgba(255,255,255,0.45);">Issued · Emitido: {{issueDateFormatted}}</p>
               <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.35);">© {{brandName}} · <a href="{{frontendUrl}}" style="color:#D9AE5F;text-decoration:none;">{{frontendUrl}}</a></p>
             </td>
           </tr>

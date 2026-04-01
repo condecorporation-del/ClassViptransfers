@@ -113,10 +113,17 @@
                     <p style="margin:0;font-size:14px;font-weight:600;color:#1e293b;">{{passengersLabel}}</p>
                   </td>
                   <td width="50%" style="padding:0 0 10px;vertical-align:top;" class="col">
-                    <p style="margin:0 0 2px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Total</p>
+                    <p style="margin:0 0 2px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Total (incl. tax)</p>
                     <p style="margin:0;font-size:16px;font-weight:900;color:#071A2B;">{{totalPaidText}}</p>
                   </td>
                 </tr>
+                {{#if hasTaxBreakdown}}
+                <tr>
+                  <td colspan="2" style="padding:4px 0 0;">
+                    <p style="margin:0;font-size:12px;color:#64748b;">Subtotal {{subtotalBeforeTaxText}} · IVA 16% (México) {{taxIvaText}}</p>
+                  </td>
+                </tr>
+                {{/if}}
               </table>
             </td>
           </tr>

@@ -2,7 +2,7 @@ import nodemailer, { Transporter } from 'nodemailer';
 import { Resend } from 'resend';
 import { prisma } from '../lib/prisma';
 import { EmailType, EmailStatus } from '@prisma/client';
-import { Booking, Customer, BookingItem } from '@prisma/client';
+import { Booking, Customer, BookingItem, Payment } from '@prisma/client';
 import { centsToDollars } from '../lib/validation';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -10,9 +10,110 @@ import Handlebars from 'handlebars';
 import { PdfService } from './pdf.service';
 import { generateBookingToken } from '../controllers/booking.controller';
 
+/** Single brand logo for all reservation emails (override with EMAIL_LOGO_URL if needed) */
+const CLASS_VIP_EMAIL_LOGO =
+  'https://res.cloudinary.com/dt9iyiorn/image/upload/v1775026128/LOGO_CLASS_TIO_hzcxdc.png';
+const STRIPE_BADGE_IMG_URL = 'https://stripe.com/img/v3/badges/stripe-badge-blurple.png';
+
+function subtractThreeHoursFromDepartureTime(depTime: string): string | null {
+  if (!depTime || typeof depTime !== 'string') return null;
+  const s = depTime.trim();
+  const m24 = s.match(/^(\d{1,2}):(\d{2})$/);
+  if (m24) {
+    const h = parseInt(m24[1], 10);
+    const min = parseInt(m24[2], 10);
+    if (h > 23 || min > 59) return null;
+    let mins = h * 60 + min - 180;
+    if (mins < 0) mins += 24 * 60;
+    const outH = Math.floor(mins / 60) % 24;
+    const outM = mins % 60;
+    return `${String(outH).padStart(2, '0')}:${String(outM).padStart(2, '0')}`;
+  }
+  const match =
+    s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i) || s.match(/^(\d{1,2})(?:\.|:)?(\d{2})?\s*(AM|PM)?$/i);
+  if (!match) return null;
+  let h = parseInt(match[1], 10);
+  const m = parseInt(match[2] || '0', 10);
+  const ampm = (match[3] || '').toUpperCase();
+  if (ampm === 'PM' && h < 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  if (!ampm && (h > 23 || m > 59)) return null;
+  let mins = h * 60 + m - 180;
+  if (mins < 0) mins += 24 * 60;
+  const outH = Math.floor(mins / 60) % 24;
+  const outM = mins % 60;
+  if (outH === 0) return `12:${String(outM).padStart(2, '0')} AM`;
+  if (outH === 12) return `12:${String(outM).padStart(2, '0')} PM`;
+  if (outH < 12) return `${outH}:${String(outM).padStart(2, '0')} AM`;
+  return `${outH - 12}:${String(outM).padStart(2, '0')} PM`;
+}
+
+function formatDepartureDateDisplay(raw: string | undefined): string | null {
+  if (!raw || typeof raw !== 'string') return null;
+  const s = raw.trim();
+  if (!s) return null;
+  const d = new Date(s);
+  if (!Number.isNaN(d.getTime())) {
+    return d.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+  return s;
+}
+
+function tripTypeToLabel(tripType: string | null | undefined): string | null {
+  if (!tripType) return null;
+  const t = tripType.toLowerCase();
+  if (t === 'roundtrip') return 'Round trip';
+  if (t === 'oneway') return 'One way';
+  return tripType;
+}
+
+function routeToLabel(route: string | null | undefined): string | null {
+  if (!route) return null;
+  return route.replace(/-/g, ' → ');
+}
+
 interface BookingWithRelations extends Booking {
   customer: Customer;
   items: BookingItem[];
+  payments?: Payment[];
+}
+
+type FormatBookingOptions = {
+  manualConfirm?: boolean;
+  pendingPayment?: boolean;
+};
+
+function resolvePaymentFields(
+  booking: BookingWithRelations & { payments?: Payment[] },
+  opts: FormatBookingOptions
+): { paymentMethodText: string; showStripeIcon: boolean } {
+  if (opts.pendingPayment) {
+    return { paymentMethodText: 'Payment pending — secure card checkout (Stripe)', showStripeIcon: true };
+  }
+  if (opts.manualConfirm) {
+    return { paymentMethodText: 'Confirmed offline by Class VIP (no card charge)', showStripeIcon: false };
+  }
+  const payments = booking.payments || [];
+  const completed = payments.find((p) => p.status === 'COMPLETED');
+  if (completed?.provider === 'STRIPE') {
+    return { paymentMethodText: 'Paid securely with card (Stripe)', showStripeIcon: true };
+  }
+  if (completed?.provider === 'PAYPAL') {
+    return { paymentMethodText: 'Paid via PayPal', showStripeIcon: false };
+  }
+  if (completed?.provider === 'CASH' || completed?.provider === 'BANK_TRANSFER' || completed?.provider === 'MANUAL') {
+    return { paymentMethodText: 'Recorded payment (offline)', showStripeIcon: false };
+  }
+  const pendingStripe = payments.find((p) => p.status === 'PENDING' && p.provider === 'STRIPE');
+  if (pendingStripe) {
+    return { paymentMethodText: 'Card payment in progress (Stripe)', showStripeIcon: true };
+  }
+  return { paymentMethodText: 'Payment received', showStripeIcon: false };
 }
 
 type EmailProvider = 'nodemailer' | 'resend' | null;
@@ -71,7 +172,7 @@ export class EmailService {
     }
 
     this.frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
-    this.logoUrl = process.env.EMAIL_LOGO_URL || 'https://res.cloudinary.com/dpmozdkfh/image/upload/v1772074422/Gemini_Generated_Image_zbgk2uzbgk2uzbgk_jnj3n2.png';
+    this.logoUrl = process.env.EMAIL_LOGO_URL || CLASS_VIP_EMAIL_LOGO;
     this.watermarkLogoUrl = process.env.EMAIL_WATERMARK_LOGO_URL || null;
     this.brandName = process.env.EMAIL_BRAND_NAME || 'Class VIP Transfers';
     this.primaryColor = process.env.EMAIL_PRIMARY_COLOR || '#071A2B';
@@ -159,7 +260,8 @@ export class EmailService {
    * Send "Booking Received / Pending Payment" to customer and company
    */
   async sendBookingReceived(booking: BookingWithRelations): Promise<{ customerSent: boolean; companySent: boolean }> {
-    const data = this.formatBookingData(booking);
+    const full = await this.ensureBookingForEmail(booking);
+    const data = this.formatBookingData(full, { pendingPayment: true });
     const subject = `Booking Received - Pending Payment - ${data.bookingIdShort}`;
     const html = this.renderTemplate('customer-pending', data);
 
@@ -209,7 +311,8 @@ export class EmailService {
     type: EmailType,
     isPending: boolean
   ): Promise<boolean> {
-    const data = this.formatBookingData(booking);
+    const full = await this.ensureBookingForEmail(booking);
+    const data = this.formatBookingData(full, isPending ? { pendingPayment: true } : {});
     Object.assign(data, {
       companyEmailTitle: isPending ? 'New Booking Received (Pending Payment)' : 'New Booking Confirmed',
       companyStatusBadge: isPending ? 'PENDING PAYMENT' : 'CONFIRMED',
@@ -250,7 +353,8 @@ export class EmailService {
    * Send cancellation email to customer and company
    */
   async sendCancellation(booking: BookingWithRelations, reason?: string): Promise<{ customerSent: boolean; companySent: boolean }> {
-    const data = this.formatBookingData(booking);
+    const full = await this.ensureBookingForEmail(booking);
+    const data = this.formatBookingData(full, {});
     (data as any).cancellationReason = reason || null;
     const subject = `Booking Cancelled - ${data.bookingIdShort}`;
     const html = this.renderTemplate('customer-cancelled', data);
@@ -289,7 +393,8 @@ export class EmailService {
   }
 
   private async sendCompanyCancellationNotification(booking: BookingWithRelations, reason?: string): Promise<boolean> {
-    const data = this.formatBookingData(booking);
+    const full = await this.ensureBookingForEmail(booking);
+    const data = this.formatBookingData(full, {});
     (data as any).companyEmailTitle = 'Booking Cancelled';
     (data as any).companyStatusBadge = 'CANCELLED';
     (data as any).companyStatusBadgeColor = '#EF4444';
@@ -419,10 +524,31 @@ export class EmailService {
   }
 
   /**
+   * Reload booking with payments when not already included (e.g. email payloads).
+   */
+  private async ensureBookingForEmail(
+    booking: BookingWithRelations
+  ): Promise<BookingWithRelations & { payments: Payment[] }> {
+    if (Array.isArray(booking.payments)) {
+      return booking as BookingWithRelations & { payments: Payment[] };
+    }
+    const full = await prisma.booking.findUnique({
+      where: { id: booking.id },
+      include: {
+        customer: true,
+        items: true,
+        payments: { orderBy: { createdAt: 'desc' } },
+      },
+    });
+    if (full) return full as BookingWithRelations & { payments: Payment[] };
+    return { ...booking, payments: [] };
+  }
+
+  /**
    * Get formatted booking data for templates (email or PDF). Public for PDF service.
    */
-  getFormatBookingData(booking: BookingWithRelations) {
-    return this.formatBookingData(booking);
+  getFormatBookingData(booking: BookingWithRelations, formatOptions?: FormatBookingOptions) {
+    return this.formatBookingData(booking, formatOptions);
   }
 
   /**
@@ -432,10 +558,15 @@ export class EmailService {
     return this.renderTemplate('customer-confirmed', data);
   }
 
+  /** Render any named email template (for admin previews). */
+  renderEmailTemplate(templateName: string, data: Record<string, unknown>): string {
+    return this.renderTemplate(templateName, data);
+  }
+
   /**
-   * Format booking data for email
+   * Format booking data for email / PDF
    */
-  private formatBookingData(booking: BookingWithRelations) {
+  private formatBookingData(booking: BookingWithRelations, formatOptions: FormatBookingOptions = {}) {
     const totalDollars = centsToDollars(booking.totalAmount);
     const formattedDate = new Date(booking.bookingDate).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -444,14 +575,38 @@ export class EmailService {
       day: 'numeric',
     });
 
+    const bookingMeta = (booking.metadata as Record<string, unknown> | null | undefined) || {};
+    const departureDateRaw =
+      typeof bookingMeta.departureDate === 'string' ? bookingMeta.departureDate : undefined;
+    const departureDateFormatted = formatDepartureDateDisplay(departureDateRaw);
+
+    const tripTypeLabel = tripTypeToLabel(booking.tripType);
+    const routeLabel = routeToLabel(booking.route);
+
+    const issueDateFormatted = new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    const { paymentMethodText, showStripeIcon } = resolvePaymentFields(booking, formatOptions);
+
+    const taxCents = booking.taxAmount ?? 0;
+    const subCents = booking.subtotalAmount;
+    const hasTaxBreakdown = taxCents > 0 && subCents != null && subCents >= 0;
+    const subtotalDollarsNum =
+      hasTaxBreakdown && subCents != null ? centsToDollars(subCents) : totalDollars;
+    const taxDollarsNum = hasTaxBreakdown ? centsToDollars(taxCents) : 0;
+
     // Group items by type
-    const activityItems = booking.items.filter(item =>
-      item.type === 'ACTIVITY' || item.type === 'COMBO' || item.type === 'CRAZY_COMBO'
+    const activityItems = booking.items.filter(
+      item =>
+        item.type === 'ACTIVITY' || item.type === 'COMBO' || item.type === 'CRAZY_COMBO'
     );
     const parkFees = booking.items.filter(item => item.type === 'PARK_ENTRANCE');
     const transportationItems = booking.items.filter(item => item.type === 'TRANSPORTATION');
 
-    // Transportation: detailed list (never mixed with activities)
     const transportationForTemplate = transportationItems.map(item => ({
       name: item.name,
       qty: 1,
@@ -459,7 +614,6 @@ export class EmailService {
       metaText: 'Transportation',
     }));
 
-    // Activities only: tours, ATV, excursions (NO transportation)
     const activityItemsForTemplate = activityItems.map(item => ({
       name: item.name,
       qty: item.quantity,
@@ -467,7 +621,6 @@ export class EmailService {
       metaText: `${item.type} • ${item.quantity} passenger${item.quantity > 1 ? 's' : ''}`,
     }));
 
-    // Park fees as activities
     parkFees.forEach(item => {
       activityItemsForTemplate.push({
         name: item.name || 'Park Entrance Fee',
@@ -477,35 +630,42 @@ export class EmailService {
       });
     });
 
-    // Included items (from transportation metadata or default)
     const transportItem = transportationItems[0];
-    const meta = transportItem?.metadata as { included?: Array<{ code?: string; label?: string }> } | undefined;
+    const meta = transportItem?.metadata as
+      | { included?: Array<{ code?: string; label?: string }> }
+      | undefined;
     const includedRaw = meta?.included || [];
-    const includedItems = includedRaw.length > 0
-      ? includedRaw.map((x: any) => x.label || x.code || 'Included').filter(Boolean)
-      : ['Basic kit (beers + water)'];
+    const includedItems =
+      includedRaw.length > 0
+        ? includedRaw.map((x: { label?: string; code?: string }) => x.label || x.code || 'Included').filter(Boolean)
+        : ['Basic kit (beers + water)'];
 
-    // Extras with prices - detailed (from ADDON items or transportation metadata.extras)
     const addons = booking.items.filter(item => item.type === 'ADDON');
-    const extrasWithPrices = addons.length > 0
-      ? addons.map(a => ({
-          label: a.name,
-          qty: a.quantity,
-          priceText: `$${centsToDollars(a.totalPrice).toFixed(2)}`,
-          unitPriceText: a.quantity > 0 ? `$${(centsToDollars(a.totalPrice) / a.quantity).toFixed(2)}` : null,
-        }))
-      : (() => {
-          const extrasMeta = (meta as { extras?: Array<{ label?: string; qty?: number; priceCents?: number }> })?.extras;
-          if (!extrasMeta?.length) return [];
-          return extrasMeta.map((e: any) => ({
-            label: e.label || '',
-            qty: e.qty || 1,
-            priceText: `$${((e.priceCents || 0) / 100).toFixed(2)}`,
-            unitPriceText: (e.qty || 1) > 0 ? `$${(((e.priceCents || 0) / 100) / (e.qty || 1)).toFixed(2)}` : null,
-          }));
-        })();
+    const extrasWithPrices =
+      addons.length > 0
+        ? addons.map(a => ({
+            label: a.name,
+            qty: a.quantity,
+            priceText: `$${centsToDollars(a.totalPrice).toFixed(2)}`,
+            unitPriceText:
+              a.quantity > 0 ? `$${(centsToDollars(a.totalPrice) / a.quantity).toFixed(2)}` : null,
+          }))
+        : (() => {
+            const extrasMeta = (
+              meta as { extras?: Array<{ label?: string; qty?: number; priceCents?: number }> }
+            )?.extras;
+            if (!extrasMeta?.length) return [];
+            return extrasMeta.map((e: { label?: string; qty?: number; priceCents?: number }) => ({
+              label: e.label || '',
+              qty: e.qty || 1,
+              priceText: `$${((e.priceCents || 0) / 100).toFixed(2)}`,
+              unitPriceText:
+                (e.qty || 1) > 0
+                  ? `$${(((e.priceCents || 0) / 100) / (e.qty || 1)).toFixed(2)}`
+                  : null,
+            }));
+          })();
 
-    // Reservation breakdown (desglose) - all line items for payment section
     const reservationBreakdown: Array<{ label: string; qty: number; priceText: string }> = [];
     booking.items.forEach(item => {
       const qty = item.quantity || 1;
@@ -514,125 +674,148 @@ export class EmailService {
       reservationBreakdown.push({ label, qty, priceText });
     });
 
-    // Format flight information
-    const hasArrivalFlight = !!(booking.flightNumber || booking.arrivalTime || (booking as any).arrivalAirline);
-    const hasDepartureFlight = !!(booking.departureFlightNumber || booking.departureTime || (booking as any).departureAirline);
-    
-    const flightDetails = (hasArrivalFlight || hasDepartureFlight) ? {
-      arrival: hasArrivalFlight ? {
-        airline: (booking as any).arrivalAirline || null,
-        flightNumber: booking.flightNumber || null,
-        time: booking.arrivalTime || null,
-        displayText: [
-          (booking as any).arrivalAirline,
-          booking.flightNumber,
-          booking.arrivalTime ? `Arrival: ${booking.arrivalTime}` : null
-        ].filter(Boolean).join(' • ') || null,
-      } : null,
-      departure: hasDepartureFlight ? {
-        airline: (booking as any).departureAirline || null,
-        flightNumber: booking.departureFlightNumber || null,
-        time: booking.departureTime || null,
-        displayText: [
-          (booking as any).departureAirline,
-          booking.departureFlightNumber,
-          booking.departureTime ? `Departure: ${booking.departureTime}` : null
-        ].filter(Boolean).join(' • ') || null,
-      } : null,
-    } : null;
+    const servicesPurchased: Array<{ category: string; lines: string[] }> = [];
+    if (transportationForTemplate.length) {
+      servicesPurchased.push({
+        category: 'Transportation',
+        lines: transportationForTemplate.map(t => `${t.name} — ${t.priceText}`),
+      });
+    }
+    if (activityItemsForTemplate.length) {
+      servicesPurchased.push({
+        category: 'Activities & tours',
+        lines: activityItemsForTemplate.map(a => `${a.name} — ${a.qty} pax — ${a.priceText}`),
+      });
+    }
+    if (extrasWithPrices.length) {
+      servicesPurchased.push({
+        category: 'Add-ons & packages',
+        lines: extrasWithPrices.map(e => `${e.label} × ${e.qty} — ${e.priceText}`),
+      });
+    }
+    const hasServicesPurchased = servicesPurchased.length > 0;
 
-    // Pickup time (use pickupTime if available, otherwise bookingTime)
+    const hasArrivalFlight = !!(
+      booking.flightNumber ||
+      booking.arrivalTime ||
+      (booking as any).arrivalAirline
+    );
+    const hasDepartureFlight = !!(
+      booking.departureFlightNumber ||
+      booking.departureTime ||
+      (booking as any).departureAirline
+    );
+
+    const flightDetails =
+      hasArrivalFlight || hasDepartureFlight
+        ? {
+            arrival: hasArrivalFlight
+              ? {
+                  airline: (booking as any).arrivalAirline || null,
+                  flightNumber: booking.flightNumber || null,
+                  time: booking.arrivalTime || null,
+                  displayText:
+                    [
+                      (booking as any).arrivalAirline,
+                      booking.flightNumber,
+                      booking.arrivalTime ? `Arrival: ${booking.arrivalTime}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' • ') || null,
+                }
+              : null,
+            departure: hasDepartureFlight
+              ? {
+                  airline: (booking as any).departureAirline || null,
+                  flightNumber: booking.departureFlightNumber || null,
+                  time: booking.departureTime || null,
+                  displayText:
+                    [
+                      (booking as any).departureAirline,
+                      booking.departureFlightNumber,
+                      booking.departureTime ? `Departure: ${booking.departureTime}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' • ') || null,
+                }
+              : null,
+          }
+        : null;
+
     const pickupTime = (booking as any).pickupTime || booking.bookingTime || 'TBD';
 
-    // Departure transfer: pick time = 3 hours before departure flight (for private transfers)
-    const departurePickupTime = (() => {
-      const depTime = booking.departureTime;
-      if (!depTime || typeof depTime !== 'string') return null;
-      const s = depTime.trim();
-      const match = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i) || s.match(/^(\d{1,2})(?:\.|:)?(\d{2})?\s*(AM|PM)?$/i);
-      if (!match) return null;
-      let h = parseInt(match[1], 10);
-      const m = parseInt(match[2] || '0', 10);
-      const ampm = (match[3] || '').toUpperCase();
-      if (ampm !== 'AM' && ampm !== 'PM') {
-        if (h <= 23) { /* 24h */ } else if (h >= 12) { h -= 12; }
-      } else if (ampm === 'PM' && h < 12) h += 12;
-      else if (ampm === 'AM' && h === 12) h = 0;
-      let mins = h * 60 + m - 3 * 60;
-      if (mins < 0) mins += 24 * 60;
-      const outH = Math.floor(mins / 60) % 24;
-      const outM = mins % 60;
-      if (outH === 0) return `12:${String(outM).padStart(2, '0')} AM`;
-      if (outH === 12) return `12:${String(outM).padStart(2, '0')} PM`;
-      if (outH < 12) return `${outH}:${String(outM).padStart(2, '0')} AM`;
-      return `${outH - 12}:${String(outM).padStart(2, '0')} PM`;
-    })();
-
-    // Park fee and vehicle protection texts (EXACT strings as requested)
-    const parkFeeText = activityItems.length > 0 
-      ? "Park entry fee: $25 USD per person (paid at check-in)"
-      : null;
-    
-    const vehicleProtectionText = activityItems.length > 0
-      ? "Vehicle protection is optional. If declined, a $1,000 USD credit card hold may be required and released after the tour if no damages."
+    const departurePickupTime = booking.departureTime
+      ? subtractThreeHoursFromDepartureTime(booking.departureTime)
       : null;
 
-    // Cancellation policy (array of bullets)
+    const parkFeeText =
+      activityItems.length > 0
+        ? 'Park entry fee: $25 USD per person (paid at check-in)'
+        : null;
+
+    const vehicleProtectionText =
+      activityItems.length > 0
+        ? 'Vehicle protection is optional. If declined, a $1,000 USD credit card hold may be required and released after the tour if no damages.'
+        : null;
+
     const cancellationPolicy = [
-      "Free cancellation up to 24 hours before your scheduled time.",
-      "Within 24 hours: non-refundable.",
-      "No-show: 100% charge."
+      'Free cancellation up to 24 hours before your scheduled time.',
+      'Within 24 hours: non-refundable.',
+      'No-show: 100% charge.',
     ];
 
-    // Logo URL - use frontend logo if EMAIL_LOGO_URL not set
-    const logoUrl = this.logoUrl || `${this.frontendUrl}/logo.png`;
+    const logoUrl = this.logoUrl || CLASS_VIP_EMAIL_LOGO;
 
     return {
       bookingId: booking.id,
       bookingIdShort: booking.id.substring(0, 8).toUpperCase(),
+      confirmationCode: booking.confirmationCode || null,
       customerName: booking.customer.name,
       customerEmail: booking.customer.email,
       customerPhone: booking.customer.phone,
       bookingType: booking.type,
       formattedDate,
       bookingTime: booking.bookingTime || 'TBD',
-      pickupTime: pickupTime,
+      pickupTime,
       pickupLocation: booking.pickupLocation || null,
       dropoffLocation: booking.dropoffLocation || null,
       passengers: booking.passengers,
       passengersLabel: booking.passengers === 1 ? '1 guest' : `${booking.passengers} guests`,
-      // Transportation (never in activities)
+      tripTypeLabel,
+      routeLabel,
+      hasTripMeta: !!(tripTypeLabel || routeLabel),
+      departureDateFormatted,
+      hasDepartureDay: !!departureDateFormatted,
+      issueDateFormatted,
       transportationItems: transportationForTemplate,
-      // Activities only: tours, excursions (NO transportation)
       activityItems: activityItemsForTemplate,
-      // Flight details
-      flightDetails: flightDetails,
-      hasArrivalFlight: hasArrivalFlight,
-      hasDepartureFlight: hasDepartureFlight,
-      departurePickupTime: departurePickupTime,
-      // Totals
+      flightDetails,
+      hasArrivalFlight,
+      hasDepartureFlight,
+      departurePickupTime,
       totalDollars: totalDollars.toFixed(2),
       totalPaidText: `$${totalDollars.toFixed(2)} USD`,
-      // Notes
+      hasTaxBreakdown,
+      subtotalBeforeTaxText: hasTaxBreakdown ? `$${subtotalDollarsNum.toFixed(2)} USD` : null,
+      taxIvaText: hasTaxBreakdown ? `$${taxDollarsNum.toFixed(2)} USD` : null,
       notes: booking.notes,
       internalNotes: (booking as any).internalNotes || null,
-      // Flags
       hasActivities: activityItems.length > 0,
-      // Included & Extras for templates
       includedItems,
       extrasWithPrices,
-      // Reservation breakdown (desglose for payment section)
       reservationBreakdown,
-      // Texts (EXACT as requested)
-      parkFeeText: parkFeeText,
-      vehicleProtectionText: vehicleProtectionText,
-      cancellationPolicy: cancellationPolicy,
-      // Branding
-      logoUrl: this.logoUrl,
-      watermarkLogoUrl: this.watermarkLogoUrl,
+      servicesPurchased,
+      hasServicesPurchased,
+      parkFeeText,
+      vehicleProtectionText,
+      cancellationPolicy,
+      logoUrl,
+      watermarkLogoUrl: this.watermarkLogoUrl || logoUrl,
       brandName: this.brandName,
       paymentUrl: `${this.frontendUrl}/checkout?bookingId=${booking.id}&bt=${generateBookingToken(booking.id)}`,
-      paymentMethodText: '✓ Paid via PayPal',
+      paymentMethodText,
+      showStripeIcon,
+      stripeBadgeUrl: STRIPE_BADGE_IMG_URL,
       primaryColor: this.primaryColor,
       accentColor: this.accentColor,
       bgColor: this.bgColor,
@@ -654,8 +837,10 @@ export class EmailService {
       return false;
     }
 
-    const data = this.formatBookingData(booking);
-    (data as any).paymentMethodText = options?.manualConfirm ? '✓ Paid offline (confirmed)' : '✓ Paid via PayPal';
+    const full = await this.ensureBookingForEmail(booking);
+    const data = this.formatBookingData(full, {
+      manualConfirm: options?.manualConfirm,
+    });
     const backendUrl = process.env.BACKEND_URL || process.env.FRONTEND_URL || 'http://localhost:3001';
     const pdfService = new PdfService();
     (data as any).pdfToken = pdfService.createPdfToken(booking.id);
@@ -708,7 +893,8 @@ export class EmailService {
       return false;
     }
 
-    const data = this.formatBookingData(booking);
+    const full = await this.ensureBookingForEmail(booking);
+    const data = this.formatBookingData(full, isPending ? { pendingPayment: true } : {});
     Object.assign(data, {
       companyEmailTitle: isPending ? 'New Booking Received (Pending Payment)' : 'New Booking Confirmed',
       companyStatusBadge: isPending ? 'PENDING PAYMENT' : 'CONFIRMED',
@@ -864,14 +1050,21 @@ export class EmailService {
       flightNumber: 'AA1234',
       arrivalTime: '10:30',
       passengers: 2,
-      totalAmount: 8500, // $85.00 in cents
+      totalAmount: 8500,
+      subtotalAmount: 7328,
+      taxAmount: 1172,
+      metadata: { departureDate: '2026-05-01T12:00:00.000Z' },
+      tripType: 'oneway',
+      route: 'airport-hotel',
+      confirmationCode: 'CLASS-TEST01',
+      payments: [{ provider: 'STRIPE', status: 'COMPLETED' }],
       notes: 'Test booking',
       items: [
         {
           type: 'TRANSPORTATION',
           name: 'Private Transfer',
           quantity: 1,
-          totalPrice: 8500,
+          totalPrice: 7328,
         },
       ],
     };

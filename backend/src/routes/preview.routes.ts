@@ -40,7 +40,9 @@ router.get('/booking-email', (req: Request, res: Response) => {
     items.push({ type: 'PARK_ENTRANCE', name: 'Park Entrance Fee', quantity: passengers, totalPrice: 2500 });
   }
 
-  const totalAmount = items.reduce((sum, i) => sum + i.totalPrice, 0);
+  const subtotalAmount = items.reduce((sum, i) => sum + i.totalPrice, 0);
+  const taxAmount = Math.round(subtotalAmount * 0.16);
+  const totalAmount = subtotalAmount + taxAmount;
 
   const mockBooking = {
     id: 'c' + 'x'.repeat(23),
@@ -64,17 +66,22 @@ router.get('/booking-email', (req: Request, res: Response) => {
     departureAirline: hasFlight ? 'American Airlines' : null,
     passengers,
     totalAmount,
+    subtotalAmount,
+    taxAmount,
+    tripType: 'roundtrip',
+    route: 'hotel-airport',
+    confirmationCode: 'CLASS-PREV-001',
+    metadata: hasFlight ? { departureDate: '2026-06-10T12:00:00.000Z' } : {},
+    payments: manualConfirm ? [] : [{ provider: 'STRIPE', status: 'COMPLETED' }],
     notes: 'Please arrive 15 minutes early.',
     internalNotes: null,
     items,
   };
 
-  const LOGO_URL = process.env.EMAIL_LOGO_URL || 'https://res.cloudinary.com/dpmozdkfh/image/upload/v1772074422/Gemini_Generated_Image_zbgk2uzbgk2uzbgk_jnj3n2.png';
-
   try {
-    const data = emailService.getFormatBookingData(mockBooking as any);
-    (data as any).logoUrl = LOGO_URL;
-    (data as any).paymentMethodText = manualConfirm ? '✓ Paid offline (confirmed)' : '✓ Paid via PayPal';
+    const data = emailService.getFormatBookingData(mockBooking as any, {
+      manualConfirm,
+    });
     (data as any).confirmationPdfUrl = `${process.env.BACKEND_URL || 'http://localhost:3001'}/api/preview/booking-email?passengers=${passengers}`;
     const html = emailService.renderConfirmationEmail(data as Record<string, unknown>);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');

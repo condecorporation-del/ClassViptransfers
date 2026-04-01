@@ -175,6 +175,26 @@
                   </td>
                 </tr>
                 {{/if}}
+                {{#if hasTripMeta}}
+                <tr>
+                  <td width="50%" style="padding:0 12px 10px 0;vertical-align:top;" class="col">
+                    <p style="margin:0 0 2px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Trip type</p>
+                    <p style="margin:0;font-size:14px;color:#1e293b;">{{#if tripTypeLabel}}{{tripTypeLabel}}{{else}}—{{/if}}</p>
+                  </td>
+                  <td width="50%" style="padding:0 0 10px;vertical-align:top;" class="col">
+                    <p style="margin:0 0 2px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Route</p>
+                    <p style="margin:0;font-size:14px;color:#1e293b;">{{#if routeLabel}}{{routeLabel}}{{else}}—{{/if}}</p>
+                  </td>
+                </tr>
+                {{/if}}
+                {{#if departureDateFormatted}}
+                <tr>
+                  <td colspan="2" style="padding:0 0 10px;">
+                    <p style="margin:0 0 2px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Return / departure day</p>
+                    <p style="margin:0;font-size:14px;font-weight:600;color:#1e293b;">{{departureDateFormatted}}</p>
+                  </td>
+                </tr>
+                {{/if}}
                 {{#if notes}}
                 <tr>
                   <td colspan="2" style="padding:4px 0 10px;border-top:1px solid #f1f5f9;">
@@ -189,6 +209,27 @@
         </table>
       </td>
     </tr>
+
+    {{#if hasServicesPurchased}}
+    <tr>
+      <td style="padding:0 24px 20px;" class="ep">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;">
+          <tr><td style="padding:11px 18px;background:#071A2B;"><p style="margin:0;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#D9AE5F;font-weight:700;">📋 Services purchased</p></td></tr>
+          <tr>
+            <td style="padding:14px 18px;">
+              {{#each servicesPurchased}}
+              {{#unless @first}}<div style="height:10px;"></div>{{/unless}}
+              <p style="margin:0 0 6px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#64748b;font-weight:700;">{{category}}</p>
+              {{#each lines}}
+              <p style="margin:0 0 4px;font-size:13px;color:#1e293b;">• {{this}}</p>
+              {{/each}}
+              {{/each}}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    {{/if}}
 
     <!-- ── PRICE BREAKDOWN ── -->
     <tr>
@@ -205,6 +246,18 @@
                 </tr>
               </table>
               {{/each}}
+              {{#if hasTaxBreakdown}}
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top:8px;padding-top:8px;border-top:1px dashed #e2e8f0;">
+                <tr>
+                  <td style="font-size:13px;color:#64748b;padding:3px 0;">Subtotal (before tax)</td>
+                  <td align="right" style="font-size:13px;font-weight:600;color:#475569;padding:3px 0;white-space:nowrap;">{{subtotalBeforeTaxText}}</td>
+                </tr>
+                <tr>
+                  <td style="font-size:13px;color:#64748b;padding:3px 0;">IVA (16% — México)</td>
+                  <td align="right" style="font-size:13px;font-weight:600;color:#475569;padding:3px 0;white-space:nowrap;">{{taxIvaText}}</td>
+                </tr>
+              </table>
+              {{/if}}
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-top:2px solid #071A2B;margin-top:8px;">
                 <tr>
                   <td style="padding:10px 0 0;font-size:14px;font-weight:700;color:#071A2B;">Total</td>
@@ -215,6 +268,10 @@
                 <tr>
                   <td style="padding:8px 14px;background:#f0fdf4;border-radius:8px;border:1px solid #dcfce7;">
                     <p style="margin:0;font-size:13px;font-weight:600;color:{{companyPaymentStatusColor}};">{{companyPaymentStatusText}}</p>
+                    <p style="margin:6px 0 0;font-size:12px;color:#475569;">{{paymentMethodText}}</p>
+                    {{#if showStripeIcon}}
+                    <p style="margin:8px 0 0;"><img src="{{stripeBadgeUrl}}" alt="Stripe" width="96" height="24" style="display:inline-block;height:24px;width:auto;" /></p>
+                    {{/if}}
                   </td>
                 </tr>
               </table>

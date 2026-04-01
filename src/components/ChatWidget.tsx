@@ -127,7 +127,6 @@ export const ChatWidget = () => {
   const sendMessage = async (text?: string) => {
     const messageText = text || input.trim();
     if (!messageText) return;
-    setActivePanel('none');
     const userMessage: Message = { id: Date.now().toString(), role: 'user', content: messageText, timestamp: new Date() };
     setMessages(prev => [...prev, userMessage]);
     setInput('');

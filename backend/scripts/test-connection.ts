@@ -4,7 +4,7 @@
  */
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
-import { getErrorMessage } from '../src/lib/errors';
+import { getErrorMessage } from '../src/shared/lib/errors';
 
 const prisma = new PrismaClient();
 

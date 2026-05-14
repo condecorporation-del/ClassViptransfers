@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { PrismaClient, ServiceType, TripType, VehicleClass, ExtraCode, PricingMode } from '@prisma/client';
 import bcrypt from 'bcrypt';
 

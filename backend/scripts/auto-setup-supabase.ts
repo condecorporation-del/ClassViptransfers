@@ -6,7 +6,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { getErrorMessage } from '../src/lib/errors';
+import { getErrorMessage } from '../src/shared/lib/errors';
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';

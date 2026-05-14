@@ -6,6 +6,10 @@ All current work is in:
 
 `C:\Users\conde\Documents\classvip-live-correct2`
 
+GitHub repo for this new isolated project:
+
+`https://github.com/condecorporation-del/ClassViptransfers.git`
+
 This is the correct repo/version we have been cleaning and improving.
 
 Local app:
@@ -14,9 +18,16 @@ Local app:
 
 ## Current Goal
 
-We are **not** rebuilding from zero.
+We are **not** touching production.
 
-We are cleaning and hardening the **existing live project** so it becomes:
+This is now an **isolated project** with:
+
+- its own GitHub repo
+- its own Supabase database
+- the same business structure/data model as the original system
+- freedom to improve without risking `classviptransfers.com`
+
+We cleaned and hardened the existing codebase so it becomes:
 
 - cleaner
 - more professional
@@ -88,6 +99,19 @@ These were already passing after cleanup/reorg:
 - `npm run build`
 - `npm run test`
 
+### 6. New isolated infrastructure
+
+- New GitHub repo created and pushed:
+  - `https://github.com/condecorporation-del/ClassViptransfers.git`
+- New Supabase database connected successfully
+- Backend `.env` updated to point to the new Supabase project
+- Prisma schema pushed successfully with:
+  - `npm run db:push`
+- Seed executed successfully with:
+  - `npm run db:seed`
+- Database connection verified with:
+  - `npm run db:test`
+
 ## Backend Reorganization
 
 Backend was reorganized by domain as well.
@@ -140,31 +164,79 @@ Passing:
 
 ### Backend
 
-Partially passing:
-
-- backend tests are safe/skipped when no `DATABASE_URL`
-
-Still failing:
+Passing:
 
 - `cd backend && npm run build`
+- `cd backend && npm run db:test`
+- `cd backend && npm run db:seed`
 
-At this point, backend build errors are concentrated in:
+Backend dev server is currently expected at:
 
-- `backend/src/features/ai/services/ai.service.ts`
+- `http://127.0.0.1:3001`
 
-## Remaining Backend TypeScript Issues
+Pricing endpoints verified against the new Supabase DB:
 
-The remaining errors are in `ai.service.ts`, mainly:
+- `/api/pricing/zones`
+- `/api/pricing/areas`
+- `/api/pricing/extras`
 
-1. possible null access
-2. properties accessed on overly generic objects
-3. `ExtractedBookingData` not cast/normalized to Prisma JSON input type
+## Booking / Admin Verification
 
-In other words:
+### Booking API
 
-- `booking` is in much better shape
-- `admin` is in much better shape
-- the main TypeScript blocker left is `ai`
+A real test booking was created successfully against the new database.
+
+Observed result:
+
+- booking created in `DRAFT`
+- confirmation code generated: `CLASS2026001`
+- transport pricing calculated correctly
+- booking appears in admin bookings list
+
+Test booking example created:
+
+- customer: `test.booking@example.com`
+- route: `SJD -> Cabo San Lucas`
+- hotel/dropoff: `Riu Palace Cabo San Lucas`
+- total: `12760` cents
+
+### Stripe
+
+Stripe payment intent creation was verified successfully for the test booking using:
+
+- `/api/stripe/create-payment-intent`
+
+This returned a valid `clientSecret`.
+
+### Admin auth
+
+Admin login was verified successfully via API:
+
+- endpoint: `/api/admin/auth/login`
+- seeded admin email: `condecorporation@gmail.com`
+- seeded password from seed file: `1234`
+
+Admin-protected endpoints were also verified:
+
+- `/api/admin/bookings`
+- `/api/admin/stats`
+
+### Browser/UI notes
+
+- Homepage still loads
+- Booking UI still loads
+- Admin login page still loads
+- Browser automation in the Codex in-app browser is a bit flaky on `input[type=email]` fields, so API verification was more reliable than UI automation for login submission
+
+## Remaining Work / Next Best Steps
+
+1. Verify the booking flow visually from the frontend UI all the way into checkout now that the new Supabase DB is live
+2. Review admin dashboard UI after successful login and confirm booking rows/stats render correctly in-browser
+3. Start actual product improvements without risk to production:
+   - booking UX
+   - admin UX
+   - visual polish
+   - Vercel deployment setup
 
 ## Files Most Recently Touched
 
@@ -186,26 +258,20 @@ In other words:
 - `C:\Users\conde\Documents\classvip-live-correct2\backend\src\features\booking\routes\preview.routes.ts`
 - `C:\Users\conde\Documents\classvip-live-correct2\backend\src\features\admin\controllers\admin.controller.ts`
 - `C:\Users\conde\Documents\classvip-live-correct2\backend\src\shared\lib\audit.ts`
+- `C:\Users\conde\Documents\classvip-live-correct2\backend\prisma\seed.ts`
+- `C:\Users\conde\Documents\classvip-live-correct2\backend\scripts\test-connection.ts`
+- `C:\Users\conde\Documents\classvip-live-correct2\backend\scripts\setup-with-env.ts`
+- `C:\Users\conde\Documents\classvip-live-correct2\backend\scripts\auto-setup-supabase.ts`
 - `C:\Users\conde\Documents\classvip-live-correct2\backend\tsconfig.json`
 - `C:\Users\conde\Documents\classvip-live-correct2\backend\vitest.config.ts`
-
-## Recommended Next Step
-
-If another agent continues from here, the best next task is:
-
-1. fix `backend/src/features/ai/services/ai.service.ts`
-2. get `cd backend && npm run build` fully green
-3. then continue with:
-   - backend cleanup
-   - Vercel migration work
-   - UI/UX polish
-   - further performance improvements
 
 ## Important Notes
 
 - Do **not** switch back to `C:\Users\conde\Documents\los-cabos-luxe-transfers-main`
 - The active repo is `C:\Users\conde\Documents\classvip-live-correct2`
+- This is now tied to a **new** GitHub repo and a **new** Supabase DB
 - Do **not** reintroduce PayPal
 - Stripe is the active payment path
 - Avoid changing visible branding unless explicitly requested
-- Keep homepage/booking behavior stable while cleaning internals
+- Keep homepage/booking behavior stable while improving internals
+- The production site is not the target environment for these tests

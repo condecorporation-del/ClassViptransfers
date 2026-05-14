@@ -1,7 +1,5 @@
 {
   "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src",
     "target": "ES2022",
     "module": "CommonJS",
     "lib": ["ES2022"],
@@ -18,7 +16,7 @@
     "sourceMap": true,
     "types": ["node", "express", "jsonwebtoken", "bcrypt", "cors", "cookie-parser", "nodemailer", "multer"]
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/test"]
+  "include": ["src/**/*.ts", "src/**/*.d.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/test", "src/shared/test"]
 }
 

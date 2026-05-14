@@ -3,18 +3,18 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import { prisma } from './lib/prisma';
-import { errorHandler } from './middleware/errorHandler';
-import bookingsRoutes from './routes/bookings.routes';
-import adminRoutes from './routes/admin.routes';
-import paypalRoutes from './routes/paypal.routes';
-import stripeRoutes from './routes/stripe.routes';
-import aiRoutes from './routes/ai.routes';
-import authRoutes from './routes/auth.routes';
-import pricingRoutes from './routes/pricing.routes';
-import hotelsRoutes from './routes/hotels.routes';
-import previewRoutes from './routes/preview.routes';
-import { EmailService } from './services/email.service';
+import { prisma } from './shared/lib/prisma';
+import { errorHandler } from './shared/middleware/errorHandler';
+import bookingsRoutes from './features/booking/routes/bookings.routes';
+import adminRoutes from './features/admin/routes/admin.routes';
+import stripeRoutes from './features/booking/routes/stripe.routes';
+import aiRoutes from './features/ai/routes/ai.routes';
+import authRoutes from './features/auth/routes/auth.routes';
+import pricingRoutes from './features/pricing/routes/pricing.routes';
+import hotelsRoutes from './features/pricing/routes/hotels.routes';
+import previewRoutes from './features/booking/routes/preview.routes';
+import { EmailService } from './features/booking/services/email.service';
+import { getErrorMessage, hasErrorCode } from './shared/lib/errors';
 
 dotenv.config();
 
@@ -25,7 +25,7 @@ process.on('unhandledRejection', (reason: unknown) => {
 process.on('uncaughtException', (err: Error) => {
   console.error('[Server] Uncaught exception:', err?.message || err);
   // Only exit for truly unrecoverable errors
-  if ((err as any)?.code === 'EADDRINUSE') process.exit(1);
+  if (hasErrorCode(err) && err.code === 'EADDRINUSE') process.exit(1);
 });
 
 const app = express();
@@ -38,9 +38,11 @@ const envOrigins = process.env.ALLOWED_ORIGINS
 
 const defaultDevOrigins = [
   'http://localhost:5173',
+  'http://localhost:5174',
   'http://localhost:8080',
   'http://localhost:8081',
   'http://localhost:8899',
+  'http://localhost:4173',
 ];
 
 const allowedOrigins = [...new Set([...envOrigins, ...defaultDevOrigins])];
@@ -55,7 +57,7 @@ app.use(cors({
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     if (hardcodedProductionOrigins.includes(origin)) return callback(null, true);
-    if (origin.endsWith('.netlify.app')) return callback(null, true);
+    if (origin.endsWith('.vercel.app')) return callback(null, true);
     if (process.env.NODE_ENV !== 'production') return callback(null, true);
 
     console.warn(`[CORS] Blocked origin: ${origin}`);
@@ -73,7 +75,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // Rate limiters
 const bookingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'Too many booking requests, please try again later.' }, standardHeaders: true, legacyHeaders: false });
-const paypalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many payment requests, please try again later.' }, standardHeaders: true, legacyHeaders: false });
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === 'production' ? 10 : 9999,
@@ -93,7 +94,6 @@ app.get('/health', (req, res) => {
 app.use('/api/bookings', bookingLimiter, bookingsRoutes);
 app.use('/api/admin/auth', authLimiter, authRoutes);
 app.use('/api/admin', adminRoutes); // Admin routes (protected by auth middleware)
-app.use('/api/paypal', paypalLimiter, paypalRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/ai', aiLimiter, aiRoutes);
 app.use('/api/pricing', pricingRoutes);
@@ -120,8 +120,8 @@ async function ensureAdminExists() {
       data: { email, passwordHash, role: 'admin' },
     });
     console.log('[Auth] Admin user created:', email);
-  } catch (e: any) {
-    console.warn('[Auth] Could not ensure admin:', e?.message || e);
+  } catch (error) {
+    console.warn('[Auth] Could not ensure admin:', getErrorMessage(error));
   }
 }
 

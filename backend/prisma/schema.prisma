@@ -173,7 +173,6 @@ model BookingItem {
 }
 
 enum PaymentProvider {
-  PAYPAL
   STRIPE
   CASH
   BANK_TRANSFER
@@ -197,8 +196,8 @@ model Payment {
   status        PaymentStatus  @default(PENDING)
   
   // Payment identifiers
-  orderId       String?        // PayPal order ID, Stripe payment intent ID, etc.
-  captureId     String?        // PayPal capture ID
+  orderId       String?        // Provider payment reference (for example, a Stripe payment intent ID)
+  captureId     String?        // Optional provider capture/settlement reference
   transactionId String?        // General transaction ID
   
   // Amount (in cents)
@@ -333,7 +332,7 @@ model AdminAuditLog {
 }
 
 enum EmailType {
-  CUSTOMER_CONFIRMATION   // Payment confirmed (PayPal)
+  CUSTOMER_CONFIRMATION   // Payment confirmed
   COMPANY_NOTIFICATION
   ADMIN_RESEND
   BOOKING_RECEIVED       // Pending payment - draft created

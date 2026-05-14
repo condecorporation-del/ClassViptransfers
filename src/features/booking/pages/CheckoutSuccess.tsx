@@ -1,0 +1,105 @@
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowRight, CheckCircle, Loader2 } from 'lucide-react';
+import { useLanguage } from '@/shared/providers/LanguageContext';
+import { getApiBaseUrl } from '@/shared/lib/api';
+
+type BookingSummary = {
+  id: string;
+  status: string;
+  confirmationCode?: string | null;
+};
+
+export default function CheckoutSuccess() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { lang } = useLanguage();
+  const bookingId = searchParams.get('bookingId');
+
+  const [loading, setLoading] = useState(Boolean(bookingId));
+  const [booking, setBooking] = useState<BookingSummary | null>(null);
+
+  useEffect(() => {
+    if (!bookingId) return;
+
+    const bt = sessionStorage.getItem(`bt_${bookingId}`) || searchParams.get('bt') || '';
+    const tokenQuery = bt ? `?token=${bt}` : '';
+
+    fetch(`${getApiBaseUrl()}/api/bookings/${bookingId}${tokenQuery}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Failed to load booking');
+        return response.json();
+      })
+      .then((data) => setBooking(data.data))
+      .catch(() => setBooking(null))
+      .finally(() => setLoading(false));
+  }, [bookingId, searchParams]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <Loader2 size={42} className="animate-spin text-gold mx-auto" />
+          <p className="text-lg font-semibold">
+            {lang === 'es' ? 'Preparando tu confirmación...' : 'Preparing your confirmation...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20">
+      <div className="max-w-lg w-full rounded-[28px] border border-gold/15 bg-card/95 shadow-[0_24px_90px_rgba(10,22,40,0.18)] p-8 md:p-10 text-center">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/12 ring-8 ring-emerald-500/5">
+          <CheckCircle size={40} className="text-emerald-500" />
+        </div>
+
+        <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">
+          {lang === 'es' ? '¡Reserva Confirmada!' : 'Booking Confirmed!'}
+        </h1>
+
+        <p className="text-muted-foreground leading-relaxed mb-6">
+          {lang === 'es'
+            ? 'Tu pago fue recibido correctamente. En breve recibirás tu confirmación por correo con todos los detalles del servicio.'
+            : 'Your payment was received successfully. You will receive your confirmation email with all service details shortly.'}
+        </p>
+
+        {booking && (
+          <div className="mb-8 rounded-2xl border border-border bg-muted/35 p-4 text-left space-y-3">
+            <div className="flex items-center justify-between gap-4 text-sm">
+              <span className="text-muted-foreground">{lang === 'es' ? 'Reserva' : 'Booking'}</span>
+              <span className="font-mono text-foreground">{booking.id}</span>
+            </div>
+            {booking.confirmationCode && (
+              <div className="flex items-center justify-between gap-4 text-sm">
+                <span className="text-muted-foreground">{lang === 'es' ? 'Confirmación' : 'Confirmation'}</span>
+                <span className="font-semibold text-foreground">{booking.confirmationCode}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between gap-4 text-sm">
+              <span className="text-muted-foreground">{lang === 'es' ? 'Estado' : 'Status'}</span>
+              <span className="font-semibold text-gold">{booking.status}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <button
+            onClick={() => navigate('/')}
+            className="w-full gold-gradient text-secondary-foreground px-6 py-3.5 rounded-xl font-semibold hover:brightness-110 transition-all flex items-center justify-center gap-2"
+          >
+            {lang === 'es' ? 'Volver al Inicio' : 'Back to Home'}
+            <ArrowRight size={16} />
+          </button>
+          <button
+            onClick={() => navigate('/contact')}
+            className="w-full px-6 py-3 rounded-xl font-semibold bg-muted text-foreground hover:bg-muted/80 transition-all"
+          >
+            {lang === 'es' ? 'Contactar soporte' : 'Contact support'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

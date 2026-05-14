@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { getErrorMessage } from '../src/lib/errors';
 import fs from 'fs';
 import path from 'path';
 
@@ -73,9 +74,9 @@ async function main() {
           Math.abs(result.createdAt.getTime() - result.updatedAt.getTime()) < 500;
         if (isNew) inserted++;
         else updated++;
-      } catch (err: any) {
+      } catch (err) {
         errors++;
-        console.error(`[Error] ${hotel.name} (${hotel.zone}): ${err.message}`);
+        console.error(`[Error] ${hotel.name} (${hotel.zone}): ${getErrorMessage(err)}`);
       }
     }
 
@@ -110,7 +111,8 @@ async function main() {
 
 main()
   .catch((err) => {
-    console.error('[Fatal]', err.message || err);
+    console.error('[Fatal]', getErrorMessage(err) || err);
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());
+

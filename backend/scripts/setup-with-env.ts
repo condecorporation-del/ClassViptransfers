@@ -4,6 +4,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { getErrorMessage } from '../src/lib/errors';
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
@@ -77,8 +78,8 @@ ADMIN_USER_ID=admin
   try {
     await prisma.$connect();
     console.log('✅ Connected to Supabase successfully!\n');
-  } catch (error: any) {
-    console.error('❌ Connection failed:', error.message);
+  } catch (error) {
+    console.error('❌ Connection failed:', getErrorMessage(error));
     await prisma.$disconnect();
     process.exit(1);
   }
@@ -113,8 +114,8 @@ ADMIN_USER_ID=admin
       });
     }
     console.log('');
-  } catch (error: any) {
-    console.error('⚠️  Could not verify tables:', error.message);
+  } catch (error) {
+    console.error('⚠️  Could not verify tables:', getErrorMessage(error));
   }
 
   // Test booking creation
@@ -173,8 +174,8 @@ ADMIN_USER_ID=admin
     await prisma.booking.delete({ where: { id: booking.id } }).catch(() => {});
     await prisma.customer.delete({ where: { id: customer.id } }).catch(() => {});
     console.log('🧹 Test data cleaned up\n');
-  } catch (error: any) {
-    console.error('❌ Failed to create test booking:', error.message);
+  } catch (error) {
+    console.error('❌ Failed to create test booking:', getErrorMessage(error));
   }
 
   await prisma.$disconnect();
@@ -190,4 +191,5 @@ main().catch((error) => {
   console.error('❌ Setup failed:', error);
   process.exit(1);
 });
+
 

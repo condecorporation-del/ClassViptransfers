@@ -6,6 +6,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { getErrorMessage } from '../src/lib/errors';
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
@@ -107,8 +108,8 @@ ADMIN_USER_ID=admin
   try {
     await prisma.$connect();
     console.log('✅ Connected to Supabase successfully!\n');
-  } catch (error: any) {
-    console.error('❌ Connection failed:', error.message);
+  } catch (error) {
+    console.error('❌ Connection failed:', getErrorMessage(error));
     console.error('\n💡 Please verify:');
     console.error('   - Project reference is correct');
     console.error('   - Password is correct');
@@ -147,8 +148,8 @@ ADMIN_USER_ID=admin
       });
     }
     console.log('');
-  } catch (error: any) {
-    console.error('⚠️  Could not verify tables:', error.message);
+  } catch (error) {
+    console.error('⚠️  Could not verify tables:', getErrorMessage(error));
   }
 
   // Step 6: Test booking creation
@@ -209,8 +210,8 @@ ADMIN_USER_ID=admin
     await prisma.booking.delete({ where: { id: booking.id } }).catch(() => {});
     await prisma.customer.delete({ where: { id: customer.id } }).catch(() => {});
     console.log('🧹 Test data cleaned up\n');
-  } catch (error: any) {
-    console.error('❌ Failed to create test booking:', error.message);
+  } catch (error) {
+    console.error('❌ Failed to create test booking:', getErrorMessage(error));
     console.error('   This might indicate a schema issue');
   }
 
@@ -236,4 +237,5 @@ main().catch((error) => {
   rl.close();
   process.exit(1);
 });
+
 

@@ -4,6 +4,7 @@
  */
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
+import { getErrorMessage } from '../src/lib/errors';
 
 const prisma = new PrismaClient();
 
@@ -37,15 +38,15 @@ async function testConnection() {
     }
     
     console.log('\n✅ Database connection test passed!');
-  } catch (error: any) {
+  } catch (error) {
     console.error('❌ Database connection failed:');
-    console.error('   Error:', error.message);
+    console.error('   Error:', getErrorMessage(error));
     
-    if (error.message.includes('DATABASE_URL')) {
+    if (getErrorMessage(error).includes('DATABASE_URL')) {
       console.error('\n💡 Make sure DATABASE_URL is set in .env file');
-    } else if (error.message.includes('password')) {
+    } else if (getErrorMessage(error).includes('password')) {
       console.error('\n💡 Check your database password in DATABASE_URL');
-    } else if (error.message.includes('SSL')) {
+    } else if (getErrorMessage(error).includes('SSL')) {
       console.error('\n💡 For Supabase, ensure connection string includes SSL parameters');
     }
     
@@ -56,4 +57,5 @@ async function testConnection() {
 }
 
 testConnection();
+
 

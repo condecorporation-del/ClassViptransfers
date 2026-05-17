@@ -215,7 +215,7 @@ export class AIService {
     try {
       // Create File-like object for OpenAI (Node.js compatible)
       // OpenAI SDK accepts File, Blob, or Buffer with proper metadata
-      const file = new File([audioBuffer], filename, { 
+      const file = new File([new Uint8Array(audioBuffer)], filename, { 
         type: filename.endsWith('.webm') ? 'audio/webm' : 'audio/mpeg'
       });
       
@@ -637,7 +637,7 @@ Respond ONLY with this JSON:
           const bookingInput = this.extractedToBookingInput(extracted, pricingData, passengers);
           const booking = await bookingService.createDraftBooking(bookingInput, 'AI_CHAT');
           finalBookingId = booking.id;
-          const { EmailService } = await import('../../booking/services/email.service');
+          const { EmailService } = await import('../../booking/services/email.service.js');
           const emailService = new EmailService();
           emailService.sendBookingReceived(booking).catch((err) => console.error('[AI] Booking received email failed:', err));
         } catch (error) {

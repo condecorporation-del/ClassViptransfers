@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import './shared/types/express';
 import { prisma } from './shared/lib/prisma';
 import { errorHandler } from './shared/middleware/errorHandler';
 import bookingsRoutes from './features/booking/routes/bookings.routes';

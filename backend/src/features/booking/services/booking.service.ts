@@ -159,6 +159,11 @@ export class BookingService {
     } else if (input.type === 'TRANSPORTATION' && input.pricingData) {
       // Legacy: pricing from zones/vehicle
       try {
+        const normalizedExtras = input.pricingData.extras?.map((extra) => ({
+          code: extra.code,
+          qty: extra.qty,
+        }));
+
         const quote = await pricingService.calculateQuote({
           serviceType: 'TRANSFER',
           tripType: input.pricingData.tripType === 'roundtrip' ? 'ROUND_TRIP' : 'ONE_WAY',
@@ -166,7 +171,7 @@ export class BookingService {
           zoneTo: input.pricingData.zoneTo,
           vehicleClass: input.pricingData.vehicleClass,
           passengers: input.passengers,
-          extras: input.pricingData.extras,
+          extras: normalizedExtras,
         });
 
         totalAmount = quote.totalCents;

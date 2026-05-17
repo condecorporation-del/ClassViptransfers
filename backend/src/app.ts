@@ -148,3 +148,5 @@ export async function ensureAdminExists() {
     console.warn('[Auth] Could not ensure admin:', getErrorMessage(error));
   }
 }
+
+export default app;

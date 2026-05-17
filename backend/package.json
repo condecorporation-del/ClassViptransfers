@@ -1,7 +1,7 @@
 {
-  "name": "los-cabos-luxe-transfers-backend",
+  "name": "class-viptransfers-backend",
   "version": "1.0.0",
-  "description": "Backend API for Los Cabos Luxe Transfers booking system",
+  "description": "Backend API for Class VIP Transfers booking system",
   "main": "dist/server.js",
   "prisma": {
     "schema": "prisma/schema.prisma"

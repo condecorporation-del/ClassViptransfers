@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { BookingController } from '../controllers/booking.controller';
 import { validate, asyncHandler } from '../../../shared/middleware/validation';
-import { optionalAdminAuth } from '../../../shared/middleware/auth';
+import { optionalAdminAuth, requireAdminAuth } from '../../../shared/middleware/auth';
 import {
   createBookingSchema,
   confirmBookingSchema,
@@ -24,6 +24,7 @@ router.post(
 // POST /api/bookings/:id/confirm - Admin confirm booking
 router.post(
   '/:id/confirm',
+  requireAdminAuth,
   validate(confirmBookingSchema, 'body'),
   asyncHandler((req, res) => bookingController.confirmBooking(req, res))
 );
@@ -31,6 +32,7 @@ router.post(
 // POST /api/bookings/:id/cancel - Cancel booking
 router.post(
   '/:id/cancel',
+  requireAdminAuth,
   validate(cancelBookingSchema, 'body'),
   asyncHandler((req, res) => bookingController.cancelBooking(req, res))
 );
@@ -38,6 +40,7 @@ router.post(
 // POST /api/bookings/:id/assign - Assign driver/vehicle
 router.post(
   '/:id/assign',
+  requireAdminAuth,
   validate(assignBookingSchema, 'body'),
   asyncHandler((req, res) => bookingController.assignBooking(req, res))
 );
@@ -45,6 +48,7 @@ router.post(
 // PATCH /api/bookings/:id/customer - Update customer information
 router.patch(
   '/:id/customer',
+  requireAdminAuth,
   validate(updateCustomerSchema, 'body'),
   asyncHandler((req, res) => bookingController.updateCustomer(req, res))
 );

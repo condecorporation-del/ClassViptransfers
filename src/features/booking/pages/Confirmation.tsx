@@ -1,23 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useLanguage } from '@/shared/providers/LanguageContext';
-import { CheckCircle, Phone, MessageCircle, Loader2, AlertCircle } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getApiBaseUrl } from '@/shared/lib/api';
 import { format } from 'date-fns';
+import { AlertCircle, CheckCircle, Loader2, MessageCircle, Phone } from 'lucide-react';
+import { useLanguage } from '@/shared/providers/LanguageContext';
+import { getApiBaseUrl } from '@/shared/lib/api';
 
 type ConfirmationBooking = {
   id: string;
   type?: string;
   status?: string;
+  confirmationCode?: string | null;
   bookingDate?: string;
   pickupLocation?: string;
   dropoffLocation?: string;
   totalAmountCents?: number;
+  totalAmount?: number;
 };
 
 const PHONE = '+52 624 122 2174';
 const WHATSAPP_LINK = 'https://wa.me/5216241222174';
+
+const STATUS_LABELS: Record<string, { en: string; es: string }> = {
+  CONFIRMED:       { en: 'Confirmed',       es: 'Confirmado' },
+  PAID:            { en: 'Paid',            es: 'Pagado' },
+  PENDING_PAYMENT: { en: 'Pending Payment', es: 'Pago Pendiente' },
+  COMPLETED:       { en: 'Completed',       es: 'Completado' },
+  CANCELLED:       { en: 'Cancelled',       es: 'Cancelado' },
+  OFFLINE_HOLD:    { en: 'Hold',            es: 'En Espera' },
+  DRAFT:           { en: 'Draft',           es: 'Borrador' },
+};
 
 const Confirmation = () => {
   const { t, lang } = useLanguage();
@@ -25,25 +37,33 @@ const Confirmation = () => {
   const bookingId = searchParams.get('bookingId');
 
   const [booking, setBooking] = useState<ConfirmationBooking | null>(null);
-  const [loading, setLoading] = useState(!!bookingId);
+  const [loading, setLoading] = useState(Boolean(bookingId));
   const [error, setError] = useState(false);
 
   useEffect(() => {
     if (!bookingId) return;
+
     const fetchBooking = async () => {
       try {
-        const bt = sessionStorage.getItem(`bt_${bookingId}`) || searchParams.get('bt') || '';
-        const res = await fetch(`${getApiBaseUrl()}/api/bookings/${bookingId}${bt ? `?token=${bt}` : ''}`);
-        if (!res.ok) throw new Error('Not found');
-        const json = await res.json();
-        setBooking(json.data);
+        const bookingToken = sessionStorage.getItem(`bt_${bookingId}`) || searchParams.get('bt') || '';
+        const response = await fetch(
+          `${getApiBaseUrl()}/api/bookings/${bookingId}${bookingToken ? `?token=${bookingToken}` : ''}`
+        );
+
+        if (!response.ok) {
+          throw new Error('Booking not found');
+        }
+
+        const payload = await response.json();
+        setBooking(payload.data);
       } catch {
         setError(true);
       } finally {
         setLoading(false);
       }
     };
-    fetchBooking();
+
+    void fetchBooking();
   }, [bookingId, searchParams]);
 
   if (loading) {
@@ -67,9 +87,14 @@ const Confirmation = () => {
               ? 'No pudimos encontrar los detalles de tu reserva. Contacta a nuestro equipo para más información.'
               : 'We could not find your booking details. Contact our team for more information.'}
           </p>
-          <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-4 rounded-full bg-[#25D366] text-white font-bold text-sm hover:bg-[#20bd5a] transition-colors mb-3">
-            <MessageCircle size={18} /> {lang === 'es' ? 'Contactar por WhatsApp' : 'Contact via WhatsApp'}
+          <a
+            href={WHATSAPP_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-4 rounded-full bg-[#25D366] text-white font-bold text-sm hover:bg-[#20bd5a] transition-colors mb-3"
+          >
+            <MessageCircle size={18} />
+            {lang === 'es' ? 'Contactar por WhatsApp' : 'Contact via WhatsApp'}
           </a>
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             {t('confirm.backHome')}
@@ -79,16 +104,12 @@ const Confirmation = () => {
     );
   }
 
-  const bookingDate = booking?.bookingDate
-    ? format(new Date(booking.bookingDate), 'PPP')
-    : null;
-  const reference = booking?.id
-    ? `#CVT-${booking.id.slice(-8).toUpperCase()}`
-    : null;
+  const bookingDate = booking?.bookingDate ? format(new Date(booking.bookingDate), 'PPP') : null;
+  const reference = booking?.confirmationCode || (booking?.id ? `#CVT-${booking.id.slice(-8).toUpperCase()}` : null);
   const status = booking?.status || 'CONFIRMED';
   const pickup = booking?.pickupLocation || '';
   const dropoff = booking?.dropoffLocation || '';
-  const totalCents = booking?.totalAmountCents ?? 0;
+  const totalCents = booking?.totalAmountCents ?? booking?.totalAmount ?? 0;
   const total = (totalCents / 100).toFixed(2);
 
   return (
@@ -109,22 +130,39 @@ const Confirmation = () => {
             <h3 className="font-semibold text-sm text-gold">{t('confirm.summary')}</h3>
             <div className="text-sm text-foreground/80 space-y-1">
               {reference && (
-                <p>{t('confirm.reference')}: <span className="font-medium text-gold">{reference}</span></p>
+                <p>
+                  {t('confirm.reference')}: <span className="font-medium text-gold">{reference}</span>
+                </p>
               )}
-              <p>{t('confirm.service')}: <span className="font-medium">{booking.type || t('confirm.serviceValue')}</span></p>
+              <p>
+                {t('confirm.service')}: <span className="font-medium">{booking.type || t('confirm.serviceValue')}</span>
+              </p>
               {bookingDate && (
-                <p>{t('confirm.date')}: <span className="font-medium">{bookingDate}</span></p>
+                <p>
+                  {t('confirm.date')}: <span className="font-medium">{bookingDate}</span>
+                </p>
               )}
               {pickup && (
-                <p>{lang === 'es' ? 'Pickup' : 'Pickup'}: <span className="font-medium">{pickup}</span></p>
+                <p>
+                  {lang === 'es' ? 'Recogida' : 'Pickup'}: <span className="font-medium">{pickup}</span>
+                </p>
               )}
               {dropoff && (
-                <p>{lang === 'es' ? 'Destino' : 'Dropoff'}: <span className="font-medium">{dropoff}</span></p>
+                <p>
+                  {lang === 'es' ? 'Destino' : 'Dropoff'}: <span className="font-medium">{dropoff}</span>
+                </p>
               )}
               {totalCents > 0 && (
-                <p>Total: <span className="font-medium text-gold">${total} USD</span></p>
+                <p>
+                  Total: <span className="font-medium text-gold">${total} USD</span>
+                </p>
               )}
-              <p>{lang === 'es' ? 'Estado' : 'Status'}: <span className="font-medium">{status}</span></p>
+              <p>
+                {lang === 'es' ? 'Estado' : 'Status'}:{' '}
+                <span className="font-medium">
+                  {STATUS_LABELS[status]?.[lang === 'es' ? 'es' : 'en'] || status}
+                </span>
+              </p>
             </div>
           </div>
         ) : (
@@ -140,16 +178,27 @@ const Confirmation = () => {
         <div className="space-y-3 mb-6">
           <h4 className="text-sm font-semibold">{t('confirm.needHelp')}</h4>
           <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-            <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="flex items-center gap-2 justify-center hover:text-foreground transition-colors">
+            <a
+              href={`tel:${PHONE.replace(/\s/g, '')}`}
+              className="flex items-center gap-2 justify-center hover:text-foreground transition-colors"
+            >
               <Phone size={14} /> {PHONE}
             </a>
-            <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 justify-center hover:text-foreground transition-colors">
+            <a
+              href={WHATSAPP_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 justify-center hover:text-foreground transition-colors"
+            >
               <MessageCircle size={14} /> WhatsApp
             </a>
           </div>
         </div>
 
-        <Link to="/" className="gold-gradient text-navy px-6 py-3 rounded-full text-sm font-bold inline-flex hover:brightness-110 transition-all gold-glow">
+        <Link
+          to="/"
+          className="gold-gradient text-navy px-6 py-3 rounded-full text-sm font-bold inline-flex hover:brightness-110 transition-all gold-glow"
+        >
           {t('confirm.backHome')}
         </Link>
       </motion.div>

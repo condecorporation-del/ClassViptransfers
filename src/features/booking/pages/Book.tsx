@@ -14,6 +14,7 @@ import { getApiBaseUrl } from '@/shared/lib/api';
 import { SEO } from '@/features/marketing/components/SEO';
 import { cloudinaryAssets } from '@/shared/lib/cloudinary-assets';
 import { getErrorMessage } from '@/shared/lib/errors';
+import { includesNormalized } from '@/shared/lib/text';
 
 const steps = ['info', 'details', 'extras', 'review'] as const;
 
@@ -128,6 +129,7 @@ const Book = () => {
   const navigate = useNavigate();
   const [current, setCurrent] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [step0Attempted, setStep0Attempted] = useState(false);
   const [creatingBooking, setCreatingBooking] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [data, setData] = useState({
@@ -319,6 +321,20 @@ const Book = () => {
   const selectedArea = areas.find((a) => a.id === data.areaId);
   const next = () => setCurrent(c => Math.min(c + 1, steps.length - 1));
   const prev = () => setCurrent(c => Math.max(c - 1, 0));
+
+  const handleNext = () => {
+    if (current === 0) {
+      setStep0Attempted(true);
+      if (
+        !data.customerName.trim() ||
+        !data.customerEmail.trim() ||
+        !data.customerPhone.trim() ||
+        !data.tripType ||
+        !data.route
+      ) return;
+    }
+    next();
+  };
 
   const toggleExtra = (code: string) => {
     setData(d => ({ ...d, extras: d.extras.includes(code) ? d.extras.filter((v) => v !== code) : [...d.extras, code] }));
@@ -527,6 +543,13 @@ const Book = () => {
         sessionStorage.setItem(`bt_${bookingId}`, lookupToken);
       }
 
+      const checkoutParams = new URLSearchParams({ bookingId });
+      if (lookupToken) {
+        checkoutParams.set('bt', lookupToken);
+      }
+
+      navigate(`/checkout?${checkoutParams.toString()}`);
+
     } catch (err) {
       console.error('Error creating booking:', err);
       const message = getErrorMessage(err, lang === 'es' ? 'Error al crear la reserva' : 'Error creating booking');
@@ -588,19 +611,18 @@ const Book = () => {
         const zoneSelected = selectedZoneForHotel ?? data.selectedHotel?.zone ?? null;
         const hotelZone = zoneSelected ? (AREA_TO_HOTEL_ZONE[zoneSelected] || zoneSelected) : '';
         const hotelsInZone = hotelZone ? hotels.filter((h) => ZONE_MATCHES(h.zone, hotelZone)) : [];
-        const searchLower = hotelSearch.toLowerCase();
         const filteredHotels = hotelsInZone.filter(
-          (h) => h.name.toLowerCase().includes(searchLower)
+          (hotel) => includesNormalized(hotel.name, hotelSearch)
         );
         return (
           <div className="space-y-7">
             {/* Header */}
             <div>
               <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">
-                {lang === 'es' ? 'Reserva Tu Transfer' : 'Book Your Transfer'}
+                {lang === 'es' ? 'Información y ruta' : 'Info & Route'}
               </h2>
               <p className="text-muted-foreground text-sm mt-1">
-                {lang === 'es' ? 'Paso 1 de 4 — Información y ruta' : 'Step 1 of 4 — Info & route'}
+                {lang === 'es' ? 'Completa tus datos y selecciona tu hotel.' : 'Enter your contact details and select your hotel.'}
               </p>
             </div>
 
@@ -614,33 +636,75 @@ const Book = () => {
                   <label className="block text-xs font-semibold text-foreground/70 mb-1.5 uppercase tracking-wide">
                     {lang === 'es' ? 'Nombre completo *' : 'Full name *'}
                   </label>
-                  <input type="text"
-                    placeholder={lang === 'es' ? 'Ej: John Smith' : 'E.g.: John Smith'}
-                    value={data.customerName}
-                    onChange={e => setData({ ...data, customerName: e.target.value })}
-                    className="w-full bg-background border-2 border-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-gold/60 focus:ring-2 focus:ring-gold/20 transition-all placeholder:text-muted-foreground/50"
-                  />
+                  <div className="relative">
+                    <User size={15} className={cn("absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none", step0Attempted && !data.customerName.trim() ? "text-red-400/70" : "text-muted-foreground/50")} />
+                    <input type="text"
+                      placeholder={lang === 'es' ? 'Ej: John Smith' : 'E.g.: John Smith'}
+                      value={data.customerName}
+                      onChange={e => setData({ ...data, customerName: e.target.value })}
+                      className={cn(
+                        "w-full bg-background border-2 rounded-xl pl-10 pr-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 transition-all placeholder:text-muted-foreground/50",
+                        step0Attempted && !data.customerName.trim()
+                          ? "border-red-400 focus:border-red-400 focus:ring-red-200"
+                          : "border-border focus:border-gold/60 focus:ring-gold/20"
+                      )}
+                    />
+                  </div>
+                  {step0Attempted && !data.customerName.trim() && (
+                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                      <AlertCircle size={11} />
+                      {lang === 'es' ? 'Este campo es obligatorio' : 'This field is required'}
+                    </p>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-foreground/70 mb-1.5 uppercase tracking-wide">Email *</label>
-                    <input type="email"
-                      placeholder="your@email.com"
-                      value={data.customerEmail}
-                      onChange={e => setData({ ...data, customerEmail: e.target.value })}
-                      className="w-full bg-background border-2 border-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-gold/60 focus:ring-2 focus:ring-gold/20 transition-all placeholder:text-muted-foreground/50"
-                    />
+                    <div className="relative">
+                      <Mail size={15} className={cn("absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none", step0Attempted && !data.customerEmail.trim() ? "text-red-400/70" : "text-muted-foreground/50")} />
+                      <input type="email"
+                        placeholder="your@email.com"
+                        value={data.customerEmail}
+                        onChange={e => setData({ ...data, customerEmail: e.target.value })}
+                        className={cn(
+                          "w-full bg-background border-2 rounded-xl pl-10 pr-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 transition-all placeholder:text-muted-foreground/50",
+                          step0Attempted && !data.customerEmail.trim()
+                            ? "border-red-400 focus:border-red-400 focus:ring-red-200"
+                            : "border-border focus:border-gold/60 focus:ring-gold/20"
+                        )}
+                      />
+                    </div>
+                    {step0Attempted && !data.customerEmail.trim() && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <AlertCircle size={11} />
+                        {lang === 'es' ? 'Este campo es obligatorio' : 'This field is required'}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-foreground/70 mb-1.5 uppercase tracking-wide">
                       {lang === 'es' ? 'Teléfono / WhatsApp *' : 'Phone / WhatsApp *'}
                     </label>
-                    <input type="tel"
-                      placeholder="+1 (555) 000-0000"
-                      value={data.customerPhone}
-                      onChange={e => setData({ ...data, customerPhone: e.target.value })}
-                      className="w-full bg-background border-2 border-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-gold/60 focus:ring-2 focus:ring-gold/20 transition-all placeholder:text-muted-foreground/50"
-                    />
+                    <div className="relative">
+                      <PhoneIcon size={15} className={cn("absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none", step0Attempted && !data.customerPhone.trim() ? "text-red-400/70" : "text-muted-foreground/50")} />
+                      <input type="tel"
+                        placeholder="+1 (555) 000-0000"
+                        value={data.customerPhone}
+                        onChange={e => setData({ ...data, customerPhone: e.target.value })}
+                        className={cn(
+                          "w-full bg-background border-2 rounded-xl pl-10 pr-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 transition-all placeholder:text-muted-foreground/50",
+                          step0Attempted && !data.customerPhone.trim()
+                            ? "border-red-400 focus:border-red-400 focus:ring-red-200"
+                            : "border-border focus:border-gold/60 focus:ring-gold/20"
+                        )}
+                      />
+                    </div>
+                    {step0Attempted && !data.customerPhone.trim() && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <AlertCircle size={11} />
+                        {lang === 'es' ? 'Este campo es obligatorio' : 'This field is required'}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -678,6 +742,12 @@ const Book = () => {
                   </button>
                 ))}
               </div>
+              {step0Attempted && !data.tripType && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle size={11} />
+                  {lang === 'es' ? 'Selecciona el tipo de viaje' : 'Please select a trip type'}
+                </p>
+              )}
 
               {/* Route direction */}
               {data.tripType && (
@@ -729,6 +799,12 @@ const Book = () => {
                   ))}
                 </div>
               )}
+              {step0Attempted && data.tripType && !data.route && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle size={11} />
+                  {lang === 'es' ? 'Selecciona la dirección del traslado' : 'Please select a transfer direction'}
+                </p>
+              )}
             </div>
 
             {/* Hotel Selection */}
@@ -747,7 +823,7 @@ const Book = () => {
                     <div className="grid grid-cols-2 gap-2">
                       {zonesOrdered.map((zone) => {
                         const hz = AREA_TO_HOTEL_ZONE[zone] || zone;
-                        const count = hotels.filter((h) => ZONE_MATCHES(h.zone, hz)).length;
+                        const count = hotels.filter((hotel) => ZONE_MATCHES(hotel.zone, hz)).length;
                         return (
                           <button key={zone} type="button"
                             onClick={() => setSelectedZoneForHotel(zone)}
@@ -791,20 +867,20 @@ const Book = () => {
 
                     {/* Hotel list */}
                     <div className="max-h-48 overflow-y-auto rounded-xl border border-border divide-y divide-border">
-                      {filteredHotels.length === 0 ? (
-                        <p className="text-sm text-muted-foreground px-4 py-3">{t('book.locations.noHotel')}</p>
-                      ) : filteredHotels.map((h) => {
-                        const isSelected = data.selectedHotel?.id === h.id;
+                    {filteredHotels.length === 0 ? (
+                      <p className="text-sm text-muted-foreground px-4 py-3">{t('book.locations.noHotel')}</p>
+                      ) : filteredHotels.map((hotel) => {
+                        const isSelected = data.selectedHotel?.id === hotel.id;
                         return (
-                          <button key={h.id} type="button"
-                            onClick={() => selectHotel(h)}
+                          <button key={hotel.id} type="button"
+                            onClick={() => selectHotel(hotel)}
                             className={cn(
                               'w-full text-left px-4 py-3 text-sm transition-all flex items-center justify-between',
                               isSelected
                                 ? 'bg-gold/10 text-foreground font-semibold'
                                 : 'text-foreground hover:bg-muted/40'
                             )}>
-                            <span>{h.name}</span>
+                            <span>{hotel.name}</span>
                             {isSelected && <Check size={14} className="text-gold shrink-0" />}
                           </button>
                         );
@@ -861,7 +937,7 @@ const Book = () => {
                 {lang === 'es' ? 'Fecha & Detalles' : 'Date & Details'}
               </h2>
               <p className="text-muted-foreground text-sm mt-1">
-                {lang === 'es' ? 'Paso 2 de 4 — Fecha, hora y pasajeros' : 'Step 2 of 4 — Date, time & passengers'}
+                {lang === 'es' ? 'Elige fecha, hora de vuelo y número de pasajeros.' : 'Choose date, flight time, and number of passengers.'}
               </p>
             </div>
 
@@ -1182,7 +1258,7 @@ const Book = () => {
                 {lang === 'es' ? 'Extras & Actividades' : 'Extras & Activities'}
               </h2>
               <p className="text-muted-foreground text-sm mt-1">
-                {lang === 'es' ? 'Paso 3 de 4 — Personaliza tu experiencia' : 'Step 3 of 4 — Personalize your experience'}
+                {lang === 'es' ? 'Complementos de bienvenida, sillas de bebé, aventuras y más.' : 'Welcome upgrades, baby seats, adventures, and more.'}
               </p>
             </div>
 
@@ -1510,13 +1586,22 @@ const Book = () => {
       case 'review':
         return (
           <div className="space-y-5">
+            {/* Mobile back link — review step has no bottom nav bar */}
+            <button
+              type="button"
+              onClick={prev}
+              className="lg:hidden flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors -mt-1 mb-1"
+            >
+              <ArrowLeft size={15} /> {lang === 'es' ? 'Volver' : 'Back'}
+            </button>
+
             {/* Header */}
             <div>
               <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">
                 {lang === 'es' ? 'Resumen y Pago' : 'Review & Pay'}
               </h2>
               <p className="text-muted-foreground text-sm mt-1">
-                {lang === 'es' ? 'Paso 4 de 4 — Confirma tu reservación' : 'Step 4 of 4 — Confirm your booking'}
+                {lang === 'es' ? 'Revisa los detalles y procede al pago seguro.' : 'Confirm your details and proceed to secure payment.'}
               </p>
             </div>
 
@@ -1569,10 +1654,12 @@ const Book = () => {
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
                   {lang === 'es' ? 'Tu traslado' : 'Your transfer'}
                 </h3>
-                <button type="button" onClick={() => setCurrent(0)}
-                  className="ml-auto text-xs text-gold font-semibold hover:underline">
-                  {lang === 'es' ? 'Editar' : 'Edit'}
-                </button>
+                {(data.tripType || data.route || data.selectedHotel) && (
+                  <button type="button" onClick={() => setCurrent(0)}
+                    className="ml-auto text-xs text-gold font-semibold hover:underline">
+                    {lang === 'es' ? 'Editar' : 'Edit'}
+                  </button>
+                )}
               </div>
               <div className="px-5 py-4 grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
                 <ReviewRow label={lang === 'es' ? 'Tipo' : 'Type'}
@@ -1683,7 +1770,7 @@ const Book = () => {
                 {/* Total */}
                 <div className="flex justify-between items-center pt-3 mt-1 border-t-2 border-gold/30">
                   <span className="font-display font-bold text-base text-foreground">{t('book.review.total')}</span>
-                  <span className="font-display font-bold text-2xl text-gold">${total} USD</span>
+                  <span className="font-display font-bold text-2xl text-gold">${Math.round(total)} USD</span>
                 </div>
               </div>
             </motion.div>
@@ -1735,7 +1822,7 @@ const Book = () => {
                     </span>
                   </div>
                   <span className="font-display font-bold text-xl" style={{ color: '#0A1628' }}>
-                    ${total} USD
+                    ${Math.round(total)} USD
                   </span>
                 </div>
                 <div className="py-2 flex items-center justify-center gap-2"
@@ -1807,7 +1894,9 @@ const Book = () => {
         >
           <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">{t('book.title')}</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            {(stepLabels[steps[current]] || steps[current])} · {current + 1} {lang === 'es' ? 'de' : 'of'} {steps.length}
+            {lang === 'es'
+              ? 'Reserva en minutos · Pago seguro con Stripe'
+              : 'Book in minutes · Secure payment via Stripe'}
           </p>
         </motion.div>
 
@@ -1870,10 +1959,17 @@ const Book = () => {
           {/* Mobile: compact progress with step label */}
           <div className="md:hidden space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-foreground">{stepLabels[steps[current]] || steps[current]}</span>
-              <span className="text-xs font-semibold text-gold tabular-nums">{current + 1}/{steps.length}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-foreground">{stepLabels[steps[current]] || steps[current]}</span>
+                {current < steps.length - 1 && (
+                  <span className="text-[10px] text-muted-foreground">
+                    → {stepLabels[steps[current + 1]]}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs font-semibold text-gold tabular-nums">{current + 1} / {steps.length}</span>
             </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
               <motion.div
                 className="h-full gold-gradient rounded-full"
                 initial={false}
@@ -1903,7 +1999,7 @@ const Book = () => {
             {/* Nav buttons - touch-friendly min height on mobile */}
             <motion.div
               layout
-              className="flex justify-between items-center mt-10 gap-4 touch-target"
+              className="hidden lg:flex justify-between items-center mt-10 gap-4 touch-target"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
@@ -1922,7 +2018,7 @@ const Book = () => {
               </motion.button>
               {current < steps.length - 1 && (
                 <motion.button
-                  onClick={next}
+                  onClick={handleNext}
                   disabled={current === 1 && Object.values(dateStepErrors).some(Boolean)}
                   whileHover={current !== 2 || !Object.values(dateStepErrors).some(Boolean) ? { scale: 1.02 } : {}}
                   whileTap={current !== 2 || !Object.values(dateStepErrors).some(Boolean) ? { scale: 0.98 } : {}}
@@ -1941,14 +2037,26 @@ const Book = () => {
 
           {/* Sticky Summary (desktop) */}
           <div className="lg:col-span-2 hidden lg:block">
-            <div className="sticky top-32 glass-card rounded-2xl p-6 space-y-4 border-2 border-gold/10">
+            <div className="sticky top-32 rounded-2xl border border-gold/15 bg-card shadow-sm p-6 space-y-4">
               <h3 className="font-display text-lg font-bold text-foreground">{t('book.summary')}</h3>
               <div className="space-y-2.5 text-sm">
-                {data.serviceType && <Row label={t('book.review.service')} value={data.serviceType} />}
-                {data.tripType && <Row label={t('book.review.trip')} value={data.tripType} />}
-                {data.route && <Row label={t('book.review.route')} value={data.route} />}
+                {data.tripType && (
+                  <Row label={t('book.review.trip')} value={
+                    data.tripType === 'roundtrip'
+                      ? (lang === 'es' ? 'Ida y Vuelta' : 'Round Trip')
+                      : (lang === 'es' ? 'Solo Ida' : 'One Way')
+                  } />
+                )}
+                {data.route && (
+                  <Row label={t('book.review.route')} value={
+                    data.route === 'airport-hotel'
+                      ? (lang === 'es' ? 'Aeropuerto → Hotel' : 'Airport → Hotel')
+                      : (lang === 'es' ? 'Hotel → Aeropuerto' : 'Hotel → Airport')
+                  } />
+                )}
+                {data.selectedHotel && <Row label="Hotel" value={data.selectedHotel.name} />}
                 {data.arrivalDate && <Row label={t('book.review.date')} value={format(data.arrivalDate, 'PPP')} />}
-                <Row label={t('book.review.passengers')} value={String(data.passengers)} />
+                <Row label={t('book.review.passengers')} value={`${data.passengers} ${data.passengers === 1 ? (lang === 'es' ? 'persona' : 'person') : (lang === 'es' ? 'personas' : 'people')}`} />
                 {data.pickup && <Row label={t('book.review.pickup')} value={data.pickup} />}
                 {data.extras.length > 0 && (
                   <div>
@@ -1970,10 +2078,10 @@ const Book = () => {
 
               {transferPrice > 0 && (
                 <div className="border-t border-border pt-4 space-y-2.5">
-                  <Row label={t('book.review.transferPrice')} value={`$${transferPrice} USD`} gold />
-                  {activitiesPrice > 0 && <Row label={data.comboMode === 'crazy' ? 'Crazy Combo' : data.comboMode === 'combo' ? 'Combo' : lang === 'es' ? 'Actividades' : 'Activities'} value={`$${activitiesPrice} USD`} gold />}
+                  <Row label={t('book.review.transferPrice')} value={`$${Math.round(transferPrice)} USD`} gold />
+                  {activitiesPrice > 0 && <Row label={data.comboMode === 'crazy' ? 'Crazy Combo' : data.comboMode === 'combo' ? 'Combo' : lang === 'es' ? 'Actividades' : 'Activities'} value={`$${Math.round(activitiesPrice)} USD`} gold />}
                   <div className="border-t-2 border-gold/20 pt-4 mt-2 rounded-xl bg-gold/5 px-4 py-3">
-                    <Row label={t('book.review.total')} value={`$${total} USD`} gold bold />
+                    <Row label={t('book.review.total')} value={`$${Math.round(total)} USD`} gold bold />
                   </div>
                 </div>
               )}
@@ -2044,7 +2152,7 @@ const Book = () => {
             <ChevronUp size={16} className={cn("text-muted-foreground transition-transform", mobileOpen && "rotate-180")} />
             <span className="text-sm font-semibold text-foreground">{t('book.summary')}</span>
           </div>
-          <span className="text-gold font-bold text-lg">${total} USD</span>
+          <span className="text-gold font-bold text-lg">${Math.round(total)} USD</span>
         </button>
 
         <AnimatePresence>

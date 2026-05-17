@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Mail, ChevronRight, ArrowLeft, RefreshCw, FileDown,
   Search, Edit2, X, Save, UserCheck, CheckCircle, XCircle,
-  Car, Calendar, Filter, Download,
+  Car, Calendar, Filter, Download, Loader2, CalendarX,
 } from 'lucide-react';
 import { useAdminAuth } from '@/features/admin/hooks/useAdminAuth';
 import { getApiBaseUrl } from '@/shared/lib/api';
@@ -98,13 +98,23 @@ const fmtDateTime = (d: string) =>
   new Date(d).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
 
 const STATUS_COLORS: Record<string, string> = {
-  DRAFT: 'bg-gray-200 text-gray-700',
+  DRAFT:           'bg-gray-200 text-gray-700',
   PENDING_PAYMENT: 'bg-amber-100 text-amber-800',
-  PAID: 'bg-emerald-100 text-emerald-800',
-  CONFIRMED: 'bg-emerald-100 text-emerald-800',
-  CANCELLED: 'bg-red-100 text-red-800',
-  COMPLETED: 'bg-blue-100 text-blue-800',
-  OFFLINE_HOLD: 'bg-purple-100 text-purple-800',
+  PAID:            'bg-emerald-100 text-emerald-800',
+  CONFIRMED:       'bg-emerald-100 text-emerald-800',
+  CANCELLED:       'bg-red-100 text-red-800',
+  COMPLETED:       'bg-blue-100 text-blue-800',
+  OFFLINE_HOLD:    'bg-purple-100 text-purple-800',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT:           'Draft',
+  PENDING_PAYMENT: 'Pending Payment',
+  PAID:            'Paid',
+  CONFIRMED:       'Confirmed',
+  CANCELLED:       'Cancelled',
+  COMPLETED:       'Completed',
+  OFFLINE_HOLD:    'Hold',
 };
 
 function today() { return new Date().toISOString().slice(0, 10); }
@@ -201,12 +211,15 @@ export const AdminBookings = () => {
       <div>
         <button
           onClick={() => { setSelectedId(null); setBookingDetail(null); }}
-          className="flex items-center gap-2 text-sm text-gold hover:underline mb-6"
+          className="flex items-center gap-2 text-sm font-semibold text-gold hover:text-gold/80 transition-colors mb-6"
         >
-          <ArrowLeft size={16} /> Back to bookings
+          <ArrowLeft size={15} /> Back to bookings
         </button>
         {detailLoading ? (
-          <div className="glass-card rounded-xl p-8 text-center text-muted-foreground">Loading...</div>
+          <div className="rounded-2xl border border-border bg-card p-12 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+            <Loader2 size={22} className="animate-spin text-gold" />
+            <p className="text-sm font-medium">Loading booking…</p>
+          </div>
         ) : bookingDetail ? (
           <BookingDetailView
             booking={bookingDetail}
@@ -214,7 +227,9 @@ export const AdminBookings = () => {
             onRefetchDetail={() => fetchDetail(selectedId)}
           />
         ) : (
-          <div className="glass-card rounded-xl p-8 text-center text-red-500">Booking not found</div>
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-10 text-center text-red-600 text-sm font-medium">
+            Booking not found or could not be loaded.
+          </div>
         )}
       </div>
     );
@@ -299,13 +314,13 @@ export const AdminBookings = () => {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-2 py-2 rounded-lg border border-border bg-background text-xs md:text-sm shrink-0"
           >
-            <option value="">All</option>
-            <option value="PENDING_PAYMENT">Pending</option>
-            <option value="PAID">Paid</option>
+            <option value="">All statuses</option>
+            <option value="PENDING_PAYMENT">Pending Payment</option>
             <option value="CONFIRMED">Confirmed</option>
             <option value="OFFLINE_HOLD">Hold</option>
-            <option value="CANCELLED">Cancelled</option>
+            <option value="PAID">Paid</option>
             <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
             <option value="DRAFT">Draft</option>
           </select>
         </div>
@@ -313,92 +328,101 @@ export const AdminBookings = () => {
 
       {/* ── Table ── */}
       {loading ? (
-        <div className="glass-card rounded-xl p-10 text-center text-muted-foreground">Loading bookings...</div>
+        <div className="rounded-2xl border border-border bg-card p-14 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+          <Loader2 size={22} className="animate-spin text-gold" />
+          <p className="text-sm font-medium">Loading bookings…</p>
+        </div>
       ) : bookings.length === 0 ? (
-        <div className="glass-card rounded-xl p-10 text-center text-muted-foreground">
-          No bookings found for this period
+        <div className="rounded-2xl border border-border bg-card p-14 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+          <div className="w-12 h-12 rounded-2xl bg-muted/60 flex items-center justify-center">
+            <CalendarX size={22} className="text-muted-foreground/60" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-foreground">No bookings found</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Try a different date range or search term</p>
+          </div>
         </div>
       ) : (
         <div>
           <p className="text-xs text-muted-foreground mb-2">{total} booking{total !== 1 ? 's' : ''} found</p>
             {/* Mobile: card list */}
-          <div className="md:hidden space-y-2.5">
+          <div className="md:hidden space-y-2">
             {bookings.map((b) => (
               <button
                 key={b.id}
                 type="button"
                 onClick={() => fetchDetail(b.id)}
-                className="w-full text-left glass-card rounded-2xl border border-border p-4 hover:border-gold/30 active:scale-[0.99] transition-all"
+                className="w-full text-left rounded-2xl border border-border bg-card p-4 hover:border-gold/40 hover:bg-gold/5 active:scale-[0.99] transition-all shadow-sm"
               >
-                <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex items-start justify-between gap-3 mb-2.5">
                   <span className="font-mono text-sm font-bold text-gold">
                     {b.confirmationCode || b.id.slice(0, 8).toUpperCase()}
                   </span>
-                  <span className={`px-2 py-0.5 rounded text-xs font-semibold shrink-0 ${STATUS_COLORS[b.status] || 'bg-gray-100 text-gray-700'}`}>
-                    {b.status.replace(/_/g, ' ')}
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold shrink-0 ${STATUS_COLORS[b.status] || 'bg-gray-100 text-gray-700'}`}>
+                    {STATUS_LABELS[b.status] ?? b.status.replace(/_/g, ' ')}
                   </span>
                 </div>
-                <p className="font-semibold text-sm text-foreground">{b.customer?.name || '—'}</p>
-                <p className="text-xs text-muted-foreground mb-2">{b.customer?.email}</p>
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-3 text-muted-foreground">
+                <p className="font-semibold text-sm text-foreground leading-tight">{b.customer?.name || '—'}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 mb-3">{b.customer?.email}</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{fmt(b.bookingDate)}</span>
                     {(b.arrivalTime || b.bookingTime) && (
-                      <span className="font-mono">{b.arrivalTime || b.bookingTime}</span>
+                      <span className="font-mono bg-muted/60 px-1.5 py-0.5 rounded">{b.arrivalTime || b.bookingTime}</span>
                     )}
-                    {b.flightNumber && <span>{b.flightNumber}</span>}
+                    {b.flightNumber && <span className="font-mono">{b.flightNumber}</span>}
                   </div>
-                  <span className="font-bold text-foreground">{fmtCents(b.totalAmount)}</span>
+                  <span className="font-bold text-sm text-foreground">{fmtCents(b.totalAmount)}</span>
                 </div>
               </button>
             ))}
           </div>
 
           {/* Desktop: table */}
-          <div className="hidden md:block glass-card rounded-xl border border-border overflow-hidden overflow-x-auto">
+          <div className="hidden md:block rounded-2xl border border-border bg-card overflow-hidden overflow-x-auto shadow-sm">
             <table className="w-full text-sm min-w-[780px]">
               <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="text-left p-3 font-medium">Confirmation</th>
-                  <th className="text-left p-3 font-medium">Date</th>
-                  <th className="text-left p-3 font-medium">Customer</th>
-                  <th className="text-left p-3 font-medium">Flight / Time</th>
-                  <th className="text-left p-3 font-medium">Service</th>
-                  <th className="text-left p-3 font-medium">Status</th>
-                  <th className="text-right p-3 font-medium">Total</th>
-                  <th className="p-3" />
+                <tr className="border-b border-border/80 bg-muted/40">
+                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Confirmation</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Date</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Customer</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Flight / Time</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Service</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Total</th>
+                  <th className="px-4 py-3 w-8" />
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border/50">
                 {bookings.map((b) => (
                   <tr
                     key={b.id}
                     onClick={() => fetchDetail(b.id)}
-                    className="border-b border-border hover:bg-muted/20 cursor-pointer"
+                    className="hover:bg-gold/5 cursor-pointer transition-colors group"
                   >
-                    <td className="p-3 font-mono text-xs font-semibold text-gold">
+                    <td className="px-4 py-3.5 font-mono text-xs font-bold text-gold">
                       {b.confirmationCode || b.id.slice(0, 8).toUpperCase()}
                     </td>
-                    <td className="p-3 text-xs">{fmt(b.bookingDate)}</td>
-                    <td className="p-3">
-                      <p className="font-medium">{b.customer?.name || '—'}</p>
-                      <p className="text-xs text-muted-foreground">{b.customer?.email}</p>
+                    <td className="px-4 py-3.5 text-xs text-muted-foreground whitespace-nowrap">{fmt(b.bookingDate)}</td>
+                    <td className="px-4 py-3.5">
+                      <p className="font-semibold text-sm text-foreground leading-tight">{b.customer?.name || '—'}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{b.customer?.email}</p>
                     </td>
-                    <td className="p-3 text-xs">
-                      <p className="font-mono">{b.flightNumber || '—'}</p>
-                      <p className="text-muted-foreground">{b.arrivalTime || b.bookingTime || '—'}</p>
+                    <td className="px-4 py-3.5 text-xs">
+                      <p className="font-mono font-semibold text-foreground">{b.flightNumber || '—'}</p>
+                      <p className="text-muted-foreground mt-0.5">{b.arrivalTime || b.bookingTime || '—'}</p>
                     </td>
-                    <td className="p-3 text-xs text-muted-foreground">
+                    <td className="px-4 py-3.5 text-xs text-muted-foreground capitalize">
                       {[b.serviceType, b.route].filter(Boolean).join(' · ') || b.type.replace(/_/g, ' ')}
                     </td>
-                    <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[b.status] || 'bg-gray-100 text-gray-700'}`}>
-                        {b.status.replace(/_/g, ' ')}
+                    <td className="px-4 py-3.5">
+                      <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold leading-none ${STATUS_COLORS[b.status] || 'bg-gray-100 text-gray-700'}`}>
+                        {STATUS_LABELS[b.status] ?? b.status.replace(/_/g, ' ')}
                       </span>
                     </td>
-                    <td className="p-3 text-right font-semibold">{fmtCents(b.totalAmount)}</td>
-                    <td className="p-3">
-                      <ChevronRight size={16} className="text-muted-foreground" />
+                    <td className="px-4 py-3.5 text-right font-bold text-sm">{fmtCents(b.totalAmount)}</td>
+                    <td className="px-4 py-3.5">
+                      <ChevronRight size={15} className="text-muted-foreground/40 group-hover:text-gold transition-colors" />
                     </td>
                   </tr>
                 ))}
@@ -520,77 +544,81 @@ function BookingDetailView({
   const lastPayment = booking.payments?.[0];
 
   return (
-    <div className="space-y-5 max-w-4xl">
+    <div className="space-y-4 max-w-4xl">
       {/* Alerts */}
       {error && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>
+        <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
+          <XCircle size={15} className="shrink-0" />{error}
+        </div>
       )}
       {success && (
-        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">{success}</div>
+        <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
+          <CheckCircle size={15} className="shrink-0" />{success}
+        </div>
       )}
 
       {/* ── Header ── */}
-      <div className="glass-card rounded-xl p-5 border border-border">
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Booking</p>
-            <h2 className="font-display text-2xl font-bold text-gold">
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-1.5">Reservation</p>
+            <h2 className="font-display text-2xl font-bold text-gold leading-none">
               {booking.confirmationCode || booking.id.slice(0, 8).toUpperCase()}
             </h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[booking.status] || ''}`}>
-                {booking.status.replace(/_/g, ' ')}
+            <div className="flex flex-wrap items-center gap-2 mt-2.5">
+              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_COLORS[booking.status] || ''}`}>
+                {STATUS_LABELS[booking.status] ?? booking.status.replace(/_/g, ' ')}
               </span>
-              <span className="text-xs text-muted-foreground">{booking.source}</span>
-              <span className="text-xs text-muted-foreground">{booking.type.replace(/_/g, ' ')}</span>
+              <span className="text-xs text-muted-foreground/70 capitalize">{booking.source}</span>
+              <span className="text-xs text-muted-foreground/70 capitalize">{booking.type.replace(/_/g, ' ')}</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
             {!['CANCELLED', 'COMPLETED'].includes(booking.status) && (
               <button
                 onClick={() => setShowEditForm(!showEditForm)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border hover:bg-muted text-sm"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border hover:bg-muted text-sm font-medium transition-colors"
               >
-                <Edit2 size={14} /> Edit
+                <Edit2 size={13} /> Edit
               </button>
             )}
             {booking.status === 'PENDING_PAYMENT' && (
               <button
                 onClick={confirmBooking}
                 disabled={busy === 'confirm'}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 text-sm"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium transition-colors"
               >
-                <CheckCircle size={14} /> {busy === 'confirm' ? 'Confirming...' : 'Confirm (offline)'}
+                <CheckCircle size={13} /> {busy === 'confirm' ? 'Confirming…' : 'Confirm (offline)'}
               </button>
             )}
             {!['CANCELLED', 'COMPLETED'].includes(booking.status) && (
               <button
                 onClick={cancelBooking}
                 disabled={busy === 'cancel'}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 text-sm border border-red-200"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 text-sm font-medium border border-red-200 transition-colors"
               >
-                <XCircle size={14} /> {busy === 'cancel' ? 'Cancelling...' : 'Cancel'}
+                <XCircle size={13} /> {busy === 'cancel' ? 'Cancelling…' : 'Cancel'}
               </button>
             )}
             <button
               onClick={openAssignForm}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border hover:bg-muted text-sm"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border hover:bg-muted text-sm font-medium transition-colors"
             >
-              <UserCheck size={14} /> Assign Driver
+              <UserCheck size={13} /> Assign Driver
             </button>
             <button
               onClick={resendEmails}
               disabled={busy === 'resend'}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border hover:bg-muted text-sm disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border hover:bg-muted text-sm font-medium disabled:opacity-50 transition-colors"
             >
-              <Mail size={14} /> {busy === 'resend' ? 'Sending...' : 'Resend'}
+              <Mail size={13} /> {busy === 'resend' ? 'Sending…' : 'Resend'}
             </button>
             <button
               onClick={downloadPdf}
               disabled={busy === 'pdf'}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-sm"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[hsl(var(--navy))] text-white hover:opacity-90 disabled:opacity-50 text-sm font-medium transition-all"
             >
-              <FileDown size={14} /> {busy === 'pdf' ? 'Generating...' : 'PDF'}
+              <FileDown size={13} /> {busy === 'pdf' ? 'Generating…' : 'PDF'}
             </button>
           </div>
         </div>
@@ -633,18 +661,18 @@ function BookingDetailView({
       )}
 
       {/* ── Main Info ── */}
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-2 gap-3">
         {/* Customer */}
-        <div className="glass-card rounded-xl p-5 border border-border space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Customer</p>
-          <p className="font-semibold">{booking.customer?.name}</p>
-          <p className="text-sm text-muted-foreground">{booking.customer?.email}</p>
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Customer</p>
+          <p className="font-bold text-base text-foreground leading-tight">{booking.customer?.name}</p>
+          <p className="text-sm text-muted-foreground mt-1">{booking.customer?.email}</p>
           <p className="text-sm text-muted-foreground">{booking.customer?.phone}</p>
         </div>
 
         {/* Booking Details */}
-        <div className="glass-card rounded-xl p-5 border border-border space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Service Details</p>
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Service Details</p>
           <Row label="Date" value={fmt(booking.bookingDate)} />
           <Row label="Time" value={booking.bookingTime || booking.arrivalTime || '—'} />
           <Row label="Passengers" value={String(booking.passengers)} />
@@ -653,8 +681,8 @@ function BookingDetailView({
         </div>
 
         {/* Flights */}
-        <div className="glass-card rounded-xl p-5 border border-border space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Flight Info</p>
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Flight Info</p>
           <Row label="Arrival flight" value={booking.flightNumber || '—'} />
           <Row label="Arrival time" value={booking.arrivalTime || '—'} />
           <Row label="Departure flight" value={booking.departureFlightNumber || '—'} />
@@ -663,11 +691,11 @@ function BookingDetailView({
         </div>
 
         {/* Location + Payment */}
-        <div className="glass-card rounded-xl p-5 border border-border space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Location & Payment</p>
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Location & Payment</p>
           <Row label="Pickup" value={booking.pickupLocation || '—'} />
           <Row label="Dropoff" value={booking.dropoffLocation || '—'} />
-          <div className="border-t border-border pt-2 mt-2">
+          <div className="border-t border-border/60 pt-3 mt-3">
             <Row label="Total" value={fmtCents(booking.totalAmount)} bold />
             {lastPayment && (
               <>
@@ -681,8 +709,8 @@ function BookingDetailView({
 
       {/* ── Items ── */}
       {booking.items && booking.items.length > 0 && (
-        <div className="glass-card rounded-xl p-5 border border-border">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Items</p>
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Items</p>
           <div className="space-y-1.5">
             {booking.items.map((item) => (
               <div key={item.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border/50 last:border-0">
@@ -700,9 +728,9 @@ function BookingDetailView({
 
       {/* ── Assignment ── */}
       {(currentDriver || currentVehicle) && (
-        <div className="glass-card rounded-xl p-5 border border-border">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-            <Car size={14} className="inline mr-1" />Assignment
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3 flex items-center gap-1.5">
+            <Car size={13} />Assignment
           </p>
           <div className="grid sm:grid-cols-2 gap-3 text-sm">
             {currentDriver && (
@@ -724,8 +752,8 @@ function BookingDetailView({
 
       {/* ── Notes ── */}
       {(booking.notes || booking.internalNotes) && (
-        <div className="glass-card rounded-xl p-5 border border-border">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Notes</p>
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Notes</p>
           {booking.notes && (
             <div className="mb-2">
               <p className="text-xs text-muted-foreground mb-1">Customer notes</p>
@@ -743,9 +771,9 @@ function BookingDetailView({
 
       {/* ── Email Log ── */}
       {booking.emailLogs && booking.emailLogs.length > 0 && (
-        <div className="glass-card rounded-xl p-5 border border-border">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1">
-            <Mail size={14} /> Email Log
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3 flex items-center gap-1.5">
+            <Mail size={13} /> Email Log
           </p>
           <div className="space-y-2">
             {booking.emailLogs.map((log) => (
@@ -808,8 +836,8 @@ function EditBookingForm({
   };
 
   return (
-    <div className="glass-card rounded-xl p-5 border border-gold/30">
-      <h3 className="font-semibold mb-4 flex items-center gap-2"><Edit2 size={16} /> Edit Booking</h3>
+    <div className="rounded-2xl border border-gold/30 bg-card p-5 shadow-sm">
+      <h3 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2"><Edit2 size={15} className="text-gold" /> Edit Booking</h3>
       <form onSubmit={handleSubmit} className="grid sm:grid-cols-2 gap-3 text-sm">
         <Field label="Date" type="date" value={form.bookingDate} onChange={(v) => setForm({ ...form, bookingDate: v })} />
         <Field label="Time" type="time" value={form.bookingTime} onChange={(v) => setForm({ ...form, bookingTime: v })} />
@@ -876,8 +904,8 @@ function AssignDriverForm({
   const [internalNotes, setInternalNotes] = useState('');
 
   return (
-    <div className="glass-card rounded-xl p-5 border border-gold/30">
-      <h3 className="font-semibold mb-4 flex items-center gap-2"><UserCheck size={16} /> Assign Driver / Vehicle</h3>
+    <div className="rounded-2xl border border-gold/30 bg-card p-5 shadow-sm">
+      <h3 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2"><UserCheck size={15} className="text-gold" /> Assign Driver / Vehicle</h3>
       <div className="grid sm:grid-cols-2 gap-3 text-sm">
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">Driver</label>

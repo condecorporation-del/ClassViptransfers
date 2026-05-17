@@ -10,6 +10,16 @@ type BookingSummary = {
   confirmationCode?: string | null;
 };
 
+const STATUS_LABELS: Record<string, { en: string; es: string }> = {
+  CONFIRMED:       { en: 'Confirmed',       es: 'Confirmado' },
+  PAID:            { en: 'Paid',            es: 'Pagado' },
+  PENDING_PAYMENT: { en: 'Pending Payment', es: 'Pago Pendiente' },
+  COMPLETED:       { en: 'Completed',       es: 'Completado' },
+  CANCELLED:       { en: 'Cancelled',       es: 'Cancelado' },
+  OFFLINE_HOLD:    { en: 'Hold',            es: 'En Espera' },
+  DRAFT:           { en: 'Draft',           es: 'Borrador' },
+};
+
 export default function CheckoutSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -22,12 +32,14 @@ export default function CheckoutSuccess() {
   useEffect(() => {
     if (!bookingId) return;
 
-    const bt = sessionStorage.getItem(`bt_${bookingId}`) || searchParams.get('bt') || '';
-    const tokenQuery = bt ? `?token=${bt}` : '';
+    const bookingToken = sessionStorage.getItem(`bt_${bookingId}`) || searchParams.get('bt') || '';
+    const tokenQuery = bookingToken ? `?token=${bookingToken}` : '';
 
     fetch(`${getApiBaseUrl()}/api/bookings/${bookingId}${tokenQuery}`)
       .then(async (response) => {
-        if (!response.ok) throw new Error('Failed to load booking');
+        if (!response.ok) {
+          throw new Error('Failed to load booking');
+        }
         return response.json();
       })
       .then((data) => setBooking(data.data))
@@ -56,7 +68,7 @@ export default function CheckoutSuccess() {
         </div>
 
         <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">
-          {lang === 'es' ? '¡Reserva Confirmada!' : 'Booking Confirmed!'}
+          {lang === 'es' ? 'Reserva confirmada' : 'Booking Confirmed'}
         </h1>
 
         <p className="text-muted-foreground leading-relaxed mb-6">
@@ -68,18 +80,16 @@ export default function CheckoutSuccess() {
         {booking && (
           <div className="mb-8 rounded-2xl border border-border bg-muted/35 p-4 text-left space-y-3">
             <div className="flex items-center justify-between gap-4 text-sm">
-              <span className="text-muted-foreground">{lang === 'es' ? 'Reserva' : 'Booking'}</span>
-              <span className="font-mono text-foreground">{booking.id}</span>
+              <span className="text-muted-foreground">{lang === 'es' ? 'Referencia' : 'Reference'}</span>
+              <span className="font-mono font-semibold text-foreground">
+                {booking.confirmationCode || `#${booking.id.slice(0, 8).toUpperCase()}`}
+              </span>
             </div>
-            {booking.confirmationCode && (
-              <div className="flex items-center justify-between gap-4 text-sm">
-                <span className="text-muted-foreground">{lang === 'es' ? 'Confirmación' : 'Confirmation'}</span>
-                <span className="font-semibold text-foreground">{booking.confirmationCode}</span>
-              </div>
-            )}
             <div className="flex items-center justify-between gap-4 text-sm">
               <span className="text-muted-foreground">{lang === 'es' ? 'Estado' : 'Status'}</span>
-              <span className="font-semibold text-gold">{booking.status}</span>
+              <span className="font-semibold text-emerald-600">
+                {STATUS_LABELS[booking.status]?.[lang === 'es' ? 'es' : 'en'] || booking.status}
+              </span>
             </div>
           </div>
         )}
@@ -89,7 +99,7 @@ export default function CheckoutSuccess() {
             onClick={() => navigate('/')}
             className="w-full gold-gradient text-secondary-foreground px-6 py-3.5 rounded-xl font-semibold hover:brightness-110 transition-all flex items-center justify-center gap-2"
           >
-            {lang === 'es' ? 'Volver al Inicio' : 'Back to Home'}
+            {lang === 'es' ? 'Volver al inicio' : 'Back to Home'}
             <ArrowRight size={16} />
           </button>
           <button

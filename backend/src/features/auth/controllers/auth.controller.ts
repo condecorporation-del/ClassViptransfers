@@ -18,17 +18,14 @@ export class AuthController {
    */
   async login(req: Request, res: Response) {
     try {
-      console.log('[Auth] Login attempt - body keys:', req.body ? Object.keys(req.body) : 'none');
       const raw = loginSchema.safeParse(req.body);
       if (!raw.success) {
-        console.log('[Auth] Validation failed:', raw.error.flatten());
         return res.status(400).json({
           success: false,
           error: raw.error.errors?.[0]?.message || 'Invalid request',
         });
       }
       const { email, password } = raw.data;
-      console.log('[Auth] Looking up user by email:', email);
 
       const jwtSecret = process.env.ADMIN_JWT_SECRET;
       if (!jwtSecret) {
@@ -44,7 +41,6 @@ export class AuthController {
       });
 
       if (!user) {
-        console.log('[Auth] User not found:', email);
         await createAuditLog({
           action: 'UPDATE',
           entityType: 'Auth',
@@ -57,13 +53,9 @@ export class AuthController {
         });
       }
 
-      console.log('[Auth] User found:', user.email, '| role:', user.role);
-
       const passwordMatch = await bcrypt.compare(password, user.passwordHash);
-      console.log('[Auth] Password comparison result:', passwordMatch ? 'match' : 'no match');
 
       if (!passwordMatch) {
-        console.log('[Auth] Invalid password for:', email);
         await createAuditLog({
           action: 'UPDATE',
           entityType: 'Auth',
@@ -77,7 +69,6 @@ export class AuthController {
       }
 
       if (user.role !== 'admin') {
-        console.log('[Auth] User has insufficient role:', user.role);
         await createAuditLog({
           action: 'UPDATE',
           entityType: 'Auth',
@@ -95,7 +86,6 @@ export class AuthController {
         jwtSecret,
         { expiresIn: '7d' }
       );
-      console.log('[Auth] Token created, expires 7d');
 
       const isProduction = process.env.NODE_ENV === 'production';
       res.cookie('admin_token', token, {
@@ -105,8 +95,6 @@ export class AuthController {
         maxAge: 7 * 24 * 60 * 60 * 1000,
         path: '/',
       });
-
-      console.log('[Auth] Login success:', user.email, '| role:', user.role);
 
       await createAuditLog({
         action: 'CREATE',

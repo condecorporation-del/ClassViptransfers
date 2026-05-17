@@ -2,7 +2,10 @@ import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
 import { prisma } from '../../../shared/lib/prisma';
 import { getErrorMessage } from '../../../shared/lib/errors';
+import { createAuditLog } from '../../../shared/lib/audit';
 import { EmailService } from '../services/email.service';
+import { optionalAdminAuth } from '../../../shared/middleware/auth';
+import { verifyBookingToken } from '../controllers/booking.controller';
 
 const router = Router();
 const emailService = new EmailService();
@@ -13,11 +16,62 @@ function getStripe(): Stripe {
   return new Stripe(key, { apiVersion: '2026-03-25.dahlia' });
 }
 
-router.post('/create-payment-intent', async (req: Request, res: Response) => {
+function hasBookingAccess(req: Request, bookingId: string, bookingToken?: string): boolean {
+  if (req.adminEmail) {
+    return true;
+  }
+
+  if (!bookingToken || bookingToken.length !== 32) {
+    return false;
+  }
+
   try {
-    const { bookingId } = req.body;
+    return verifyBookingToken(bookingId, bookingToken);
+  } catch {
+    return false;
+  }
+}
+
+async function markStripePaymentCompleted(bookingId: string, intent: Stripe.PaymentIntent) {
+  const existingPayment = await prisma.payment.findFirst({
+    where: { bookingId, orderId: intent.id, provider: 'STRIPE' },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (existingPayment) {
+    await prisma.payment.update({
+      where: { id: existingPayment.id },
+      data: {
+        status: 'COMPLETED',
+        completedAt: existingPayment.completedAt || new Date(),
+        rawPayload: intent as unknown as object,
+      },
+    });
+    return;
+  }
+
+  await prisma.payment.create({
+    data: {
+      bookingId,
+      provider: 'STRIPE',
+      status: 'COMPLETED',
+      orderId: intent.id,
+      amount: intent.amount,
+      currency: (intent.currency || 'usd').toUpperCase(),
+      completedAt: new Date(),
+      rawPayload: intent as unknown as object,
+    },
+  });
+}
+
+router.post('/create-payment-intent', optionalAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { bookingId, bookingToken } = req.body;
     if (!bookingId || typeof bookingId !== 'string') {
       return res.status(400).json({ error: 'bookingId is required' });
+    }
+    if (!hasBookingAccess(req, bookingId, typeof bookingToken === 'string' ? bookingToken : undefined)) {
+      return res.status(403).json({ error: 'Invalid or missing booking token.' });
     }
 
     const booking = await prisma.booking.findUnique({
@@ -28,6 +82,9 @@ router.post('/create-payment-intent', async (req: Request, res: Response) => {
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
     if (booking.status === 'CONFIRMED') {
       return res.status(400).json({ error: 'This booking is already paid and confirmed.' });
+    }
+    if (booking.totalAmount <= 0) {
+      return res.status(400).json({ error: 'This booking does not have a payable balance.' });
     }
 
     const stripe = getStripe();
@@ -54,7 +111,7 @@ router.post('/create-payment-intent', async (req: Request, res: Response) => {
         confirmationCode: booking.confirmationCode ?? '',
         customerEmail: booking.customer?.email ?? '',
       },
-      automatic_payment_methods: { enabled: true },
+      payment_method_types: ['card'],
     });
 
     await prisma.payment.create({
@@ -76,11 +133,14 @@ router.post('/create-payment-intent', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/confirm-payment', async (req: Request, res: Response) => {
+router.post('/confirm-payment', optionalAdminAuth, async (req: Request, res: Response) => {
   try {
-    const { bookingId, paymentIntentId } = req.body;
+    const { bookingId, paymentIntentId, bookingToken } = req.body;
     if (!bookingId || !paymentIntentId) {
       return res.status(400).json({ error: 'bookingId and paymentIntentId are required' });
+    }
+    if (!hasBookingAccess(req, bookingId, typeof bookingToken === 'string' ? bookingToken : undefined)) {
+      return res.status(403).json({ error: 'Invalid or missing booking token.' });
     }
 
     const stripe = getStripe();
@@ -88,6 +148,25 @@ router.post('/confirm-payment', async (req: Request, res: Response) => {
 
     if (intent.status !== 'succeeded') {
       return res.status(400).json({ error: `Payment not completed. Status: ${intent.status}` });
+    }
+
+    if (intent.metadata?.bookingId && intent.metadata.bookingId !== bookingId) {
+      return res.status(400).json({ error: 'Payment intent does not belong to this booking.' });
+    }
+
+    const existingBooking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { customer: true, items: true },
+    });
+
+    if (!existingBooking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    await markStripePaymentCompleted(bookingId, intent);
+
+    if (existingBooking.status === 'CONFIRMED') {
+      return res.json({ success: true, data: { status: existingBooking.status, alreadyConfirmed: true } });
     }
 
     const booking = await prisma.booking.update({
@@ -99,9 +178,16 @@ router.post('/confirm-payment', async (req: Request, res: Response) => {
       include: { customer: true, items: true },
     });
 
-    await prisma.payment.updateMany({
-      where: { bookingId, orderId: paymentIntentId },
-      data: { status: 'COMPLETED', completedAt: new Date() },
+    await createAuditLog({
+      action: 'PAYMENT',
+      entityType: 'Booking',
+      entityId: bookingId,
+      userEmail: req.adminEmail,
+      description: `Stripe payment confirmed for booking ${bookingId}`,
+      changes: {
+        status: { from: existingBooking.status, to: 'CONFIRMED' },
+        paymentIntentId,
+      },
     });
 
     emailService.sendConfirmationEmails(booking, false).catch((error) => {
@@ -149,9 +235,17 @@ router.post('/webhook', async (req: Request, res: Response) => {
           include: { customer: true, items: true },
         });
 
-        await prisma.payment.updateMany({
-          where: { bookingId, orderId: intent.id },
-          data: { status: 'COMPLETED', completedAt: new Date() },
+        await markStripePaymentCompleted(bookingId, intent);
+
+        await createAuditLog({
+          action: 'PAYMENT',
+          entityType: 'Booking',
+          entityId: bookingId,
+          description: `Stripe webhook confirmed booking ${bookingId}`,
+          changes: {
+            status: { from: existing.status, to: 'CONFIRMED' },
+            paymentIntentId: intent.id,
+          },
         });
 
         emailService.sendConfirmationEmails(booking, false).catch((error) => {
@@ -159,6 +253,8 @@ router.post('/webhook', async (req: Request, res: Response) => {
         });
 
         console.log(`[Stripe Webhook] Booking ${bookingId} confirmed`);
+      } else if (existing) {
+        await markStripePaymentCompleted(bookingId, intent);
       }
     } catch (error) {
       console.error('[Stripe Webhook] DB error:', getErrorMessage(error, 'Unknown database error'));

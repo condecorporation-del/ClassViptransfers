@@ -14,17 +14,9 @@ import {
 } from '../../../shared/lib/validation';
 import { getErrorMessage } from '../../../shared/lib/errors';
 import { BookingSource } from '@prisma/client';
+import { generateBookingToken, verifyBookingToken } from '../../../shared/lib/booking-token';
 
-const BOOKING_HMAC_SECRET = process.env.BOOKING_LOOKUP_SECRET || process.env.JWT_SECRET || 'change-me-in-production';
-
-export function generateBookingToken(bookingId: string): string {
-  return crypto.createHmac('sha256', BOOKING_HMAC_SECRET).update(bookingId).digest('hex').slice(0, 32);
-}
-
-function verifyBookingToken(bookingId: string, token: string): boolean {
-  const expected = generateBookingToken(bookingId);
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(token));
-}
+export { generateBookingToken, verifyBookingToken };
 
 const bookingService = new BookingService();
 const emailService = new EmailService();
@@ -121,9 +113,8 @@ export class BookingController {
     
     const { notes } = confirmBookingSchema.parse(req.body);
     
-    // In a real app, get userId/userEmail from auth middleware
-    const userId = req.headers['x-user-id'] as string | undefined;
-    const userEmail = req.headers['x-user-email'] as string | undefined;
+    const userId = undefined;
+    const userEmail = req.adminEmail;
     
     const booking = await bookingService.confirmBooking(id, userId, userEmail, notes);
 
@@ -150,8 +141,8 @@ export class BookingController {
     
     const { reason } = cancelBookingSchema.parse(req.body);
     
-    const userId = req.headers['x-user-id'] as string | undefined;
-    const userEmail = req.headers['x-user-email'] as string | undefined;
+    const userId = undefined;
+    const userEmail = req.adminEmail;
     
     const booking = await bookingService.cancelBooking(id, reason, userId, userEmail);
 
@@ -178,8 +169,8 @@ export class BookingController {
     
     const input = assignBookingSchema.parse(req.body);
     
-    const userId = req.headers['x-user-id'] as string | undefined;
-    const userEmail = req.headers['x-user-email'] as string | undefined;
+    const userId = undefined;
+    const userEmail = req.adminEmail;
     
     const result = await bookingService.assignBooking(
       id,

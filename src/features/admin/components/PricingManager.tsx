@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Edit, Trash2, Loader2, Save, X, Search } from 'lucide-react';
 import { useAdminAuth } from '@/features/admin/hooks/useAdminAuth';
 import { getApiBaseUrl } from '@/shared/lib/api';
+import { includesNormalized } from '@/shared/lib/text';
 
 const getAdminUrl = (path: string) => {
   const base = getApiBaseUrl();
@@ -259,8 +260,9 @@ export function PricingManager() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
+      <div className="flex flex-col items-center justify-center gap-3 p-14 text-muted-foreground">
         <Loader2 className="h-6 w-6 animate-spin text-gold" />
+        <p className="text-sm font-medium">Loading pricing data…</p>
       </div>
     );
   }
@@ -268,62 +270,37 @@ export function PricingManager() {
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-border">
-        <button
-          onClick={() => setActiveTab('areas')}
-          className={`px-4 py-2 font-medium transition-colors ${
-            activeTab === 'areas'
-              ? 'border-b-2 border-gold text-gold'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Areas
-        </button>
-        <button
-          onClick={() => setActiveTab('rules')}
-          className={`px-4 py-2 font-medium transition-colors ${
-            activeTab === 'rules'
-              ? 'border-b-2 border-gold text-gold'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Pricing Rules
-        </button>
-        <button
-          onClick={() => setActiveTab('extras')}
-          className={`px-4 py-2 font-medium transition-colors ${
-            activeTab === 'extras'
-              ? 'border-b-2 border-gold text-gold'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Pricing Extras
-        </button>
-        <button
-          onClick={() => setActiveTab('hotels')}
-          className={`px-4 py-2 font-medium transition-colors ${
-            activeTab === 'hotels'
-              ? 'border-b-2 border-gold text-gold'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Hotels
-        </button>
+      <div className="flex items-center gap-1 bg-muted/40 rounded-xl p-1 w-fit overflow-x-auto">
+        {(['areas', 'rules', 'extras', 'hotels'] as const).map((tab) => {
+          const labels: Record<string, string> = { areas: 'Areas', rules: 'Pricing Rules', extras: 'Extras', hotels: 'Hotels' };
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
+                activeTab === tab
+                  ? 'bg-gold text-navy shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {labels[tab]}
+            </button>
+          );
+        })}
       </div>
 
       {/* Areas Tab */}
       {activeTab === 'areas' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Areas</h2>
+            <p className="text-sm font-semibold text-foreground">
+              {areas.length} area{areas.length !== 1 ? 's' : ''}
+            </p>
             <button
-              onClick={() => {
-                setEditingArea(null);
-                setShowAreaForm(true);
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-gold text-navy rounded-lg hover:bg-gold/90 transition-colors"
+              onClick={() => { setEditingArea(null); setShowAreaForm(true); }}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-gold text-navy text-sm font-bold rounded-xl hover:bg-gold/90 transition-colors shadow-sm"
             >
-              <Plus size={16} />
+              <Plus size={15} />
               Add Area
             </button>
           </div>
@@ -332,50 +309,49 @@ export function PricingManager() {
             <AreaForm
               area={editingArea}
               onSave={handleSaveArea}
-              onCancel={() => {
-                setShowAreaForm(false);
-                setEditingArea(null);
-              }}
+              onCancel={() => { setShowAreaForm(false); setEditingArea(null); }}
             />
           )}
 
-          <div className="border rounded-lg overflow-x-auto">
-            <table className="w-full min-w-[400px]">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">1–5 pax One-way</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">1–5 pax Round-trip</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">6+ pax One-way</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">6+ pax Round-trip</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
+          <div className="rounded-2xl border border-border bg-card overflow-hidden overflow-x-auto shadow-sm">
+            <table className="w-full min-w-[480px]">
+              <thead>
+                <tr className="border-b border-border/80 bg-muted/40">
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Name</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">SUV 1–5 pax</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">SUV Round-trip</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Sprinter 6+ pax</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Sprinter Round-trip</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
+                  <th className="px-4 py-3 w-20" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-border/50">
                 {areas.map((area) => (
-                  <tr key={area.id} className={!area.isActive ? 'opacity-50' : ''}>
-                    <td className="px-4 py-3 text-sm font-medium">{area.name}</td>
-                    <td className="px-4 py-3 text-sm">${(area.oneWayPriceCents / 100).toFixed(0)}</td>
-                    <td className="px-4 py-3 text-sm">${(area.roundTripPriceCents / 100).toFixed(0)}</td>
-                    <td className="px-4 py-3 text-sm">{area.sprinterOneWayPriceCents > 0 ? `$${(area.sprinterOneWayPriceCents / 100).toFixed(0)}` : '—'}</td>
-                    <td className="px-4 py-3 text-sm">{area.sprinterRoundTripPriceCents > 0 ? `$${(area.sprinterRoundTripPriceCents / 100).toFixed(0)}` : '—'}</td>
-                    <td className="px-4 py-3 text-sm">{area.isActive ? 'Active' : 'Inactive'}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
+                  <tr key={area.id} className={`hover:bg-muted/20 transition-colors ${!area.isActive ? 'opacity-40' : ''}`}>
+                    <td className="px-4 py-3.5 text-sm font-semibold text-foreground">{area.name}</td>
+                    <td className="px-4 py-3.5 text-sm font-medium">${(area.oneWayPriceCents / 100).toFixed(0)}</td>
+                    <td className="px-4 py-3.5 text-sm font-medium">${(area.roundTripPriceCents / 100).toFixed(0)}</td>
+                    <td className="px-4 py-3.5 text-sm text-muted-foreground">{area.sprinterOneWayPriceCents > 0 ? `$${(area.sprinterOneWayPriceCents / 100).toFixed(0)}` : '—'}</td>
+                    <td className="px-4 py-3.5 text-sm text-muted-foreground">{area.sprinterRoundTripPriceCents > 0 ? `$${(area.sprinterRoundTripPriceCents / 100).toFixed(0)}` : '—'}</td>
+                    <td className="px-4 py-3.5">
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold ${area.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                        {area.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex gap-1.5">
                         <button
-                          onClick={() => {
-                            setEditingArea(area);
-                            setShowAreaForm(true);
-                          }}
-                          className="p-1.5 rounded hover:bg-muted"
+                          onClick={() => { setEditingArea(area); setShowAreaForm(true); }}
+                          className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          title="Edit"
                         >
                           <Edit size={14} />
                         </button>
                         {area.isActive && (
                           <button
                             onClick={() => handleDeactivateArea(area.id)}
-                            className="p-1.5 rounded hover:bg-destructive/10 text-destructive"
+                            className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
                             title="Deactivate"
                           >
                             <Trash2 size={14} />
@@ -395,15 +371,14 @@ export function PricingManager() {
       {activeTab === 'rules' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Pricing Rules</h2>
+            <p className="text-sm font-semibold text-foreground">
+              {rules.length} rule{rules.length !== 1 ? 's' : ''}
+            </p>
             <button
-              onClick={() => {
-                setEditingRule(null);
-                setShowRuleForm(true);
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-gold text-navy rounded-lg hover:bg-gold/90 transition-colors"
+              onClick={() => { setEditingRule(null); setShowRuleForm(true); }}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-gold text-navy text-sm font-bold rounded-xl hover:bg-gold/90 transition-colors shadow-sm"
             >
-              <Plus size={16} />
+              <Plus size={15} />
               Add Rule
             </button>
           </div>
@@ -412,55 +387,51 @@ export function PricingManager() {
             <RuleForm
               rule={editingRule}
               onSave={handleSaveRule}
-              onCancel={() => {
-                setShowRuleForm(false);
-                setEditingRule(null);
-              }}
+              onCancel={() => { setShowRuleForm(false); setEditingRule(null); }}
             />
           )}
 
-          <div className="border rounded-lg overflow-x-auto table-scroll-x">
+          <div className="rounded-2xl border border-border bg-card overflow-hidden overflow-x-auto shadow-sm">
             <table className="w-full min-w-[600px]">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">From</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">To</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Vehicle</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Trip</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Price</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Passengers</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
+              <thead>
+                <tr className="border-b border-border/80 bg-muted/40">
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">From</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">To</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Vehicle</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Trip</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Price</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Passengers</th>
+                  <th className="px-4 py-3 w-20" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-border/50">
                 {rules.map((rule) => (
-                  <tr key={rule.id} className={!rule.active ? 'opacity-50' : ''}>
-                    <td className="px-4 py-3 text-sm">{rule.zoneFrom}</td>
-                    <td className="px-4 py-3 text-sm">{rule.zoneTo}</td>
-                    <td className="px-4 py-3 text-sm">{rule.vehicleClass}</td>
-                    <td className="px-4 py-3 text-sm">{rule.tripType}</td>
-                    <td className="px-4 py-3 text-sm font-medium">
+                  <tr key={rule.id} className={`hover:bg-muted/20 transition-colors ${!rule.active ? 'opacity-40' : ''}`}>
+                    <td className="px-4 py-3.5 text-sm text-muted-foreground">{rule.zoneFrom}</td>
+                    <td className="px-4 py-3.5 text-sm text-muted-foreground">{rule.zoneTo}</td>
+                    <td className="px-4 py-3.5 text-sm font-medium capitalize">{rule.vehicleClass.toLowerCase()}</td>
+                    <td className="px-4 py-3.5 text-sm capitalize">{rule.tripType.replace(/_/g, ' ').toLowerCase()}</td>
+                    <td className="px-4 py-3.5 text-sm font-bold text-foreground">
                       ${(rule.basePriceCents / 100).toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-sm">
-                      {rule.passengersMin || '1'} - {rule.passengersMax || '∞'}
+                    <td className="px-4 py-3.5 text-sm text-muted-foreground">
+                      {rule.passengersMin || '1'}–{rule.passengersMax || '∞'}
                     </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex gap-2">
+                    <td className="px-4 py-3.5">
+                      <div className="flex gap-1.5">
                         <button
-                          onClick={() => {
-                            setEditingRule(rule);
-                            setShowRuleForm(true);
-                          }}
-                          className="text-gold hover:text-gold/80"
+                          onClick={() => { setEditingRule(rule); setShowRuleForm(true); }}
+                          className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          title="Edit"
                         >
-                          <Edit size={16} />
+                          <Edit size={14} />
                         </button>
                         <button
                           onClick={() => handleDeleteRule(rule.id)}
-                          className="text-red-500 hover:text-red-600"
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                          title="Delete"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
@@ -475,16 +446,15 @@ export function PricingManager() {
       {/* Extras Tab */}
       {activeTab === 'extras' && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-            <h2 className="text-xl font-semibold">Pricing Extras</h2>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-foreground">
+              {extras.length} extra{extras.length !== 1 ? 's' : ''}
+            </p>
             <button
-              onClick={() => {
-                setEditingExtra(null);
-                setShowExtraForm(true);
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-gold text-navy rounded-lg hover:bg-gold/90 transition-colors"
+              onClick={() => { setEditingExtra(null); setShowExtraForm(true); }}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-gold text-navy text-sm font-bold rounded-xl hover:bg-gold/90 transition-colors shadow-sm"
             >
-              <Plus size={16} />
+              <Plus size={15} />
               Add Extra
             </button>
           </div>
@@ -493,51 +463,47 @@ export function PricingManager() {
             <ExtraForm
               extra={editingExtra}
               onSave={handleSaveExtra}
-              onCancel={() => {
-                setShowExtraForm(false);
-                setEditingExtra(null);
-              }}
+              onCancel={() => { setShowExtraForm(false); setEditingExtra(null); }}
             />
           )}
 
-          <div className="border rounded-lg overflow-x-auto table-scroll-x">
+          <div className="rounded-2xl border border-border bg-card overflow-hidden overflow-x-auto shadow-sm">
             <table className="w-full min-w-[500px]">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Code</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Label</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Price</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Mode</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Max Qty</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
+              <thead>
+                <tr className="border-b border-border/80 bg-muted/40">
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Code</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Label</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Price</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Mode</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Max Qty</th>
+                  <th className="px-4 py-3 w-20" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-border/50">
                 {extras.map((extra) => (
-                  <tr key={extra.id} className={!extra.active ? 'opacity-50' : ''}>
-                    <td className="px-4 py-3 text-sm font-mono">{extra.code}</td>
-                    <td className="px-4 py-3 text-sm">{extra.label}</td>
-                    <td className="px-4 py-3 text-sm font-medium">
+                  <tr key={extra.id} className={`hover:bg-muted/20 transition-colors ${!extra.active ? 'opacity-40' : ''}`}>
+                    <td className="px-4 py-3.5 text-xs font-mono font-semibold text-muted-foreground">{extra.code}</td>
+                    <td className="px-4 py-3.5 text-sm font-medium text-foreground">{extra.label}</td>
+                    <td className="px-4 py-3.5 text-sm font-bold text-foreground">
                       ${(extra.priceCents / 100).toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-sm">{extra.pricingMode}</td>
-                    <td className="px-4 py-3 text-sm">{extra.maxQty || '∞'}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex gap-2">
+                    <td className="px-4 py-3.5 text-xs text-muted-foreground capitalize">{extra.pricingMode.toLowerCase()}</td>
+                    <td className="px-4 py-3.5 text-sm text-muted-foreground">{extra.maxQty || '∞'}</td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex gap-1.5">
                         <button
-                          onClick={() => {
-                            setEditingExtra(extra);
-                            setShowExtraForm(true);
-                          }}
-                          className="text-gold hover:text-gold/80"
+                          onClick={() => { setEditingExtra(extra); setShowExtraForm(true); }}
+                          className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          title="Edit"
                         >
-                          <Edit size={16} />
+                          <Edit size={14} />
                         </button>
                         <button
                           onClick={() => handleDeleteExtra(extra.id)}
-                          className="text-red-500 hover:text-red-600"
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                          title="Delete"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
@@ -604,8 +570,9 @@ function HotelsTab({
 
   const filteredHotels = useMemo(() => {
     if (!search.trim()) return hotels;
-    const q = search.trim().toLowerCase();
-    return hotels.filter(h => h.name.toLowerCase().includes(q) || h.zone.toLowerCase().includes(q));
+    return hotels.filter(
+      (hotel) => includesNormalized(hotel.name, search) || includesNormalized(hotel.zone, search)
+    );
   }, [hotels, search]);
 
   const hotelsByZone = useMemo(() => {
@@ -623,25 +590,25 @@ function HotelsTab({
   const zoneOrder = zones;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-xl font-semibold">Hotels ({activeHotels.length} active)</h2>
-        <div className="flex flex-col sm:flex-row gap-3">
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <p className="text-sm font-semibold text-foreground">{activeHotels.length} active hotels</p>
+        <div className="flex items-center gap-2">
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar hotel o zona..."
-              className="pl-9 pr-4 py-2 border rounded-lg w-full sm:w-64 text-sm"
+              placeholder="Search hotel or zone…"
+              className="pl-9 pr-4 py-2 border border-border rounded-xl w-full sm:w-56 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold/50 transition-all"
             />
           </div>
           <button
             onClick={() => onShowForm(null)}
-            className="flex items-center gap-2 px-4 py-2 bg-gold text-navy rounded-lg hover:bg-gold/90 transition-colors whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-gold text-navy text-sm font-bold rounded-xl hover:bg-gold/90 transition-colors shadow-sm whitespace-nowrap"
           >
-            <Plus size={16} />
+            <Plus size={15} />
             Add Hotel
           </button>
         </div>
@@ -657,61 +624,59 @@ function HotelsTab({
         />
       )}
 
-      <div className="grid gap-6">
+      <div className="grid gap-4">
         {zoneOrder.map((zone) => {
           const zoneHotels = (hotelsByZone[zone] || []).sort((a, b) => a.name.localeCompare(b.name));
           const area = areas.find(a => a.name === zone);
           const priceInfo = area
-            ? `$${(area.oneWayPriceCents / 100).toFixed(0)} / $${(area.roundTripPriceCents / 100).toFixed(0)}`
-            : '—';
+            ? `SUV $${(area.oneWayPriceCents / 100).toFixed(0)} · RT $${(area.roundTripPriceCents / 100).toFixed(0)}`
+            : 'No pricing configured';
 
           return (
-            <div key={zone} className="border rounded-xl overflow-hidden bg-card">
-              <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 bg-muted/40 border-b">
+            <div key={zone} className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 bg-muted/40 border-b border-border/60">
                 <div>
-                  <h3 className="font-semibold text-foreground">{zone}</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    One-way / Round-trip: {priceInfo}
-                  </p>
+                  <p className="font-bold text-sm text-foreground">{zone}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{priceInfo} · {zoneHotels.filter(h => h.isActive).length} active hotels</p>
                 </div>
                 <button
                   onClick={() => onShowForm(null, zone)}
-                  className="flex items-center gap-2 px-3 py-2 bg-gold/90 text-navy rounded-lg hover:bg-gold text-sm font-medium"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gold/90 text-navy rounded-xl hover:bg-gold text-xs font-bold transition-colors"
                 >
-                  <Plus size={14} />
-                  Add
+                  <Plus size={13} />
+                  Add Hotel
                 </button>
               </div>
-              <div className="divide-y divide-border min-h-[60px]">
+              <div className="divide-y divide-border/40">
                 {zoneHotels.length === 0 ? (
-                  <div className="px-5 py-6 text-center text-sm text-muted-foreground">
-                    No hotels. Click &quot;Add&quot; to add one.
+                  <div className="px-5 py-5 text-center text-sm text-muted-foreground/70 italic">
+                    No hotels in this zone yet.
                   </div>
                 ) : (
                   zoneHotels.map((hotel) => (
                     <div
                       key={hotel.id}
-                      className={`flex items-center justify-between px-5 py-3 ${!hotel.isActive ? 'opacity-50' : ''}`}
+                      className={`flex items-center justify-between px-5 py-2.5 hover:bg-muted/20 transition-colors ${!hotel.isActive ? 'opacity-40' : ''}`}
                     >
-                      <span className="font-medium text-sm">{hotel.name}</span>
+                      <span className="text-sm font-medium text-foreground">{hotel.name}</span>
                       <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded text-xs ${hotel.isActive ? 'bg-green-500/20 text-green-600' : 'bg-red-500/20 text-red-600'}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${hotel.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
                           {hotel.isActive ? 'Active' : 'Inactive'}
                         </span>
                         <button
                           onClick={() => onShowForm(hotel)}
-                          className="p-1.5 rounded hover:bg-muted text-gold"
-                          title="Edit / Move to another zone"
+                          className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          title="Edit"
                         >
-                          <Edit size={14} />
+                          <Edit size={13} />
                         </button>
                         {hotel.isActive && (
                           <button
                             onClick={() => onDeactivate(hotel.id)}
-                            className="p-1.5 rounded hover:bg-red-500/10 text-red-500"
+                            className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
                             title="Deactivate"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={13} />
                           </button>
                         )}
                       </div>
@@ -755,8 +720,8 @@ function HotelForm({
   }, [hotel?.id, hotel?.name, hotel?.zone, hotel?.isActive, initialZone]);
 
   return (
-    <div className="border rounded-lg p-4 space-y-4 bg-muted/20">
-      <h3 className="font-semibold">{hotel ? 'Edit Hotel / Move to Zone' : 'Add Hotel'}</h3>
+    <div className="rounded-2xl border border-gold/30 bg-card p-5 shadow-sm space-y-4">
+      <h3 className="text-sm font-bold text-foreground flex items-center gap-2"><Edit size={14} className="text-gold" />{hotel ? 'Edit Hotel' : 'Add Hotel'}</h3>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Name</label>
@@ -839,8 +804,8 @@ function AreaForm({
   };
 
   return (
-    <div className="border rounded-lg p-6 bg-card space-y-4">
-      <h3 className="text-lg font-semibold">{area ? 'Edit Area' : 'New Area'}</h3>
+    <div className="rounded-2xl border border-gold/30 bg-card p-5 shadow-sm space-y-4">
+      <h3 className="text-sm font-bold text-foreground flex items-center gap-2"><Edit size={14} className="text-gold" />{area ? 'Edit Area' : 'New Area'}</h3>
       <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
           <label className="block text-sm font-medium mb-1">Name</label>
@@ -940,8 +905,8 @@ function RuleForm({
   });
 
   return (
-    <div className="border rounded-lg p-6 bg-card space-y-4">
-      <h3 className="text-lg font-semibold">{rule ? 'Edit Rule' : 'New Rule'}</h3>
+    <div className="rounded-2xl border border-gold/30 bg-card p-5 shadow-sm space-y-4">
+      <h3 className="text-sm font-bold text-foreground flex items-center gap-2"><Edit size={14} className="text-gold" />{rule ? 'Edit Rule' : 'New Rule'}</h3>
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Zone From</label>
@@ -1059,8 +1024,8 @@ function ExtraForm({
   });
 
   return (
-    <div className="border rounded-lg p-6 bg-card space-y-4">
-      <h3 className="text-lg font-semibold">{extra ? 'Edit Extra' : 'New Extra'}</h3>
+    <div className="rounded-2xl border border-gold/30 bg-card p-5 shadow-sm space-y-4">
+      <h3 className="text-sm font-bold text-foreground flex items-center gap-2"><Edit size={14} className="text-gold" />{extra ? 'Edit Extra' : 'New Extra'}</h3>
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Code</label>

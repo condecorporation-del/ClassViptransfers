@@ -71,16 +71,16 @@ describeIfDatabase('BookingService', () => {
 
     const booking = await bookingService.createDraftBooking(input);
 
+    createdBookingId = booking.id;
+    createdCustomerId = booking.customerId;
+
     expect(booking).toBeDefined();
     expect(booking.status).toBe('DRAFT');
     expect(booking.type).toBe('TRANSPORTATION');
-    expect(booking.totalAmount).toBe(8500); // $85 in cents
+    expect(booking.totalAmount).toBe(9860); // $85 subtotal + 16% IVA
     expect(booking.customer.email).toBe('test@example.com');
     expect(booking.items).toHaveLength(1);
     expect(booking.items[0].unitPrice).toBe(8500); // $85 in cents
-
-    createdBookingId = booking.id;
-    createdCustomerId = booking.customerId;
   });
 
   it('should create a draft activity booking with combo', async () => {
@@ -119,7 +119,7 @@ describeIfDatabase('BookingService', () => {
     expect(booking).toBeDefined();
     expect(booking.status).toBe('DRAFT');
     expect(booking.type).toBe('CRAZY_COMBO');
-    expect(booking.totalAmount).toBe(30000); // (125 * 2) + (25 * 2) = 300 in cents
+    expect(booking.totalAmount).toBe(34800); // $300 subtotal + 16% IVA
     expect(booking.items).toHaveLength(2);
 
     // Clean up
@@ -173,9 +173,9 @@ describeIfDatabase('BookingService', () => {
     const csv = await bookingService.exportBookingsToCSV('2024-12-25');
 
     expect(csv).toBeDefined();
-    expect(csv.includes('Booking ID')).toBe(true);
-    expect(csv.includes('Customer Name')).toBe(true);
-  });
+    expect(csv.includes('bookingId')).toBe(true);
+    expect(csv.includes('customerName')).toBe(true);
+  }, 15000);
 
   it('should cancel a booking', async () => {
     if (!createdBookingId) {
@@ -198,5 +198,47 @@ describeIfDatabase('BookingService', () => {
     expect(booking.status).toBe('CANCELLED');
     expect(booking.cancelledAt).toBeDefined();
   });
+
+  it('should create a completed MANUAL payment for confirmed manual bookings', async () => {
+    const booking = await bookingService.createManualBooking(
+      {
+        type: 'TRANSPORTATION',
+        customer: {
+          name: 'Manual Paid User',
+          email: 'manual-paid@example.com',
+          phone: '+1234567892',
+          language: 'en',
+        },
+        bookingDate: new Date('2024-12-27'),
+        bookingTime: '15:00',
+        pickupLocation: 'Airport',
+        dropoffLocation: 'Hotel',
+        passengers: 2,
+        serviceType: 'private',
+        tripType: 'oneway',
+        route: 'airport-hotel',
+        items: [
+          {
+            type: 'TRANSPORTATION',
+            name: 'Private Transfer',
+            quantity: 1,
+            unitPrice: 120,
+          },
+        ],
+      },
+      'CONFIRMED'
+    );
+
+    const payment = await prisma.payment.findFirst({
+      where: { bookingId: booking.id, provider: 'MANUAL', status: 'COMPLETED' },
+    });
+
+    expect(booking.status).toBe('CONFIRMED');
+    expect(payment).toBeTruthy();
+    expect(payment?.amount).toBe(booking.totalAmount);
+
+    await prisma.booking.delete({ where: { id: booking.id } });
+    await prisma.customer.delete({ where: { id: booking.customerId } });
+  }, 15000);
 });
 

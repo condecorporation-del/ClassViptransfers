@@ -272,12 +272,18 @@ export class AdminController {
         return res.status(404).json({ error: 'Booking not found' });
       }
 
+      const hasCompletedStripePayment = booking.payments?.some(
+        (payment) => payment.provider === 'STRIPE' && payment.status === 'COMPLETED'
+      );
+
       // Resend emails (force resend)
-      const result = await emailService.sendConfirmationEmails(booking, true);
+      const result = await emailService.sendConfirmationEmails(booking, true, {
+        manualConfirm: !hasCompletedStripePayment,
+      });
 
       // Audit log
       const userId = req.headers['x-user-id'] as string | undefined;
-      const userEmail = req.headers['x-user-email'] as string | undefined;
+      const userEmail = req.adminEmail;
 
       await createAuditLog({
         action: 'UPDATE',
@@ -439,7 +445,7 @@ export class AdminController {
     try {
       const { newTotalCents, reason } = priceOverrideSchema.parse(req.body);
       const userId = req.headers['x-user-id'] as string | undefined;
-      const userEmail = req.headers['x-user-email'] as string | undefined;
+      const userEmail = req.adminEmail;
 
       const booking = await bookingService.applyPriceOverride(
         id,
@@ -474,7 +480,7 @@ export class AdminController {
 
     try {
       const userId = req.headers['x-user-id'] as string | undefined;
-      const userEmail = req.headers['x-user-email'] as string | undefined;
+      const userEmail = req.adminEmail;
 
       const booking = await bookingService.removePriceOverride(id, userId, userEmail);
 
@@ -504,7 +510,7 @@ export class AdminController {
     try {
       const input = assignBookingSchemaExtended.parse(req.body);
       const userId = req.headers['x-user-id'] as string | undefined;
-      const userEmail = req.headers['x-user-email'] as string | undefined;
+      const userEmail = req.adminEmail;
 
       const result = await bookingService.assignBookingExtended(
         id,
@@ -537,7 +543,7 @@ export class AdminController {
     try {
       const input = manualBookingSchema.parse(req.body);
       const userId = req.headers['x-user-id'] as string | undefined;
-      const userEmail = req.headers['x-user-email'] as string | undefined;
+      const userEmail = req.adminEmail;
       const emailMeta: {
         mode: 'payment-link' | 'confirmation' | 'none';
         customerSent: boolean;
@@ -669,7 +675,7 @@ export class AdminController {
     try {
       const input = createDriverSchema.parse(req.body);
       const userId = req.headers['x-user-id'] as string | undefined;
-      const userEmail = req.headers['x-user-email'] as string | undefined;
+      const userEmail = req.adminEmail;
 
       const driver = await driverVehicleService.createDriver(input, userId, userEmail);
 
@@ -714,7 +720,7 @@ export class AdminController {
     try {
       const input = createVehicleSchema.parse(req.body);
       const userId = req.headers['x-user-id'] as string | undefined;
-      const userEmail = req.headers['x-user-email'] as string | undefined;
+      const userEmail = req.adminEmail;
 
       const vehicle = await driverVehicleService.createVehicle(input, userId, userEmail);
 

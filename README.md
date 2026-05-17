@@ -1,6 +1,6 @@
 # Class VIP Transfers
 
-Frontend and backend for the current Class VIP Transfers website, booking flow, and admin dashboard.
+Frontend and backend for the isolated Class VIP Transfers rebuild: website, booking flow, admin dashboard, and supporting API.
 
 ## Stack
 
@@ -13,15 +13,28 @@ Frontend and backend for the current Class VIP Transfers website, booking flow, 
 ## Project structure
 
 ```text
-src/                 Frontend app
-  components/        Shared UI and feature components
-  pages/             Route-level screens
-  hooks/             Frontend hooks
-  lib/               Frontend helpers
-  data/              Static frontend content
+src/
+  features/
+    admin/           Admin pages, hooks, and operational components
+    booking/         Booking, checkout, and pricing UI
+    marketing/       Public website pages, chat, SEO, and content
+  shared/
+    components/      App-wide wrappers and boundaries
+    hooks/           Shared hooks
+    lib/             Shared frontend helpers
+    pages/           Shared route screens
+    providers/       Global providers (language, etc.)
+    ui/              Reusable UI primitives
+  assets/            Local optimized brand assets
+  i18n/              Translation catalog
+  test/              Frontend test utilities
 
 backend/
-  src/               Express API
+  src/
+    app.ts           Express app assembly
+    server.ts        Local server bootstrap
+    features/        Admin, auth, booking, pricing, AI domains
+    shared/          Shared backend libs, middleware, types, tests
   prisma/            Prisma schema and seed
   scripts/           Database and setup utilities
   data/              Hotel and pricing seed sources
@@ -40,7 +53,7 @@ npm run build
 npm run test
 ```
 
-The frontend runs on `http://127.0.0.1:5173` by default and proxies `/api` to the backend on port `3001`.
+The frontend typically runs on `http://127.0.0.1:5173` or `http://127.0.0.1:5174`, depending on the active dev session.
 
 ## Backend commands
 
@@ -86,12 +99,23 @@ Main variables used by the API:
 
 ## Current deployment direction
 
-- Frontend prepared to deploy on Vercel
-- Backend still lives as a separate Express app
-- `vercel.json` is included for clean frontend routing and asset caching
+- Frontend is prepared for Vercel deployment
+- Backend is exposed through Vercel Functions via `api/[...path].ts`
+- The backend has been split into `app.ts` + `server.ts` so local dev and Vercel serverless entry stay cleanly separated
+- `vercel.json` preserves filesystem routes first, so `/api/*` wins before the SPA fallback
+- Remaining work is staging verification, not platform selection
+
+The main staging checkpoints are:
+
+- Prisma connection handling in serverless runtime
+- Stripe webhook delivery
+- bundling of the `backend/src/*` TypeScript graph into Vercel Functions
+- cookie/auth behavior on the deployed Vercel domain
+- PDF confirmation generation, because it relies on `puppeteer` and should be verified on Vercel Functions before treating the deploy as production-ready
 
 ## Notes
 
 - PayPal legacy runtime code has been removed; Stripe is the active payment path.
 - This repo has already gone through cleanup to remove dead pages, unused UI scaffolding, and old assets.
+- The new Supabase database currently contains a validated public hotel catalog of `252` active hotels.
 - Keep new work aligned with the current live site behavior unless a change is intentional.

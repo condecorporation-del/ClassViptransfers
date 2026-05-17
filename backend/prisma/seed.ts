@@ -144,14 +144,32 @@ async function main() {
   // DEFAULT_AREAS: prices derived from PRICES_ONE_WAY — verify/update from classviptransfers.com (Rates by zone)
   const DEFAULT_AREAS = hotelZonesForAreas.map((zone) => {
     const prices = PRICES_ONE_WAY[zone as Exclude<Zone, 'SJD'>];
-    const base = prices.SUV;
-    return { name: zone, oneWayPriceCents: base, roundTripPriceCents: Math.round(base * 1.8) };
+    return {
+      name: zone,
+      oneWayPriceCents: prices.SUV,
+      roundTripPriceCents: Math.round(prices.SUV * 1.8),
+      sprinterOneWayPriceCents: prices.SPRINTER,
+      sprinterRoundTripPriceCents: Math.round(prices.SPRINTER * 1.8),
+    };
   });
   for (const a of DEFAULT_AREAS) {
     await prisma.area.upsert({
       where: { name: a.name },
-      update: { oneWayPriceCents: a.oneWayPriceCents, roundTripPriceCents: a.roundTripPriceCents, isActive: true },
-      create: { name: a.name, oneWayPriceCents: a.oneWayPriceCents, roundTripPriceCents: a.roundTripPriceCents, isActive: true },
+      update: {
+        oneWayPriceCents: a.oneWayPriceCents,
+        roundTripPriceCents: a.roundTripPriceCents,
+        sprinterOneWayPriceCents: a.sprinterOneWayPriceCents,
+        sprinterRoundTripPriceCents: a.sprinterRoundTripPriceCents,
+        isActive: true,
+      },
+      create: {
+        name: a.name,
+        oneWayPriceCents: a.oneWayPriceCents,
+        roundTripPriceCents: a.roundTripPriceCents,
+        sprinterOneWayPriceCents: a.sprinterOneWayPriceCents,
+        sprinterRoundTripPriceCents: a.sprinterRoundTripPriceCents,
+        isActive: true,
+      },
     });
   }
   console.log(`✅ ${DEFAULT_AREAS.length} areas seeded`);

@@ -168,35 +168,13 @@ const Index = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.8 }}
-            className="flex flex-col items-center gap-4"
           >
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link
-                to="/book"
-                className="gold-gradient text-secondary-foreground px-12 py-5 rounded-full font-bold text-lg md:text-xl hover:brightness-110 transition-all gold-glow flex items-center gap-3 group shadow-2xl"
-              >
-                {t('hero.cta1')} <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <a
-                href="https://wa.me/5216241222174"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-8 py-4 rounded-full border border-white/20 bg-black/20 backdrop-blur-md text-white font-semibold hover:bg-white/10 transition-all"
-              >
-                WhatsApp
-              </a>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-3xl">
-              {stats.map((stat, i) => (
-                <div key={i} className="rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md px-4 py-3 text-center">
-                  <div className="flex items-center justify-center gap-1.5 mb-1">
-                    <span className="font-display text-xl md:text-2xl font-bold text-white">{stat.value}</span>
-                    {stat.icon}
-                  </div>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/60">{stat.label}</p>
-                </div>
-              ))}
-            </div>
+            <Link
+              to="/book"
+              className="gold-gradient text-secondary-foreground px-12 py-5 rounded-full font-bold text-lg md:text-xl hover:brightness-110 transition-all gold-glow inline-flex items-center gap-3 group shadow-2xl"
+            >
+              {t('hero.cta1')} <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
           </motion.div>
         </div>
 

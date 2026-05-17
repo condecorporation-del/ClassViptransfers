@@ -44,7 +44,20 @@ export class BookingService {
     const count = await prisma.booking.count({
       where: { confirmationCode: { startsWith: prefix } },
     });
-    return `${prefix}${String(count + 1).padStart(3, '0')}`;
+
+    for (let offset = 1; offset <= 25; offset += 1) {
+      const candidate = `${prefix}${String(count + offset).padStart(3, '0')}`;
+      const existing = await prisma.booking.findUnique({
+        where: { confirmationCode: candidate },
+        select: { id: true },
+      });
+
+      if (!existing) {
+        return candidate;
+      }
+    }
+
+    return `${prefix}${Date.now().toString().slice(-6)}`;
   }
 
   /**
@@ -365,6 +378,13 @@ export class BookingService {
   async confirmBooking(bookingId: string, userId?: string, userEmail?: string, notes?: string) {
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
+      include: {
+        customer: true,
+        items: true,
+        payments: {
+          orderBy: { createdAt: 'desc' },
+        },
+      },
     });
 
     if (!booking) {
@@ -374,6 +394,12 @@ export class BookingService {
     if (booking.status === 'CANCELLED') {
       throw new Error('Cannot confirm a cancelled booking');
     }
+
+    if (booking.status === 'CONFIRMED') {
+      return booking;
+    }
+
+    const hasCompletedPayment = booking.payments.some((payment) => payment.status === 'COMPLETED');
 
     const updated = await prisma.booking.update({
       where: { id: bookingId },
@@ -399,6 +425,34 @@ export class BookingService {
         status: { from: booking.status, to: 'CONFIRMED' },
       },
     });
+
+    if (!hasCompletedPayment) {
+      await prisma.payment.create({
+        data: {
+          bookingId,
+          provider: 'MANUAL',
+          status: 'COMPLETED',
+          amount: booking.totalAmount,
+          currency: booking.currency,
+          completedAt: new Date(),
+          notes: 'Admin confirmed booking offline',
+        },
+      });
+
+      await createAuditLog({
+        action: 'PAYMENT',
+        entityType: 'Booking',
+        entityId: bookingId,
+        userId,
+        userEmail,
+        description: `Manual payment recorded while confirming booking ${bookingId}`,
+        changes: {
+          provider: 'MANUAL',
+          amount: booking.totalAmount,
+          status: 'COMPLETED',
+        },
+      });
+    }
 
     return updated;
   }
@@ -977,6 +1031,7 @@ export class BookingService {
     }
 
     const confirmationCode = await this.generateConfirmationCode();
+    const shouldCreateManualPayment = status === 'CONFIRMED';
 
     // Create booking
     const booking = await prisma.booking.create({
@@ -1014,6 +1069,18 @@ export class BookingService {
           return base;
         })(),
         ...(status === 'CONFIRMED' && { confirmedAt: new Date() }),
+        ...(shouldCreateManualPayment && {
+          payments: {
+            create: {
+              provider: 'MANUAL',
+              status: 'COMPLETED',
+              amount: totalCents,
+              currency: 'USD',
+              completedAt: new Date(),
+              notes: 'Manual/admin booking confirmed offline',
+            },
+          },
+        }),
         items: {
           create: input.items.map(item => ({
             type: item.type,
@@ -1039,6 +1106,20 @@ export class BookingService {
       entityId: booking.id,
       description: `Manual booking created: ${booking.type} (${status})`,
     });
+
+    if (shouldCreateManualPayment) {
+      await createAuditLog({
+        action: 'PAYMENT',
+        entityType: 'Booking',
+        entityId: booking.id,
+        description: `Manual payment recorded for booking ${booking.id}`,
+        changes: {
+          provider: 'MANUAL',
+          amount: totalCents,
+          status: 'COMPLETED',
+        },
+      });
+    }
 
     return booking;
   }

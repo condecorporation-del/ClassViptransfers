@@ -205,16 +205,11 @@ export class PricingController {
         notes,
       });
 
-      // Audit log
-      const userId = req.headers['x-user-id'] as string | undefined;
-      const userEmail = req.headers['x-user-email'] as string | undefined;
-
       await createAuditLog({
         action: 'CREATE',
         entityType: 'PricingRule',
         entityId: rule.id,
-        userId,
-        userEmail,
+        userEmail: req.adminEmail,
         description: `Created pricing rule: ${zoneFrom} → ${zoneTo} (${vehicleClass}, ${tripType}) - $${basePriceCents / 100}`,
       });
 
@@ -269,16 +264,11 @@ export class PricingController {
         notes,
       });
 
-      // Audit log
-      const userId = req.headers['x-user-id'] as string | undefined;
-      const userEmail = req.headers['x-user-email'] as string | undefined;
-
       await createAuditLog({
         action: 'UPDATE',
         entityType: 'PricingRule',
         entityId: id,
-        userId,
-        userEmail,
+        userEmail: req.adminEmail,
         description: `Updated pricing rule: ${rule.zoneFrom} → ${rule.zoneTo}`,
       });
 
@@ -307,16 +297,11 @@ export class PricingController {
 
       const rule = await pricingService.deletePricingRule(id);
 
-      // Audit log
-      const userId = req.headers['x-user-id'] as string | undefined;
-      const userEmail = req.headers['x-user-email'] as string | undefined;
-
       await createAuditLog({
         action: 'DELETE',
         entityType: 'PricingRule',
         entityId: id,
-        userId,
-        userEmail,
+        userEmail: req.adminEmail,
         description: `Deleted pricing rule: ${rule.zoneFrom} → ${rule.zoneTo}`,
       });
 
@@ -361,8 +346,10 @@ export class PricingController {
     try {
       const {
         active,
+        included,
         code,
         label,
+        labelEs,
         priceCents,
         pricingMode,
         maxQty,
@@ -378,24 +365,21 @@ export class PricingController {
 
       const extra = await pricingService.createPricingExtra({
         active,
+        included,
         code: code as ExtraCode,
         label,
+        labelEs,
         priceCents: parseInt(priceCents),
         pricingMode: pricingMode as PricingMode,
         maxQty: maxQty ? parseInt(maxQty) : undefined,
         description,
       });
 
-      // Audit log
-      const userId = req.headers['x-user-id'] as string | undefined;
-      const userEmail = req.headers['x-user-email'] as string | undefined;
-
       await createAuditLog({
         action: 'CREATE',
         entityType: 'PricingExtra',
         entityId: extra.id,
-        userId,
-        userEmail,
+        userEmail: req.adminEmail,
         description: `Created pricing extra: ${label} (${code}) - $${priceCents / 100}`,
       });
 
@@ -424,8 +408,10 @@ export class PricingController {
 
       const {
         active,
+        included,
         code,
         label,
+        labelEs,
         priceCents,
         pricingMode,
         maxQty,
@@ -434,24 +420,21 @@ export class PricingController {
 
       const extra = await pricingService.updatePricingExtra(id, {
         active,
+        included,
         code: code as ExtraCode,
         label,
+        labelEs,
         priceCents: priceCents ? parseInt(priceCents) : undefined,
         pricingMode: pricingMode as PricingMode,
         maxQty: maxQty ? parseInt(maxQty) : undefined,
         description,
       });
 
-      // Audit log
-      const userId = req.headers['x-user-id'] as string | undefined;
-      const userEmail = req.headers['x-user-email'] as string | undefined;
-
       await createAuditLog({
         action: 'UPDATE',
         entityType: 'PricingExtra',
         entityId: id,
-        userId,
-        userEmail,
+        userEmail: req.adminEmail,
         description: `Updated pricing extra: ${extra.label}`,
       });
 
@@ -480,16 +463,11 @@ export class PricingController {
 
       const extra = await pricingService.deletePricingExtra(id);
 
-      // Audit log
-      const userId = req.headers['x-user-id'] as string | undefined;
-      const userEmail = req.headers['x-user-email'] as string | undefined;
-
       await createAuditLog({
         action: 'DELETE',
         entityType: 'PricingExtra',
         entityId: id,
-        userId,
-        userEmail,
+        userEmail: req.adminEmail,
         description: `Deleted pricing extra: ${extra.label}`,
       });
 

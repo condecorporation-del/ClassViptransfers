@@ -158,45 +158,82 @@ export const createVehicleSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-export const manualBookingSchema = z.object({
-  type: z.enum(['TRANSPORTATION', 'ACTIVITY', 'COMBO', 'CRAZY_COMBO']),
-  customer: z.object({
-    name: z.string().min(1, 'Name is required'),
-    email: z.string().email('Invalid email'),
-    phone: z.string().min(1, 'Phone is required'),
-    country: z.string().optional(),
-    language: z.enum(['en', 'es']).default('en'),
-  }),
-  bookingDate: z.union([
-    z.string().datetime(),
-    z.date(),
-    z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid date format'),
-  ]),
-  bookingTime: z.string().optional(),
-  pickupLocation: z.string().optional(),
-  dropoffLocation: z.string().optional(),
-  flightNumber: z.string().optional(),
-  arrivalTime: z.string().optional(),
-  departureFlightNumber: z.string().optional(),
-  departureTime: z.string().optional(),
-  passengers: z.number().int().min(1).default(1),
-  serviceType: z.enum(['private', 'shuttle']).optional(),
-  tripType: z.enum(['oneway', 'roundtrip']).optional(),
-  route: z.string().optional(),
-  items: z.array(z.object({
-    type: z.enum(['TRANSPORTATION', 'ACTIVITY', 'ADDON', 'PARK_ENTRANCE', 'COMBO', 'CRAZY_COMBO']),
-    name: z.string(),
-    slug: z.string().optional(),
-    quantity: z.number().int().min(1).default(1),
-    unitPrice: z.number().nonnegative(),
-    metadata: z.record(z.any()).optional(),
-  })).min(1, 'At least one item is required'),
-  totalAmount: z.number().int().min(0).optional(), // Override total in cents
-  status: z.enum(['OFFLINE_HOLD', 'CONFIRMED']).default('OFFLINE_HOLD'),
-  notes: z.string().optional(),
-  sendConfirmation: z.boolean().default(false),
-  sendPaymentLink: z.boolean().default(false),
-});
+export const manualBookingSchema = z
+  .object({
+    type: z.enum(['TRANSPORTATION', 'ACTIVITY', 'COMBO', 'CRAZY_COMBO']),
+    customer: z.object({
+      name: z.string().min(1, 'Name is required'),
+      email: z.string().email('Invalid email'),
+      phone: z.string().min(1, 'Phone is required'),
+      country: z.string().optional(),
+      language: z.enum(['en', 'es']).default('en'),
+    }),
+    bookingDate: z.union([
+      z.string().datetime(),
+      z.date(),
+      z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid date format'),
+    ]),
+    bookingTime: z.string().optional(),
+    pickupLocation: z.string().optional(),
+    dropoffLocation: z.string().optional(),
+    flightNumber: z.string().optional(),
+    arrivalTime: z.string().optional(),
+    departureFlightNumber: z.string().optional(),
+    departureTime: z.string().optional(),
+    passengers: z.number().int().min(1).default(1),
+    serviceType: z.enum(['private', 'shuttle']).optional(),
+    tripType: z.enum(['oneway', 'roundtrip']).optional(),
+    route: z.string().optional(),
+    items: z
+      .array(
+        z.object({
+          type: z.enum([
+            'TRANSPORTATION',
+            'ACTIVITY',
+            'ADDON',
+            'PARK_ENTRANCE',
+            'COMBO',
+            'CRAZY_COMBO',
+          ]),
+          name: z.string(),
+          slug: z.string().optional(),
+          quantity: z.number().int().min(1).default(1),
+          unitPrice: z.number().nonnegative(),
+          metadata: z.record(z.any()).optional(),
+        })
+      )
+      .min(1, 'At least one item is required'),
+    totalAmount: z.number().int().min(0).optional(), // Override total in cents
+    status: z.enum(['OFFLINE_HOLD', 'CONFIRMED']).default('OFFLINE_HOLD'),
+    notes: z.string().optional(),
+    sendConfirmation: z.boolean().default(false),
+    sendPaymentLink: z.boolean().default(false),
+  })
+  .superRefine((data, ctx) => {
+    if (data.sendConfirmation && data.sendPaymentLink) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Choose either confirmation or payment link, not both.',
+        path: ['sendConfirmation'],
+      });
+    }
+
+    if (data.sendConfirmation && data.status !== 'CONFIRMED') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Confirmation emails require a confirmed booking.',
+        path: ['status'],
+      });
+    }
+
+    if (data.sendPaymentLink && data.status !== 'OFFLINE_HOLD') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Payment links require the booking to remain on hold.',
+        path: ['status'],
+      });
+    }
+  });
 
 export const exportBookingsSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),

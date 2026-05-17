@@ -1,17 +1,18 @@
-import { PrismaClient } from '@prisma/client';
-import { getErrorMessage } from '../src/lib/errors';
+import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
+import { PrismaClient } from '@prisma/client';
+import { getErrorMessage } from '../src/shared/lib/errors';
 
 const prisma = new PrismaClient();
 
 const ZONE_MAPPING: Record<string, string> = {
   'San José del Cabo': 'San Jose del Cabo',
-  'Corredor': 'Tourist Corridor',
+  Corredor: 'Tourist Corridor',
   'Cabo San Lucas': 'Cabo San Lucas',
   'East Cape': 'Pacific & East Cape',
   'Puerto Los Cabos': 'Port Los Cabos',
-  'Diamante': 'Cabo Pacific Area',
+  Diamante: 'Cabo Pacific Area',
   'Todos Santos': 'Pacific & East Cape',
   'La Paz': 'Pacific & East Cape',
 };
@@ -23,73 +24,107 @@ interface EnrichedHotel {
   zona: string;
 }
 
+interface ImportHotelRecord {
+  name: string;
+  zone: string;
+}
+
+function normalizeKey(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
 async function main() {
   const filePath = path.resolve(__dirname, '../data/hotels-enriched.json');
   const raw: EnrichedHotel[] = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
   console.log('='.repeat(60));
-  console.log(' Import Hotels → Prisma (table: Hotel)');
+  console.log('Import Hotels -> Prisma (table: Hotel)');
   console.log('='.repeat(60));
   console.log(`Source: ${filePath}`);
-  console.log(`Total records: ${raw.length}`);
+  console.log(`Total source records: ${raw.length}`);
 
-  // Map zones and filter out unmapped
-  const hotels: { name: string; zone: string }[] = [];
   const unmapped: string[] = [];
+  const dedupeMap = new Map<string, ImportHotelRecord>();
 
-  for (const h of raw) {
-    const zone = ZONE_MAPPING[h.zona];
+  for (const sourceHotel of raw) {
+    const zone = ZONE_MAPPING[sourceHotel.zona.trim()];
+
     if (!zone) {
-      unmapped.push(`"${h.zona}" (${h.nombre})`);
+      unmapped.push(`"${sourceHotel.zona}" (${sourceHotel.nombre})`);
       continue;
     }
-    hotels.push({ name: h.nombre, zone });
+
+    const hotel = {
+      name: sourceHotel.nombre.trim(),
+      zone,
+    };
+
+    dedupeMap.set(`${normalizeKey(hotel.name)}||${normalizeKey(hotel.zone)}`, hotel);
   }
+
+  const hotels = [...dedupeMap.values()];
 
   if (unmapped.length > 0) {
-    console.warn(`\n[Warning] ${unmapped.length} hotels with unknown zone (skipped):`);
-    unmapped.forEach((u) => console.warn(' -', u));
+    console.warn(`\n[Warning] ${unmapped.length} hotels with unknown zone were skipped:`);
+    unmapped.forEach((entry) => console.warn(` - ${entry}`));
   }
 
-  console.log(`\nReady to import: ${hotels.length} hotels\n`);
+  console.log(`Unique mapped hotels ready to import: ${hotels.length}\n`);
+
+  const existingHotels = await prisma.hotel.findMany({
+    select: { name: true, zone: true },
+  });
+
+  const existingKeys = new Set(
+    existingHotels.map((hotel) => `${normalizeKey(hotel.name)}||${normalizeKey(hotel.zone)}`)
+  );
 
   let inserted = 0;
-  let updated = 0;
+  let existing = 0;
   let errors = 0;
 
-  // Process in batches
-  for (let i = 0; i < hotels.length; i += BATCH_SIZE) {
-    const batch = hotels.slice(i, i + BATCH_SIZE);
+  for (let index = 0; index < hotels.length; index += BATCH_SIZE) {
+    const batch = hotels.slice(index, index + BATCH_SIZE);
 
     for (const hotel of batch) {
       try {
-        const result = await prisma.hotel.upsert({
+        const hotelKey = `${normalizeKey(hotel.name)}||${normalizeKey(hotel.zone)}`;
+        const wasExisting = existingKeys.has(hotelKey);
+
+        await prisma.hotel.upsert({
           where: { name_zone: { name: hotel.name, zone: hotel.zone } },
           update: { isActive: true },
           create: { name: hotel.name, zone: hotel.zone, isActive: true },
         });
-        // Prisma upsert doesn't directly tell us insert vs update,
-        // so we check updatedAt vs createdAt to infer
-        const isNew =
-          Math.abs(result.createdAt.getTime() - result.updatedAt.getTime()) < 500;
-        if (isNew) inserted++;
-        else updated++;
-      } catch (err) {
+
+        if (wasExisting) {
+          existing++;
+        } else {
+          inserted++;
+          existingKeys.add(hotelKey);
+        }
+      } catch (error) {
         errors++;
-        console.error(`[Error] ${hotel.name} (${hotel.zone}): ${getErrorMessage(err)}`);
+        console.error(`[Error] ${hotel.name} (${hotel.zone}): ${getErrorMessage(error)}`);
       }
     }
 
-    const processed = Math.min(i + BATCH_SIZE, hotels.length);
+    const processed = Math.min(index + BATCH_SIZE, hotels.length);
     console.log(`Processed: ${processed}/${hotels.length}`);
   }
 
   console.log('\n--- Import Summary ---');
   console.log(`  Inserted (new): ${inserted}`);
-  console.log(`  Updated (existing): ${updated}`);
-  if (errors > 0) console.log(`  Errors: ${errors}`);
+  console.log(`  Already present / reactivated: ${existing}`);
+  if (errors > 0) {
+    console.log(`  Errors: ${errors}`);
+  }
 
-  // Verification
   console.log('\n--- Database Verification ---');
   const totalHotels = await prisma.hotel.count();
   const totalActive = await prisma.hotel.count({ where: { isActive: true } });
@@ -102,17 +137,16 @@ async function main() {
 
   console.log(`Total hotels in DB: ${totalHotels} (${totalActive} active)`);
   console.log('\nBy zone:');
-  for (const z of byZone) {
-    console.log(`  ${z.zone}: ${z._count._all}`);
+  for (const zone of byZone) {
+    console.log(`  ${zone.zone}: ${zone._count._all}`);
   }
 
   console.log('\n' + '='.repeat(60));
 }
 
 main()
-  .catch((err) => {
-    console.error('[Fatal]', getErrorMessage(err) || err);
+  .catch((error) => {
+    console.error('[Fatal]', getErrorMessage(error) || error);
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());
-

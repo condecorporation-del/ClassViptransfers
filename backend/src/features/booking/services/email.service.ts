@@ -9,7 +9,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import Handlebars from 'handlebars';
 import { PdfService } from './pdf.service';
-import { generateBookingToken } from '../controllers/booking.controller';
+import { generateBookingToken } from '../../../shared/lib/booking-token';
 
 /** Single brand logo for all reservation emails (override with EMAIL_LOGO_URL if needed) */
 const CLASS_VIP_EMAIL_LOGO =
@@ -294,35 +294,112 @@ export class EmailService {
   /**
    * Check if email was already sent (idempotency)
    */
+  private async wasEmailSentToRecipient(
+    bookingId: string,
+    type: EmailType,
+    to: string
+  ): Promise<boolean> {
+    const existing = await prisma.emailLog.findFirst({
+      where: {
+        bookingId,
+        type,
+        to,
+        status: EmailStatus.SENT,
+      },
+    });
+
+    return !!existing;
+  }
+
+  private async getRecipientsNeedingEmail(
+    bookingId: string,
+    type: EmailType,
+    recipients: string[],
+    forceResend: boolean
+  ): Promise<string[]> {
+    if (forceResend) {
+      return recipients;
+    }
+
+    const checks = await Promise.all(
+      recipients.map(async (recipient) => ({
+        recipient,
+        alreadySent: await this.wasEmailSentToRecipient(bookingId, type, recipient),
+      }))
+    );
+
+    return checks.filter((entry) => !entry.alreadySent).map((entry) => entry.recipient);
+  }
+
+  private async logEmailResultForRecipients(
+    bookingId: string,
+    type: EmailType,
+    recipients: string[],
+    subject: string,
+    status: EmailStatus,
+    providerId?: string,
+    error?: string
+  ): Promise<void> {
+    await Promise.all(
+      recipients.map(async (recipient) => {
+        const log = await this.createEmailLog(bookingId, type, recipient, subject);
+        await this.updateEmailLog(log.id, status, providerId, error);
+      })
+    );
+  }
+
   /**
    * Send "Booking Received / Pending Payment" to customer and company
    */
-  async sendBookingReceived(booking: BookingWithRelations): Promise<{ customerSent: boolean; companySent: boolean }> {
+  async sendBookingReceived(
+    booking: BookingWithRelations,
+    forceResend: boolean = false
+  ): Promise<{ customerSent: boolean; companySent: boolean }> {
     const full = await this.ensureBookingForEmail(booking);
     const data = this.formatBookingData(full, { pendingPayment: true });
     const subject = `Booking Received - Pending Payment - ${data.bookingIdShort}`;
     const html = this.renderTemplate('customer-pending', data);
 
-    const emailLog = await this.createEmailLog(
-      booking.id,
-      EmailType.BOOKING_RECEIVED,
-      booking.customer.email,
-      subject
-    );
-
     let customerSent = false;
-    console.log(`[Email] Sending booking received to ${booking.customer.email}...`);
-    const customerResult = await this.sendMail({
-      to: booking.customer.email,
-      subject,
-      html,
-      context: 'booking-received-customer',
-    });
-    if (customerResult.success) {
-      await this.updateEmailLog(emailLog.id, EmailStatus.SENT, customerResult.messageId);
-      customerSent = true;
+    const shouldSendCustomer =
+      forceResend ||
+      !(await this.wasEmailSentToRecipient(
+        booking.id,
+        EmailType.BOOKING_RECEIVED,
+        booking.customer.email
+      ));
+
+    if (shouldSendCustomer) {
+      console.log(`[Email] Sending booking received to ${booking.customer.email}...`);
+      const customerResult = await this.sendMail({
+        to: booking.customer.email,
+        subject,
+        html,
+        context: 'booking-received-customer',
+      });
+      if (customerResult.success) {
+        await this.logEmailResultForRecipients(
+          booking.id,
+          EmailType.BOOKING_RECEIVED,
+          [booking.customer.email],
+          subject,
+          EmailStatus.SENT,
+          customerResult.messageId
+        );
+        customerSent = true;
+      } else {
+        await this.logEmailResultForRecipients(
+          booking.id,
+          EmailType.BOOKING_RECEIVED,
+          [booking.customer.email],
+          subject,
+          EmailStatus.FAILED,
+          undefined,
+          customerResult.error
+        );
+      }
     } else {
-      await this.updateEmailLog(emailLog.id, EmailStatus.FAILED, undefined, customerResult.error);
+      console.log(`[Email] Booking received email already sent to ${booking.customer.email}`);
     }
 
     let companySent = false;
@@ -331,7 +408,8 @@ export class EmailService {
         companySent = await this.sendCompanyNotificationForType(
           booking,
           EmailType.BOOKING_RECEIVED,
-          true
+          true,
+          forceResend
         );
       } catch (err) {
         console.error(`❌ Company copy failed (booking not affected):`, getErrorMessage(err));
@@ -347,7 +425,8 @@ export class EmailService {
   private async sendCompanyNotificationForType(
     booking: BookingWithRelations,
     type: EmailType,
-    isPending: boolean
+    isPending: boolean,
+    forceResend: boolean = false
   ): Promise<boolean> {
     const full = await this.ensureBookingForEmail(booking);
     const data = this.formatBookingData(full, isPending ? { pendingPayment: true } : {});
@@ -364,33 +443,55 @@ export class EmailService {
     const html = this.renderTemplate('company-confirmed', data);
 
     const companyRecipients = [...this.companyEmails];
-    const logPromises = companyRecipients.map((email) =>
-      this.createEmailLog(booking.id, type, email, subject)
+    const pendingRecipients = await this.getRecipientsNeedingEmail(
+      booking.id,
+      type,
+      companyRecipients,
+      forceResend
     );
-    const logs = await Promise.all(logPromises);
+
+    if (pendingRecipients.length === 0) {
+      console.log(`[Email] Company ${type} email already sent to all recipients for booking ${booking.id}`);
+      return true;
+    }
 
     const result = await this.sendMail({
-      to: companyRecipients,
+      to: pendingRecipients,
       subject,
       html,
       context: 'company-notification',
     });
     if (result.success) {
-      for (const log of logs) {
-        await this.updateEmailLog(log.id, EmailStatus.SENT, result.messageId);
-      }
+      await this.logEmailResultForRecipients(
+        booking.id,
+        type,
+        pendingRecipients,
+        subject,
+        EmailStatus.SENT,
+        result.messageId
+      );
       return true;
     }
-    for (const log of logs) {
-      await this.updateEmailLog(log.id, EmailStatus.FAILED, undefined, result.error);
-    }
+    await this.logEmailResultForRecipients(
+      booking.id,
+      type,
+      pendingRecipients,
+      subject,
+      EmailStatus.FAILED,
+      undefined,
+      result.error
+    );
     throw new Error(result.error);
   }
 
   /**
    * Send cancellation email to customer and company
    */
-  async sendCancellation(booking: BookingWithRelations, reason?: string): Promise<{ customerSent: boolean; companySent: boolean }> {
+  async sendCancellation(
+    booking: BookingWithRelations,
+    reason?: string,
+    forceResend: boolean = false
+  ): Promise<{ customerSent: boolean; companySent: boolean }> {
     const full = await this.ensureBookingForEmail(booking);
     const data = this.formatBookingData(full, {});
     const cancellationData = data as typeof data & { cancellationReason?: string | null };
@@ -398,31 +499,47 @@ export class EmailService {
     const subject = `Booking Cancelled - ${data.bookingIdShort}`;
     const html = this.renderTemplate('customer-cancelled', data);
 
-    const emailLog = await this.createEmailLog(
-      booking.id,
-      EmailType.CANCELLED,
-      booking.customer.email,
-      subject
-    );
-
     let customerSent = false;
-    const customerResult = await this.sendMail({
-      to: booking.customer.email,
-      subject,
-      html,
-      context: 'cancellation-customer',
-    });
-    if (customerResult.success) {
-      await this.updateEmailLog(emailLog.id, EmailStatus.SENT, customerResult.messageId);
-      customerSent = true;
+    const shouldSendCustomer =
+      forceResend ||
+      !(await this.wasEmailSentToRecipient(booking.id, EmailType.CANCELLED, booking.customer.email));
+
+    if (shouldSendCustomer) {
+      const customerResult = await this.sendMail({
+        to: booking.customer.email,
+        subject,
+        html,
+        context: 'cancellation-customer',
+      });
+      if (customerResult.success) {
+        await this.logEmailResultForRecipients(
+          booking.id,
+          EmailType.CANCELLED,
+          [booking.customer.email],
+          subject,
+          EmailStatus.SENT,
+          customerResult.messageId
+        );
+        customerSent = true;
+      } else {
+        await this.logEmailResultForRecipients(
+          booking.id,
+          EmailType.CANCELLED,
+          [booking.customer.email],
+          subject,
+          EmailStatus.FAILED,
+          undefined,
+          customerResult.error
+        );
+      }
     } else {
-      await this.updateEmailLog(emailLog.id, EmailStatus.FAILED, undefined, customerResult.error);
+      console.log(`[Email] Cancellation email already sent to ${booking.customer.email}`);
     }
 
     let companySent = false;
     if (this.companyEmails.length > 0) {
       try {
-        companySent = await this.sendCompanyCancellationNotification(booking, reason);
+        companySent = await this.sendCompanyCancellationNotification(booking, reason, forceResend);
       } catch (err) {
         console.error(`❌ Company cancellation copy failed:`, getErrorMessage(err));
       }
@@ -431,7 +548,11 @@ export class EmailService {
     return { customerSent, companySent };
   }
 
-  private async sendCompanyCancellationNotification(booking: BookingWithRelations, reason?: string): Promise<boolean> {
+  private async sendCompanyCancellationNotification(
+    booking: BookingWithRelations,
+    reason?: string,
+    forceResend: boolean = false
+  ): Promise<boolean> {
     const full = await this.ensureBookingForEmail(booking);
     const data = this.formatBookingData(full, {});
     const companyCancellationData = data as typeof data & {
@@ -452,27 +573,44 @@ export class EmailService {
     const html = this.renderTemplate('company-confirmed', data);
 
     const companyRecipients = [...this.companyEmails];
-    const logs = await Promise.all(
-      companyRecipients.map((email) =>
-        this.createEmailLog(booking.id, EmailType.CANCELLED, email, subject)
-      )
+    const pendingRecipients = await this.getRecipientsNeedingEmail(
+      booking.id,
+      EmailType.CANCELLED,
+      companyRecipients,
+      forceResend
     );
 
+    if (pendingRecipients.length === 0) {
+      console.log(`[Email] Company cancellation email already sent to all recipients for booking ${booking.id}`);
+      return true;
+    }
+
     const result = await this.sendMail({
-      to: companyRecipients,
+      to: pendingRecipients,
       subject,
       html,
       context: 'cancellation-company',
     });
     if (result.success) {
-      for (const log of logs) {
-        await this.updateEmailLog(log.id, EmailStatus.SENT, result.messageId);
-      }
+      await this.logEmailResultForRecipients(
+        booking.id,
+        EmailType.CANCELLED,
+        pendingRecipients,
+        subject,
+        EmailStatus.SENT,
+        result.messageId
+      );
       return true;
     }
-    for (const log of logs) {
-      await this.updateEmailLog(log.id, EmailStatus.FAILED, undefined, result.error);
-    }
+    await this.logEmailResultForRecipients(
+      booking.id,
+      EmailType.CANCELLED,
+      pendingRecipients,
+      subject,
+      EmailStatus.FAILED,
+      undefined,
+      result.error
+    );
     throw new Error(result.error);
   }
 
@@ -974,61 +1112,45 @@ export class EmailService {
       subject,
     });
 
-    // Check idempotency for all emails
-    if (!forceResend) {
-      const allSent = await Promise.all(
-        companyRecipients.map(email =>
-          prisma.emailLog.findFirst({
-            where: {
-              bookingId: booking.id,
-              type: EmailType.COMPANY_NOTIFICATION,
-              to: email,
-              status: EmailStatus.SENT,
-            },
-          })
-        )
-      );
+    const pendingRecipients = await this.getRecipientsNeedingEmail(
+      booking.id,
+      EmailType.COMPANY_NOTIFICATION,
+      companyRecipients,
+      forceResend
+    );
 
-      if (allSent.every(log => log !== null)) {
-        console.log(`Company notification already sent to all recipients for booking ${booking.id}`);
-        return true;
-      }
+    if (pendingRecipients.length === 0) {
+      console.log(`Company notification already sent to all recipients for booking ${booking.id}`);
+      return true;
     }
 
     const result = await this.sendMail({
-      to: companyRecipients,
+      to: pendingRecipients,
       subject,
       html,
       context: 'company-notification',
     });
 
     if (result.success) {
-      await Promise.all(
-        companyRecipients.map(email =>
-          this.createEmailLog(
-            booking.id,
-            EmailType.COMPANY_NOTIFICATION,
-            email,
-            subject
-          ).then(log =>
-            this.updateEmailLog(log.id, EmailStatus.SENT, result.messageId)
-          )
-        )
+      await this.logEmailResultForRecipients(
+        booking.id,
+        EmailType.COMPANY_NOTIFICATION,
+        pendingRecipients,
+        subject,
+        EmailStatus.SENT,
+        result.messageId
       );
       return true;
     }
 
-    await Promise.all(
-      companyRecipients.map(email =>
-        this.createEmailLog(
-          booking.id,
-          EmailType.COMPANY_NOTIFICATION,
-          email,
-          subject
-        ).then(log =>
-          this.updateEmailLog(log.id, EmailStatus.FAILED, undefined, result.error)
-        )
-      )
+    await this.logEmailResultForRecipients(
+      booking.id,
+      EmailType.COMPANY_NOTIFICATION,
+      pendingRecipients,
+      subject,
+      EmailStatus.FAILED,
+      undefined,
+      result.error
     );
     return false;
   }

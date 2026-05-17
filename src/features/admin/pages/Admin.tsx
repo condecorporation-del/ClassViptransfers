@@ -1,15 +1,18 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLanguage } from '@/shared/providers/LanguageContext';
 import {
-  DollarSign, CalendarCheck, LogOut, Mail, LayoutDashboard, PlusCircle,
+  CalendarCheck, LogOut, Mail, LayoutDashboard, PlusCircle,
   TrendingUp, Clock, AlertCircle, CheckCircle2, CreditCard, Banknote, Send,
   MoreHorizontal, User, Plane, StickyNote, X,
   Paperclip, Truck, ChevronRight, Pencil, Check,
+  BarChart2, Megaphone, Users, Settings,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/features/admin/hooks/useAdminAuth';
 import { PricingManager } from '@/features/admin/components/PricingManager';
 import { AdminBookings } from '@/features/admin/components/AdminBookings';
+import { FinanzasTab } from '@/features/admin/components/FinanzasTab';
+import { MarketingTab } from '@/features/admin/components/MarketingTab';
+import { RRHHTab } from '@/features/admin/components/RRHHTab';
 import { getApiBaseUrl } from '@/shared/lib/api';
 import { cloudinaryAssets } from '@/shared/lib/cloudinary-assets';
 
@@ -18,7 +21,7 @@ const apiUrl = (path: string) => {
   return base ? `${base}${path}` : path;
 };
 
-type Tab = 'dashboard' | 'bookings' | 'pricing' | 'new-booking';
+type Tab = 'dashboard' | 'bookings' | 'pricing' | 'new-booking' | 'finanzas' | 'marketing' | 'rrhh';
 
 type DashboardBookingRecord = {
   id: string;
@@ -93,12 +96,6 @@ function DashboardTab() {
       return `${String(parseInt(h24Match[1], 10)).padStart(2, '0')}:${h24Match[2]}`;
     }
     return '';
-  };
-
-  const formatOperationalTime = (kind: 'ARR' | 'DEP', time: string): string => {
-    const inputFmt = formatTimeForInput(time);
-    if (!inputFmt) return `${kind} --:--`;
-    return `${kind} ${inputFmt}`;
   };
 
   const fetchTodayServices = async () => {
@@ -290,7 +287,7 @@ function DashboardTab() {
             </p>
             {i === 0 && (
               <p className="text-[10px] mt-1 text-gold/80 font-semibold uppercase tracking-wide">
-                Tap to view today services
+                Tap to view today's services
               </p>
             )}
           </motion.div>
@@ -298,36 +295,52 @@ function DashboardTab() {
       </div>
 
       {showTodayServices && (
-        <div className="rounded-2xl border border-gold/20 bg-white/80 backdrop-blur-sm p-4 md:p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display text-xl font-bold text-foreground">Today Services</h3>
+        <div className="rounded-2xl border border-gold/20 bg-white/90 backdrop-blur-sm p-4 md:p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-display text-lg font-bold text-foreground">Today's Services</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+            </div>
             <button
               type="button"
               onClick={() => setShowTodayServices(false)}
-              className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-lg hover:bg-muted/50 transition-colors"
             >
-              Close
+              <X size={12} /> Close
             </button>
           </div>
           {servicesLoading ? (
-            <p className="text-sm text-muted-foreground">Loading services…</p>
+            <div className="flex items-center gap-2 py-6 justify-center text-muted-foreground text-sm">
+              <div className="w-4 h-4 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
+              Loading…
+            </div>
           ) : todayServices.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No services found for today.</p>
+            <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
+              <CalendarCheck size={28} className="text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">No transfers scheduled for today.</p>
+            </div>
           ) : (
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               {todayServices.map((s) => (
-                <div key={s.id} className="rounded-xl border border-border/70 bg-card p-3">
-                  <div className="flex items-start gap-3">
-                    <div className="min-w-[84px] text-left">
-                      <p className="font-display text-xl leading-none font-bold text-gold">
-                        {formatOperationalTime(s.serviceKind, s.time)}
+                <div key={s.id} className="rounded-xl border border-border/60 bg-white p-3.5 shadow-sm">
+                  <div className="flex items-start gap-3.5">
+                    <div className="flex flex-col items-center gap-1.5 min-w-[52px]">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                        s.serviceKind === 'ARR'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {s.serviceKind}
+                      </span>
+                      <p className="font-mono text-base leading-none font-bold text-foreground">
+                        {formatTimeForInput(s.bookingTimeRaw) || '--:--'}
                       </p>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-foreground">{s.customerName}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-semibold text-foreground leading-tight">{s.customerName}</p>
                         {editingServiceId === s.id ? (
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 shrink-0">
                             <input
                               type="time"
                               value={editingTime}
@@ -356,16 +369,16 @@ function DashboardTab() {
                           <button
                             type="button"
                             onClick={() => startEditingServiceTime(s.id, s.bookingTimeRaw)}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                            className="inline-flex items-center gap-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground shrink-0"
                             title="Change time"
                           >
-                            <Pencil size={12} />
-                            Edit time
+                            <Pencil size={11} />
+                            Edit
                           </button>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">{s.serviceLabel}</p>
-                      <p className="text-xs text-muted-foreground/80 mt-1">{s.location}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{s.serviceLabel}</p>
+                      <p className="text-xs text-muted-foreground/60 mt-0.5 truncate">{s.location}</p>
                     </div>
                   </div>
                 </div>
@@ -573,13 +586,13 @@ function QuickBookingTab() {
   const isOpenService = form.tripType === 'open';
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-3xl">
       {/* Page header */}
       <div className="mb-8">
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gold mb-1">New Reservation</p>
         <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">Quick Booking</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {isOpenService ? 'Custom service invoice with Stripe payment link.' : 'Manual reservation — private transfer.'}
+          {isOpenService ? 'Custom service — send Stripe link or confirm manually.' : 'Manual reservation — private airport transfer.'}
         </p>
       </div>
 
@@ -622,7 +635,7 @@ function QuickBookingTab() {
         <FormSection title="Service Type" icon={<Truck size={14} />}>
           <div className="mb-4">
             <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-2">Service Type *</p>
-            <div className="flex rounded-xl border border-border overflow-hidden">
+            <div className="flex rounded-xl border border-border overflow-hidden bg-muted/30">
               {([
                 { id: 'oneway', label: 'One Way' },
                 { id: 'roundtrip', label: 'Round Trip' },
@@ -630,10 +643,10 @@ function QuickBookingTab() {
               ] as const).map(t => (
                 <button key={t.id} type="button"
                   onClick={() => setForm(p => ({ ...p, tripType: t.id }))}
-                  className={`flex-1 py-2.5 text-sm font-semibold transition-all ${
+                  className={`flex-1 py-3 text-sm font-bold transition-all ${
                     form.tripType === t.id
-                      ? 'bg-[hsl(var(--navy))] text-gold'
-                      : 'bg-background text-muted-foreground hover:bg-muted/70'
+                      ? 'bg-[hsl(var(--navy))] text-gold shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                   }`}
                 >
                   {t.label}
@@ -648,15 +661,13 @@ function QuickBookingTab() {
                 <QField label="Hotel / Property / Destination *" value={form.hotelName} onChange={f('hotelName')} placeholder="Pueblo Bonito, Villa Serena…" />
                 <QField label="Passengers" type="number" value={form.passengers} onChange={f('passengers')} />
               </div>
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-2">Price (USD)</p>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">$</span>
-                    <input type="number" value={form.priceUsd} onChange={e => setForm(p => ({ ...p, priceUsd: e.target.value }))}
-                      placeholder="0.00" min="0" step="0.01"
-                      className="w-full pl-7 pr-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold/50 transition-all" />
-                  </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-2">Price (USD)</p>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-semibold">$</span>
+                  <input type="number" value={form.priceUsd} onChange={e => setForm(p => ({ ...p, priceUsd: e.target.value }))}
+                    placeholder="0.00" min="0" step="0.01"
+                    className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold/50 transition-all" />
                 </div>
               </div>
             </>
@@ -800,6 +811,12 @@ function QuickBookingTab() {
               <span>Client receives a Stripe payment link by email. Booking confirmed automatically when payment is completed.</span>
             </div>
           )}
+          {paymentMethod === 'stripe' && (!form.priceUsd || parseFloat(form.priceUsd) <= 0) && (
+            <div className="mt-2 flex items-start gap-2.5 p-3 rounded-xl bg-amber-50/80 border border-amber-200/70 text-amber-700 text-xs">
+              <AlertCircle size={13} className="mt-0.5 shrink-0" />
+              <span>A price greater than $0 is required to generate a Stripe payment link.</span>
+            </div>
+          )}
           {paymentMethod === 'cash' && (
             <div className="mt-3 flex items-start gap-2.5 p-3 rounded-xl bg-emerald-50/80 border border-emerald-200/70 text-emerald-700 text-xs">
               <Banknote size={13} className="mt-0.5 shrink-0" />
@@ -866,16 +883,18 @@ function QField({
 // ─── Admin Shell ──────────────────────────────────────────────────────────────
 
 const Admin = () => {
-  const { t } = useLanguage();
   const { email, logout } = useAdminAuth();
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [mobileMenu, setMobileMenu] = useState(false);
 
-  const sidebarItems: Array<{ id: Tab; label: string; icon: React.ReactNode; mobileLabel?: string }> = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={17} />, mobileLabel: 'Home' },
-    { id: 'bookings', label: t('admin.sidebar.bookings'), icon: <CalendarCheck size={17} /> },
-    { id: 'new-booking', label: 'Quick Booking', icon: <PlusCircle size={17} />, mobileLabel: 'New' },
-    { id: 'pricing', label: t('admin.sidebar.pricing'), icon: <DollarSign size={17} /> },
+  const sidebarItems: Array<{ id: Tab; label: string; icon: React.ReactNode; mobileLabel?: string; group?: string }> = [
+    { id: 'dashboard',   label: 'Dashboard',         icon: <LayoutDashboard size={17} />, mobileLabel: 'Home',    group: 'OPERACIONES' },
+    { id: 'bookings',    label: 'Reservaciones',      icon: <CalendarCheck size={17} />,   mobileLabel: 'Res.',    group: 'OPERACIONES' },
+    { id: 'new-booking', label: 'Nueva Reserva',      icon: <PlusCircle size={17} />,      mobileLabel: 'Nueva',   group: 'OPERACIONES' },
+    { id: 'finanzas',    label: 'Finanzas',           icon: <BarChart2 size={17} />,       mobileLabel: 'Fin.',    group: 'ANALYTICS' },
+    { id: 'marketing',   label: 'Marketing',          icon: <Megaphone size={17} />,       mobileLabel: 'Mkt.',    group: 'ANALYTICS' },
+    { id: 'rrhh',        label: 'Recursos Humanos',   icon: <Users size={17} />,           mobileLabel: 'RRHH',    group: 'EQUIPO' },
+    { id: 'pricing',     label: 'Configuración',      icon: <Settings size={17} />,        mobileLabel: 'Config',  group: 'EQUIPO' },
   ];
 
   const activeLabel = sidebarItems.find(s => s.id === activeTab)?.label || 'Admin';
@@ -907,25 +926,32 @@ const Admin = () => {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-white/95 backdrop-blur-xl"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="flex items-center justify-around h-[58px]">
-          {sidebarItems.map(item => (
-            <button key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all ${
-                activeTab === item.id ? 'text-gold' : 'text-muted-foreground'
-              }`}
-            >
-              <span className={`p-1 rounded-lg transition-all ${activeTab === item.id ? 'bg-gold/10' : ''}`}>
-                {item.icon}
-              </span>
-              <span className={`text-[9px] font-bold uppercase tracking-wide ${activeTab === item.id ? 'text-gold' : 'text-muted-foreground/70'}`}>
-                {item.mobileLabel || item.label}
-              </span>
-            </button>
-          ))}
+          {(['dashboard', 'bookings', 'new-booking', 'finanzas', 'rrhh'] as Tab[]).map(tabId => {
+            const item = sidebarItems.find(s => s.id === tabId)!;
+            return (
+              <button key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all ${
+                  activeTab === item.id ? 'text-gold' : 'text-muted-foreground'
+                }`}
+              >
+                <span className={`p-1 rounded-lg transition-all ${activeTab === item.id ? 'bg-gold/10' : ''}`}>
+                  {item.icon}
+                </span>
+                <span className={`text-[9px] font-bold uppercase tracking-wide ${activeTab === item.id ? 'text-gold' : 'text-muted-foreground/70'}`}>
+                  {item.mobileLabel || item.label}
+                </span>
+              </button>
+            );
+          })}
           <button onClick={() => setMobileMenu(true)}
             className="flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl text-muted-foreground">
-            <span className="p-1 rounded-lg"><MoreHorizontal size={17} /></span>
-            <span className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground/70">More</span>
+            <span className={`p-1 rounded-lg transition-all ${(['marketing', 'pricing'].includes(activeTab)) ? 'bg-gold/10' : ''}`}>
+              <MoreHorizontal size={17} className={['marketing', 'pricing'].includes(activeTab) ? 'text-gold' : ''} />
+            </span>
+            <span className={`text-[9px] font-bold uppercase tracking-wide ${['marketing', 'pricing'].includes(activeTab) ? 'text-gold' : 'text-muted-foreground/70'}`}>
+              {['marketing', 'pricing'].includes(activeTab) ? sidebarItems.find(s => s.id === activeTab)?.mobileLabel : 'Más'}
+            </span>
           </button>
         </div>
       </nav>
@@ -1010,32 +1036,41 @@ const Admin = () => {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/25 px-3 pt-3 pb-2">Navigation</p>
-          {sidebarItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group ${
-                activeTab === item.id
-                  ? 'text-gold'
-                  : 'text-white/50 hover:text-white hover:bg-white/6'
-              }`}
-              style={activeTab === item.id ? {
-                background: 'linear-gradient(to right, rgba(212,175,55,0.12), rgba(212,175,55,0.04))',
-                borderLeft: '2px solid hsl(42 78% 50%)',
-                paddingLeft: '10px',
-              } : undefined}
-            >
-              <span className={`transition-colors ${activeTab === item.id ? 'text-gold' : 'text-white/30 group-hover:text-white/60'}`}>
-                {item.icon}
-              </span>
-              <span>{item.label}</span>
-              {activeTab === item.id && (
-                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-gold" />
-              )}
-            </button>
-          ))}
+        <nav className="flex-1 p-3 overflow-y-auto">
+          {(['OPERACIONES', 'ANALYTICS', 'EQUIPO'] as const).map((group) => {
+            const groupItems = sidebarItems.filter(i => i.group === group);
+            return (
+              <div key={group} className="mb-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/25 px-3 pt-3 pb-2">{group}</p>
+                <div className="space-y-0.5">
+                  {groupItems.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group ${
+                        activeTab === item.id
+                          ? 'text-gold'
+                          : 'text-white/50 hover:text-white hover:bg-white/6'
+                      }`}
+                      style={activeTab === item.id ? {
+                        background: 'linear-gradient(to right, rgba(212,175,55,0.12), rgba(212,175,55,0.04))',
+                        borderLeft: '2px solid hsl(42 78% 50%)',
+                        paddingLeft: '10px',
+                      } : undefined}
+                    >
+                      <span className={`transition-colors ${activeTab === item.id ? 'text-gold' : 'text-white/30 group-hover:text-white/60'}`}>
+                        {item.icon}
+                      </span>
+                      <span>{item.label}</span>
+                      {activeTab === item.id && (
+                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-gold" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </nav>
 
         {/* User section */}
@@ -1109,6 +1144,12 @@ const Admin = () => {
               <PricingManager />
             </div>
           )}
+
+          {activeTab === 'finanzas' && <FinanzasTab />}
+
+          {activeTab === 'marketing' && <MarketingTab />}
+
+          {activeTab === 'rrhh' && <RRHHTab />}
         </motion.div>
       </div>
     </div>

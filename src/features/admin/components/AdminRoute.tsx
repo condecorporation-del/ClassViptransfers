@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAdminAuth } from '@/features/admin/hooks/useAdminAuth';
 import { Loader2 } from 'lucide-react';
 
@@ -9,13 +8,7 @@ interface AdminRouteProps {
 
 export const AdminRoute = ({ children }: AdminRouteProps) => {
   const { authenticated, loading } = useAdminAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading && !authenticated) {
-      navigate('/admin/login');
-    }
-  }, [authenticated, loading, navigate]);
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -26,7 +19,7 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
   }
 
   if (!authenticated) {
-    return null; // Will redirect
+    return <Navigate to="/admin/login" replace state={{ from: location }} />;
   }
 
   return <>{children}</>;

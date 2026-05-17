@@ -106,8 +106,11 @@ export class PdfService {
 
       const page = await browser.newPage();
       await page.setContent(html, {
-        waitUntil: 'networkidle0',
+        waitUntil: 'domcontentloaded',
         timeout: 20000,
+      });
+      await page.waitForNetworkIdle({ idleTime: 500, timeout: 10000 }).catch(() => {
+        // Non-fatal: continue if the page never reaches a fully idle network state.
       });
       const pdfBuffer = await page.pdf({
         format: 'A4',

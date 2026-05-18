@@ -399,17 +399,7 @@ const Book = () => {
       setBookingError(`${t('book.validation.incomplete')} ${t(sectionKey)}`);
       setCurrent(reviewValidation.firstInvalidStepIndex);
       return;
-    }
-
-    const apiBase = getApiBaseUrl();
-    if (!apiBase && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      setBookingError(lang === 'es' 
-        ? 'Error de configuración: Backend no configurado. Por favor contacta soporte.' 
-        : 'Configuration error: Backend not configured. Please contact support.');
-      return;
-    }
-
-    setCreatingBooking(true);
+    }setCreatingBooking(true);
     setBookingError(null);
 
     try {

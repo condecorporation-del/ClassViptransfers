@@ -12,6 +12,7 @@ const WHATSAPP_LINK = 'https://wa.me/5216241222174';
 const WHATSAPP_PHONE = '+52 624 122 2174';
 const IMESSAGE_LINK = 'sms:+15625551234'; // fallback SMS
 const EMAIL_LINK = 'mailto:Armando@classviptransfers.com';
+const EMAIL_ADDRESS = 'Armando@classviptransfers.com';
 const BOOK_FORM = '/book';
 
 interface Message {
@@ -124,8 +125,8 @@ export const ChatWidget = () => {
     setMessages(prev => [...prev, {
       id: Date.now().toString(), role: 'assistant',
       content: lang === 'es'
-        ? `No pude conectar. Contáctanos directamente:\n📱 WhatsApp: ${WHATSAPP_PHONE}\n📧 ${EMAIL}`
-        : `Could not connect. Contact us directly:\n📱 WhatsApp: ${WHATSAPP_PHONE}\n📧 ${EMAIL}`,
+        ? `No pude conectar con el asistente en este momento. Contactanos directamente:\nWhatsApp: ${WHATSAPP_PHONE}\nEmail: ${EMAIL_ADDRESS}`
+        : `I couldn''t reach the assistant right now. Contact us directly:\nWhatsApp: ${WHATSAPP_PHONE}\nEmail: ${EMAIL_ADDRESS}`,
       timestamp: new Date(), showBookingCta: true,
     }]);
   };
@@ -549,3 +550,4 @@ export const ChatWidget = () => {
     </>
   );
 };
+

@@ -75,8 +75,8 @@ Main variables:
 
 - `VITE_STRIPE_PUBLIC_KEY`
 - `VITE_API_BASE_URL`
-- `VITE_COMMIT_REF`
-- `VITE_CONTEXT`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
 ### Backend
 
@@ -99,19 +99,44 @@ Main variables used by the API:
 
 ## Current deployment direction
 
-- Frontend is prepared for Vercel deployment
-- Backend is exposed through Vercel Functions via `api/[...path].ts`
-- The backend has been split into `app.ts` + `server.ts` so local dev and Vercel serverless entry stay cleanly separated
-- `vercel.json` preserves filesystem routes first, so `/api/*` wins before the SPA fallback
-- Remaining work is staging verification, not platform selection
+- Frontend is designed for Vercel
+- Public catalog data can fall back to Supabase directly from the frontend:
+  - hotels
+  - areas
+  - zones
+  - pricing extras
+- Sensitive flows still belong on a backend API:
+  - booking creation
+  - Stripe payment intent / confirmation
+  - Stripe webhooks
+  - admin auth and admin mutations
+  - PDFs and email delivery
 
-The main staging checkpoints are:
+That means the current professional deployment shape is:
 
-- Prisma connection handling in serverless runtime
-- Stripe webhook delivery
-- bundling of the `backend/src/*` TypeScript graph into Vercel Functions
-- cookie/auth behavior on the deployed Vercel domain
-- PDF confirmation generation, because it relies on `puppeteer` and should be verified on Vercel Functions before treating the deploy as production-ready
+- Vercel for the frontend SPA
+- Supabase for PostgreSQL
+- backend API either:
+  - Vercel Functions after a Vercel-first refactor, or
+  - a dedicated backend host while the API remains Express-based
+
+## Recommended Vercel-first architecture
+
+If the goal is to run the whole product cleanly on Vercel over time, the next refactor should move the sensitive backend into smaller serverless endpoints instead of one large Express runtime.
+
+Recommended split:
+
+- Direct frontend reads from Supabase for public data
+- Vercel Functions for:
+  - /api/bookings
+  - /api/bookings/:id
+  - /api/stripe/create-payment-intent
+  - /api/stripe/confirm-payment
+  - /api/admin/auth/*
+  - /api/admin/bookings/*
+  - /api/admin/pricing/*
+
+This keeps the public site fast and cheap while leaving secure operations server-side.
 
 ## Notes
 
@@ -119,3 +144,4 @@ The main staging checkpoints are:
 - This repo has already gone through cleanup to remove dead pages, unused UI scaffolding, and old assets.
 - The new Supabase database currently contains a validated public hotel catalog of `252` active hotels.
 - Keep new work aligned with the current live site behavior unless a change is intentional.
+

@@ -74,9 +74,9 @@ Use the root `.env.example` as reference.
 Main variables:
 
 - `VITE_STRIPE_PUBLIC_KEY`
-- `VITE_API_BASE_URL`
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
+- `VITE_API_BASE_URL` only when the frontend must call another host. For a Vercel-only same-origin deployment, leave it empty.
 
 ### Backend
 
@@ -112,31 +112,25 @@ Main variables used by the API:
   - admin auth and admin mutations
   - PDFs and email delivery
 
-That means the current professional deployment shape is:
+That means the current deployment target is:
 
 - Vercel for the frontend SPA
+- Vercel Functions for the API entry
 - Supabase for PostgreSQL
-- backend API either:
-  - Vercel Functions after a Vercel-first refactor, or
-  - a dedicated backend host while the API remains Express-based
 
-## Recommended Vercel-first architecture
+## Vercel-first architecture
 
-If the goal is to run the whole product cleanly on Vercel over time, the next refactor should move the sensitive backend into smaller serverless endpoints instead of one large Express runtime.
-
-Recommended split:
+The repo is now aligned to this split:
 
 - Direct frontend reads from Supabase for public data
-- Vercel Functions for:
-  - /api/bookings
-  - /api/bookings/:id
-  - /api/stripe/create-payment-intent
-  - /api/stripe/confirm-payment
-  - /api/admin/auth/*
-  - /api/admin/bookings/*
-  - /api/admin/pricing/*
+- Vercel Functions for sensitive operations:
+  - booking creation and lookup
+  - Stripe payment intent creation and confirmation
+  - Stripe webhooks
+  - admin auth and admin mutations
+  - email and PDF generation
 
-This keeps the public site fast and cheap while leaving secure operations server-side.
+This keeps the public site fast while leaving secure operations server-side.
 
 ## Notes
 

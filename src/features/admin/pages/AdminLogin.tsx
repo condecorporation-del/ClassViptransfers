@@ -5,16 +5,11 @@ import { useLanguage } from '@/shared/providers/LanguageContext';
 import { getApiBaseUrl } from '@/shared/lib/api';
 import { cloudinaryAssets } from '@/shared/lib/cloudinary-assets';
 import { getErrorMessage } from '@/shared/lib/errors';
-import {
-  clearAdminToken,
-  readAdminToken,
-  writeAdminToken,
-} from '@/features/admin/lib/adminSession';
+import { clearAdminToken } from '@/features/admin/lib/adminSession';
 
 type AdminLoginResponse = {
   success?: boolean;
   error?: string;
-  token?: string;
 };
 
 type RouteState = {
@@ -40,14 +35,7 @@ export default function AdminLogin() {
     try {
       const base = getApiBaseUrl();
       const url = base ? `${base}/api/admin/auth/me` : '/api/admin/auth/me';
-      const localToken = readAdminToken();
-      const headers: Record<string, string> = {};
-
-      if (localToken) {
-        headers.Authorization = `Bearer ${localToken}`;
-      }
-
-      const response = await fetch(url, { credentials: 'include', headers });
+      const response = await fetch(url, { credentials: 'include' });
 
       if (!response.ok) {
         clearAdminToken();
@@ -62,8 +50,7 @@ export default function AdminLogin() {
       }
 
       clearAdminToken();
-    } catch (err) {
-      console.debug('[AdminLogin] checkAuth error:', err);
+    } catch {
       clearAdminToken();
     } finally {
       setCheckingAuth(false);
@@ -74,8 +61,8 @@ export default function AdminLogin() {
     void checkAuth();
   }, [checkAuth]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError(null);
     setLoading(true);
 
@@ -100,19 +87,16 @@ export default function AdminLogin() {
       }
 
       if (data.success) {
-        if (data.token) {
-          writeAdminToken(data.token);
-        }
         navigate(redirectTarget, { replace: true });
         return;
       }
 
       clearAdminToken();
       setError(data.error || 'Login failed');
-    } catch (error) {
-      const message = getErrorMessage(error, 'Network error');
+    } catch (caughtError) {
+      const message = getErrorMessage(caughtError, 'Network error');
 
-      if (message.includes('Failed to fetch') || error instanceof TypeError) {
+      if (message.includes('Failed to fetch') || caughtError instanceof TypeError) {
         const base = getApiBaseUrl();
         setError(
           lang === 'es'
@@ -127,11 +111,13 @@ export default function AdminLogin() {
     }
   };
 
-  const navyBg = { background: 'linear-gradient(135deg, #080f1e 0%, #0d1f3c 60%, #080f1e 100%)' };
+  const navyBackground = {
+    background: 'linear-gradient(135deg, #080f1e 0%, #0d1f3c 60%, #080f1e 100%)',
+  };
 
   if (checkingAuth) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center" style={navyBg}>
+      <div className="min-h-[100dvh] flex items-center justify-center" style={navyBackground}>
         <div className="text-center">
           <img
             src={cloudinaryAssets.logo}
@@ -148,7 +134,7 @@ export default function AdminLogin() {
     <div
       className="min-h-[100dvh] flex items-center justify-center relative overflow-hidden px-4 py-6"
       style={{
-        ...navyBg,
+        ...navyBackground,
         paddingTop: 'max(env(safe-area-inset-top, 0px), 1rem)',
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1rem)',
       }}
@@ -199,27 +185,27 @@ export default function AdminLogin() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-[11px] font-bold text-white/50 uppercase tracking-widest mb-2">
-                {lang === 'es' ? 'Correo Electrónico' : 'Email Address'}
+                {lang === 'es' ? 'Correo Electronico' : 'Email Address'}
               </label>
               <div className="relative">
                 <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gold/50" />
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(event) => setEmail(event.target.value)}
                   required
                   className="w-full pl-10 pr-4 py-3 rounded-xl text-white text-sm placeholder-white/25 focus:outline-none transition-all"
                   style={{
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.1)',
                   }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.border = '1px solid rgba(212,175,55,0.5)';
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(212,175,55,0.08)';
+                  onFocus={(event) => {
+                    event.currentTarget.style.border = '1px solid rgba(212,175,55,0.5)';
+                    event.currentTarget.style.boxShadow = '0 0 0 3px rgba(212,175,55,0.08)';
                   }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.border = '1px solid rgba(255,255,255,0.1)';
-                    e.currentTarget.style.boxShadow = 'none';
+                  onBlur={(event) => {
+                    event.currentTarget.style.border = '1px solid rgba(255,255,255,0.1)';
+                    event.currentTarget.style.boxShadow = 'none';
                   }}
                   placeholder="admin@classviptransfers.com"
                   disabled={loading}
@@ -229,29 +215,29 @@ export default function AdminLogin() {
 
             <div>
               <label className="block text-[11px] font-bold text-white/50 uppercase tracking-widest mb-2">
-                {lang === 'es' ? 'Contraseña' : 'Password'}
+                {lang === 'es' ? 'Contrasena' : 'Password'}
               </label>
               <div className="relative">
                 <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gold/50" />
                 <input
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(event) => setPassword(event.target.value)}
                   required
                   className="w-full pl-10 pr-4 py-3 rounded-xl text-white text-sm placeholder-white/25 focus:outline-none transition-all"
                   style={{
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.1)',
                   }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.border = '1px solid rgba(212,175,55,0.5)';
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(212,175,55,0.08)';
+                  onFocus={(event) => {
+                    event.currentTarget.style.border = '1px solid rgba(212,175,55,0.5)';
+                    event.currentTarget.style.boxShadow = '0 0 0 3px rgba(212,175,55,0.08)';
                   }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.border = '1px solid rgba(255,255,255,0.1)';
-                    e.currentTarget.style.boxShadow = 'none';
+                  onBlur={(event) => {
+                    event.currentTarget.style.border = '1px solid rgba(255,255,255,0.1)';
+                    event.currentTarget.style.boxShadow = 'none';
                   }}
-                  placeholder="••••••••"
+                  placeholder="********"
                   disabled={loading}
                 />
               </div>
@@ -285,11 +271,14 @@ export default function AdminLogin() {
             </button>
           </form>
 
-          <div className="mt-6 pt-5 border-t text-center" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+          <div
+            className="mt-6 pt-5 border-t text-center"
+            style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+          >
             <p className="text-[11px] text-white/25">
               {lang === 'es'
-                ? 'Solo personal autorizado · Class VIP Transfers'
-                : 'Authorized personnel only · Class VIP Transfers'}
+                ? 'Solo personal autorizado | Class VIP Transfers'
+                : 'Authorized personnel only | Class VIP Transfers'}
             </p>
           </div>
         </div>

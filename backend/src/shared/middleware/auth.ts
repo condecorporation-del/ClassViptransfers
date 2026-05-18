@@ -46,7 +46,6 @@ export const requireAdminAuth = (req: Request, res: Response, next: NextFunction
     const role = decoded.role || 'admin';
 
     if (role !== 'admin') {
-      console.log('[Auth] Access denied - insufficient role:', decoded.email, '| role:', role);
       return res.status(403).json({
         success: false,
         error: 'Admin access required',

@@ -107,7 +107,6 @@ export class AuthController {
 
       res.json({
         success: true,
-        token,
         data: {
           authenticated: true,
           email: user.email,

@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getApiBaseUrl } from '@/shared/lib/api';
-import {
-  clearAdminToken,
-  readAdminToken,
-} from '@/features/admin/lib/adminSession';
+import { clearAdminToken } from '@/features/admin/lib/adminSession';
 
 interface AuthState {
   authenticated: boolean;
@@ -21,18 +18,10 @@ export const useAdminAuth = () => {
   const navigate = useNavigate();
 
   const checkAuth = useCallback(async () => {
-    const localToken = readAdminToken();
-
     try {
       const base = getApiBaseUrl();
       const url = base ? `${base}/api/admin/auth/me` : '/api/admin/auth/me';
-      const headers: Record<string, string> = {};
-
-      if (localToken) {
-        headers.Authorization = `Bearer ${localToken}`;
-      }
-
-      const response = await fetch(url, { credentials: 'include', headers });
+      const response = await fetch(url, { credentials: 'include' });
 
       if (!response.ok) {
         clearAdminToken();
@@ -63,16 +52,7 @@ export const useAdminAuth = () => {
     try {
       const base = getApiBaseUrl();
       const url = base ? `${base}/api/admin/auth/logout` : '/api/admin/auth/logout';
-      const localToken = readAdminToken();
-      const headers: Record<string, string> = {};
-
-      if (localToken) {
-        headers.Authorization = `Bearer ${localToken}`;
-      }
-
-      await fetch(url, { method: 'POST', credentials: 'include', headers });
-    } catch (error) {
-      console.error('Logout error:', error);
+      await fetch(url, { method: 'POST', credentials: 'include' });
     } finally {
       clearAdminToken();
       setAuth({ authenticated: false, email: null, loading: false });
@@ -81,14 +61,7 @@ export const useAdminAuth = () => {
   }, [navigate]);
 
   const getAuthHeaders = useCallback(() => {
-    const localToken = readAdminToken();
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-
-    if (localToken) {
-      headers.Authorization = `Bearer ${localToken}`;
-    }
-
-    return headers;
+    return { 'Content-Type': 'application/json' };
   }, []);
 
   return { ...auth, checkAuth, logout, getAuthHeaders };

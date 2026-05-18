@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { SEO } from '@/features/marketing/components/SEO';
 import { getApiBaseUrl } from '@/shared/lib/api';
 import { ArrowRight, MapPin, Clock, Car, ChevronRight, Loader2, Star } from 'lucide-react';
+import { getPublicHotelDetailFromSupabase } from '@/shared/lib/public-data';
 
 interface HotelData {
   id: string;
@@ -49,7 +50,19 @@ export default function HotelPage() {
         setHotel(j.data);
         setStatus('found');
       })
-      .catch(() => setStatus('error'));
+      .catch(async () => {
+        try {
+          const fallbackHotel = await getPublicHotelDetailFromSupabase(slug);
+          if (!fallbackHotel) {
+            setStatus('notfound');
+            return;
+          }
+          setHotel(fallbackHotel);
+          setStatus('found');
+        } catch {
+          setStatus('error');
+        }
+      });
   }, [slug]);
 
   if (status === 'notfound') return <Navigate to="/transfers" replace />;

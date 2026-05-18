@@ -15,6 +15,7 @@ import { SEO } from '@/features/marketing/components/SEO';
 import { cloudinaryAssets } from '@/shared/lib/cloudinary-assets';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { includesNormalized } from '@/shared/lib/text';
+import { getPublicHotelsFromSupabase } from '@/shared/lib/public-data';
 
 const steps = ['info', 'details', 'extras', 'review'] as const;
 
@@ -244,7 +245,17 @@ const Book = () => {
         setHotels(data.length > 0 ? data : FALLBACK_HOTELS);
         setHotelsError(false);
       })
-      .catch(() => {
+      .catch(async () => {
+        try {
+          const fallbackHotels = await getPublicHotelsFromSupabase();
+          if (fallbackHotels.length > 0) {
+            setHotels(fallbackHotels);
+            setHotelsError(false);
+            return;
+          }
+        } catch {
+          // Ignore and fall back to static list below.
+        }
         setHotels(FALLBACK_HOTELS);
         setHotelsError(true);
       })

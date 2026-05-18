@@ -1,6 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { getApiBaseUrl } from '@/shared/lib/api';
 import { getErrorMessage } from '@/shared/lib/errors';
+import {
+  getPublicAreasFromSupabase,
+  getPublicExtrasFromSupabase,
+  getPublicRulesFromSupabase,
+  getPublicZonesFromSupabase,
+} from '@/shared/lib/public-data';
 
 export interface PricingRulePublic {
   zoneFrom: string;
@@ -75,7 +81,11 @@ export function usePricing() {
       const json = await response.json();
       return json.data ?? [];
     } catch {
-      return [];
+      try {
+        return await getPublicRulesFromSupabase();
+      } catch {
+        return [];
+      }
     }
   }, []);
 
@@ -86,7 +96,11 @@ export function usePricing() {
       const json = await response.json();
       return json.data ?? [];
     } catch {
-      return [];
+      try {
+        return await getPublicZonesFromSupabase();
+      } catch {
+        return [];
+      }
     }
   }, []);
 
@@ -125,7 +139,11 @@ export function usePricing() {
       const json = await response.json();
       return json.data ?? [];
     } catch {
-      return [];
+      try {
+        return await getPublicExtrasFromSupabase();
+      } catch {
+        return [];
+      }
     }
   }, []);
 
@@ -136,7 +154,11 @@ export function usePricing() {
       const json = await response.json();
       return json.data ?? [];
     } catch {
-      return [];
+      try {
+        return await getPublicAreasFromSupabase();
+      } catch {
+        return [];
+      }
     }
   }, []);
 

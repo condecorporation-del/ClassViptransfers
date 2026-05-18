@@ -1,25 +1,26 @@
 # Deploy Guide
 
-This project is being prepared for **Vercel-only** deployment.
+This project is prepared for **Vercel-only** deployment.
 
 That means:
 
 - frontend on Vercel
 - backend API on Vercel Functions
 - Stripe webhook on Vercel
+- public catalog reads directly from Supabase when appropriate
 
 ## Current Vercel-only shape
 
-The repo already has the basic pieces needed for a Vercel-only setup:
+The repo already has the core pieces needed for a Vercel-only setup:
 
-- `api/[...path].ts`
+- `api/index.ts`
 - `backend/src/app.ts`
 - `backend/src/server.ts`
 - `vercel.json`
 
 Current serverless entry:
 
-- `api/[...path].ts` exports the Express app from `backend/src/app.ts`
+- `api/index.ts` exports the Express app from `backend/src/app.ts`
 
 That is the path we are committing to.
 
@@ -54,13 +55,13 @@ Use one Vercel project from this repo root.
 
 The backend API is served by:
 
-- `api/[...path].ts`
+- `api/index.ts`
 
 The frontend SPA is still served from:
 
 - `dist`
 
-`vercel.json` already preserves filesystem routes first, so `/api/*` should resolve before SPA fallback.
+`vercel.json` already preserves filesystem routes first, so `/api/*` resolves before the SPA fallback.
 
 ## Environment variables for Vercel
 
@@ -68,14 +69,23 @@ Set these in the Vercel project.
 
 ### Frontend
 
-- `VITE_API_BASE_URL=https://your-vercel-domain.vercel.app`
 - `VITE_STRIPE_PUBLIC_KEY=pk_live_or_test_here`
+- `VITE_SUPABASE_URL=https://your-project-ref.supabase.co`
+- `VITE_SUPABASE_ANON_KEY=your_supabase_anon_key`
+
+Optional:
+
+- `VITE_API_BASE_URL=https://your-vercel-domain.vercel.app`
+
+Notes:
+
+- Leave `VITE_API_BASE_URL` empty or unset when frontend and API share the same Vercel deployment.
+- Set `VITE_API_BASE_URL` only if the frontend must temporarily call another backend host.
 
 ### Core backend
 
 - `NODE_ENV=production`
 - `DATABASE_URL=...`
-- `PORT=3001`
 - `FRONTEND_URL=https://your-vercel-domain.vercel.app`
 - `BACKEND_URL=https://your-vercel-domain.vercel.app`
 
@@ -88,7 +98,7 @@ Set these in the Vercel project.
 Recommended:
 
 - use `ALLOW_VERCEL_PREVIEW_ORIGINS=true` while testing preview deployments
-- once the final production domain is stable, you can tighten this if desired
+- once the final production domain is stable, tighten this if you want stricter CORS
 
 ### Admin auth
 
@@ -180,14 +190,22 @@ After the first Vercel deploy, verify:
 14. confirmation emails
 15. Stripe webhook confirmation path
 
-## What is still open
+## Final architecture target
 
-Even with Vercel-only chosen, this is not "done" until:
+For a clean Vercel-first production setup:
 
-- staging smoke test passes
-- mobile QA passes
-- admin QA passes
-- booking QA passes
-- email QA passes
-- webhook QA passes
-- final visual pass passes
+- public reads:
+  - hotels
+  - areas
+  - zones
+  - extras
+  come from Supabase-friendly frontend reads
+
+- sensitive writes and operations:
+  - booking creation
+  - payment intent creation
+  - payment confirmation
+  - admin auth
+  - admin mutations
+  - email / PDF / webhook handling
+  stay server-side

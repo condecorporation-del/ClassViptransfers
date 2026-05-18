@@ -126,7 +126,7 @@ export const ChatWidget = () => {
       id: Date.now().toString(), role: 'assistant',
       content: lang === 'es'
         ? `No pude conectar con el asistente en este momento. Contactanos directamente:\nWhatsApp: ${WHATSAPP_PHONE}\nEmail: ${EMAIL_ADDRESS}`
-        : `I couldn''t reach the assistant right now. Contact us directly:\nWhatsApp: ${WHATSAPP_PHONE}\nEmail: ${EMAIL_ADDRESS}`,
+        : `I couldn't reach the assistant right now. Contact us directly:\nWhatsApp: ${WHATSAPP_PHONE}\nEmail: ${EMAIL_ADDRESS}`,
       timestamp: new Date(), showBookingCta: true,
     }]);
   };

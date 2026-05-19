@@ -154,6 +154,9 @@ function resolvePaymentFields(
 type EmailProvider = 'nodemailer' | 'resend' | null;
 
 export class EmailService {
+  private static warnedMissingCompanyEmail = false;
+  private static warnedMissingProvider = false;
+  private static warnedMissingCompanyRecipients = false;
   private nodemailerTransport: Transporter | null = null;
   private resend: Resend | null = null;
   private provider: EmailProvider = null;
@@ -170,7 +173,10 @@ export class EmailService {
   constructor() {
     const companyEmailRaw = process.env.COMPANY_BOOKINGS_EMAIL || process.env.EMAIL_COMPANY_TO || '';
     if (!companyEmailRaw) {
-      console.warn('[Email] COMPANY_BOOKINGS_EMAIL is not set. Company notifications will be skipped.');
+      if (!EmailService.warnedMissingCompanyEmail) {
+        console.warn('[Email] COMPANY_BOOKINGS_EMAIL is not set. Company notifications will be skipped.');
+        EmailService.warnedMissingCompanyEmail = true;
+      }
     }
     this.companyEmails = companyEmailRaw.split(',').map(e => e.trim()).filter(Boolean);
 
@@ -198,12 +204,18 @@ export class EmailService {
         this.resend = new Resend(apiKey);
         console.log('[Email] Resend OK (fallback). From:', this.fromEmail, '| Company:', this.companyEmails.join(', '));
       } else {
-        console.warn('[Email] No email provider configured. Set GMAIL_USER + GMAIL_APP_PASSWORD, or RESEND_API_KEY.');
+        if (!EmailService.warnedMissingProvider) {
+          console.warn('[Email] No email provider configured. Set GMAIL_USER + GMAIL_APP_PASSWORD, or RESEND_API_KEY.');
+          EmailService.warnedMissingProvider = true;
+        }
       }
     }
 
     if (this.companyEmails.length === 0) {
-      console.warn('[Email] No company emails configured');
+      if (!EmailService.warnedMissingCompanyRecipients) {
+        console.warn('[Email] No company emails configured');
+        EmailService.warnedMissingCompanyRecipients = true;
+      }
     }
 
     this.frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';

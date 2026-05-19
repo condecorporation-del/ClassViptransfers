@@ -5,6 +5,7 @@ import { prisma } from '../../../shared/lib/prisma';
 import { createAuditLog } from '../../../shared/lib/audit';
 import { z } from 'zod';
 import { getErrorMessage } from '../../../shared/lib/errors';
+import { getAdminCookieOptions } from '../../../shared/lib/admin-cookie';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email'),
@@ -87,14 +88,7 @@ export class AuthController {
         { expiresIn: '7d' }
       );
 
-      const isProduction = process.env.NODE_ENV === 'production';
-      res.cookie('admin_token', token, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? 'none' : 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: '/',
-      });
+      res.cookie('admin_token', token, getAdminCookieOptions());
 
       await createAuditLog({
         action: 'CREATE',
@@ -126,12 +120,7 @@ export class AuthController {
     try {
       const adminEmail = req.adminEmail;
 
-      res.clearCookie('admin_token', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        path: '/',
-      });
+      res.clearCookie('admin_token', getAdminCookieOptions());
 
       if (adminEmail) {
         await createAuditLog({

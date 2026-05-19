@@ -4,6 +4,7 @@ import { BookingService } from '../../booking/services/booking.service';
 import { EmailService } from '../../booking/services/email.service';
 import { PdfService } from '../../booking/services/pdf.service';
 import { DriverVehicleService } from '../../booking/services/driver-vehicle.service';
+import { ClientAccountsService } from '../services/client-accounts.service';
 import {
   listBookingsSchema,
   exportBookingsSchema,
@@ -11,6 +12,9 @@ import {
   assignBookingSchemaExtended,
   createDriverSchema,
   createVehicleSchema,
+  createClientAccountSchema,
+  createAccountChargeSchema,
+  createAccountPaymentSchema,
   manualBookingSchema,
   updateBookingSchema,
 } from '../../../shared/lib/validation';
@@ -22,6 +26,7 @@ const bookingService = new BookingService();
 const emailService = new EmailService();
 const pdfService = new PdfService();
 const driverVehicleService = new DriverVehicleService();
+const clientAccountsService = new ClientAccountsService();
 type PreviewBooking = Parameters<EmailService['getFormatBookingData']>[0];
 
 export class AdminController {
@@ -73,7 +78,7 @@ export class AdminController {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const [bookingsToday, emailsSentToday, pendingCount] = await Promise.all([
+    const [bookingsToday, emailsSentToday, pendingCount, accountsSummary] = await Promise.all([
       prisma.booking.count({
         where: {
           bookingDate: { gte: today, lt: tomorrow },
@@ -89,6 +94,12 @@ export class AdminController {
       prisma.booking.count({
         where: { status: { in: ['DRAFT', 'PENDING_PAYMENT'] } },
       }),
+      clientAccountsService.getAccountsSummary().catch(() => ({
+        totalAccounts: 0,
+        openAccounts: 0,
+        outstandingBalanceCents: 0,
+        settledAccounts: 0,
+      })),
     ]);
 
     const revenueResult = await prisma.booking.aggregate({
@@ -107,6 +118,7 @@ export class AdminController {
         emailsSentToday,
         pendingCount,
         revenueToday: (revenueCents / 100).toFixed(2),
+        accounts: accountsSummary,
       },
     });
   }
@@ -123,6 +135,8 @@ export class AdminController {
     todayEnd.setDate(todayEnd.getDate() + 1);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const last7Start = new Date(todayStart);
+    last7Start.setDate(last7Start.getDate() - 6);
 
     const [
       totalToday,
@@ -131,6 +145,8 @@ export class AdminController {
       revenueMonthResult,
       bookingsTodayList,
       bookingsRecentList,
+      bookingsLast7,
+      accountsSummary,
     ] = await Promise.all([
       prisma.booking.count({
         where: {
@@ -172,7 +188,61 @@ export class AdminController {
         include: { customer: true, items: true },
         take: 20,
       }),
+      prisma.booking.findMany({
+        where: {
+          bookingDate: { gte: last7Start, lt: todayEnd },
+        },
+        select: {
+          id: true,
+          bookingDate: true,
+          totalAmount: true,
+          status: true,
+          dropoffLocation: true,
+          pickupLocation: true,
+          tripType: true,
+        },
+      }),
+      clientAccountsService.getAccountsSummary().catch(() => ({
+        totalAccounts: 0,
+        openAccounts: 0,
+        outstandingBalanceCents: 0,
+        settledAccounts: 0,
+      })),
     ]);
+
+    const bookingsByDayMap = new Map<string, { date: string; bookings: number; revenueCents: number }>();
+    for (let i = 0; i < 7; i += 1) {
+      const date = new Date(last7Start);
+      date.setDate(last7Start.getDate() + i);
+      const key = date.toISOString().slice(0, 10);
+      bookingsByDayMap.set(key, { date: key, bookings: 0, revenueCents: 0 });
+    }
+
+    for (const booking of bookingsLast7) {
+      const key = booking.bookingDate.toISOString().slice(0, 10);
+      const existing = bookingsByDayMap.get(key);
+      if (!existing) continue;
+      existing.bookings += booking.status === 'CANCELLED' ? 0 : 1;
+      if (['PAID', 'CONFIRMED', 'COMPLETED'].includes(booking.status)) {
+        existing.revenueCents += booking.totalAmount;
+      }
+    }
+
+    const statusCounts = bookingsLast7.reduce<Record<string, number>>((acc, booking) => {
+      acc[booking.status] = (acc[booking.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    const topRoutesMap = bookingsLast7.reduce<Map<string, number>>((acc, booking) => {
+      const route = `${booking.pickupLocation || 'Pickup'} → ${booking.dropoffLocation || 'Destination'}`;
+      acc.set(route, (acc.get(route) || 0) + 1);
+      return acc;
+    }, new Map());
+
+    const topRoutes = [...topRoutesMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([route, count]) => ({ route, count }));
 
     res.json({
       success: true,
@@ -183,8 +253,115 @@ export class AdminController {
         revenueMonth: ((revenueMonthResult._sum.totalAmount || 0) / 100).toFixed(2),
         bookingsToday: bookingsTodayList,
         bookingsRecent: bookingsRecentList,
+        trends: {
+          last7Days: [...bookingsByDayMap.values()].map((entry) => ({
+            ...entry,
+            revenue: Number((entry.revenueCents / 100).toFixed(2)),
+            label: new Date(`${entry.date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          })),
+          statusCounts,
+          topRoutes,
+        },
+        accounts: accountsSummary,
       },
     });
+  }
+
+  async listClientAccounts(req: Request, res: Response) {
+    const accounts = await clientAccountsService.listAccounts();
+    res.json({ success: true, data: accounts });
+  }
+
+  async getClientAccount(req: Request, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    if (!id) return res.status(400).json({ error: 'Account ID is required' });
+
+    try {
+      const account = await clientAccountsService.getAccountById(id);
+      res.json({ success: true, data: account });
+    } catch (error) {
+      res.status(404).json({ success: false, error: getErrorMessage(error) });
+    }
+  }
+
+  async createClientAccount(req: Request, res: Response) {
+    try {
+      const input = createClientAccountSchema.parse(req.body);
+      const account = await clientAccountsService.createAccount(input, req.adminEmail);
+      await createAuditLog({
+        action: 'CREATE',
+        entityType: 'ClientAccount',
+        entityId: account.id,
+        userEmail: req.adminEmail,
+        description: `Created client account ${account.name}`,
+      });
+      res.status(201).json({ success: true, data: account });
+    } catch (error) {
+      res.status(400).json({ success: false, error: getErrorMessage(error) });
+    }
+  }
+
+  async createAccountCharge(req: Request, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    if (!id) return res.status(400).json({ error: 'Account ID is required' });
+
+    try {
+      const input = createAccountChargeSchema.parse(req.body);
+      const charge = await clientAccountsService.addCharge(id, input, req.adminEmail);
+      await createAuditLog({
+        action: 'CREATE',
+        entityType: 'AccountCharge',
+        entityId: charge.id,
+        userEmail: req.adminEmail,
+        description: `Added account charge to ${id}`,
+      });
+      res.status(201).json({ success: true, data: charge });
+    } catch (error) {
+      res.status(400).json({ success: false, error: getErrorMessage(error) });
+    }
+  }
+
+  async attachBookingToAccount(req: Request, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    if (!id) return res.status(400).json({ error: 'Account ID is required' });
+
+    try {
+      const bookingId = typeof req.body?.bookingId === 'string' ? req.body.bookingId : '';
+      if (!bookingId) {
+        return res.status(400).json({ success: false, error: 'bookingId is required' });
+      }
+      const charge = await clientAccountsService.attachBooking(id, bookingId, req.adminEmail);
+      await createAuditLog({
+        action: 'CREATE',
+        entityType: 'AccountCharge',
+        entityId: charge.id,
+        userEmail: req.adminEmail,
+        description: `Attached booking ${bookingId} to account ${id}`,
+      });
+      res.status(201).json({ success: true, data: charge });
+    } catch (error) {
+      res.status(400).json({ success: false, error: getErrorMessage(error) });
+    }
+  }
+
+  async createAccountPayment(req: Request, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    if (!id) return res.status(400).json({ error: 'Account ID is required' });
+
+    try {
+      const input = createAccountPaymentSchema.parse(req.body);
+      const payment = await clientAccountsService.addPayment(id, input, req.adminEmail);
+      await createAuditLog({
+        action: 'PAYMENT',
+        entityType: 'ClientAccount',
+        entityId: id,
+        userEmail: req.adminEmail,
+        description: `Recorded account payment for ${id}`,
+      });
+      res.status(201).json({ success: true, data: payment });
+    } catch (error) {
+      res.status(400).json({ success: false, error: getErrorMessage(error) });
+    }
   }
 
   /**

@@ -11,6 +11,8 @@ import { useAdminAuth } from '@/features/admin/hooks/useAdminAuth';
 import { PricingManager } from '@/features/admin/components/PricingManager';
 import { AdminBookings } from '@/features/admin/components/AdminBookings';
 import { FinanzasTab } from '@/features/admin/components/FinanzasTab';
+import { DashboardOverviewTab } from '@/features/admin/components/DashboardOverviewTab';
+import { AccountsTab } from '@/features/admin/components/AccountsTab';
 import { MarketingTab } from '@/features/admin/components/MarketingTab';
 import { RRHHTab } from '@/features/admin/components/RRHHTab';
 import { getApiBaseUrl } from '@/shared/lib/api';
@@ -21,386 +23,13 @@ const apiUrl = (path: string) => {
   return base ? `${base}${path}` : path;
 };
 
-type Tab = 'dashboard' | 'bookings' | 'pricing' | 'new-booking' | 'finanzas' | 'marketing' | 'rrhh';
-
-type DashboardBookingRecord = {
-  id: string;
-  tripType?: string | null;
-  notes?: string | null;
-  pickupLocation?: string | null;
-  dropoffLocation?: string | null;
-  bookingTime?: string | null;
-  arrivalTime?: string | null;
-  type?: string | null;
-  customer?: { name?: string | null } | null;
-  items?: Array<{ name: string }>;
-};
+type Tab = 'dashboard' | 'bookings' | 'pricing' | 'new-booking' | 'finanzas' | 'accounts' | 'marketing' | 'rrhh';
 
 // ─── Dashboard Stats ──────────────────────────────────────────────────────────
 
 function DashboardTab() {
-  const { getAuthHeaders } = useAdminAuth();
-  const [stats, setStats] = useState<{
-    bookingsToday: number;
-    emailsSentToday: number;
-    pendingCount: number;
-    revenueToday: string;
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [showTodayServices, setShowTodayServices] = useState(false);
-  const [servicesLoading, setServicesLoading] = useState(false);
-  const [todayServices, setTodayServices] = useState<Array<{
-    id: string;
-    time: string;
-    bookingTimeRaw: string;
-    serviceKind: 'ARR' | 'DEP';
-    customerName: string;
-    serviceLabel: string;
-    location: string;
-  }>>([]);
-  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
-  const [editingTime, setEditingTime] = useState('');
-  const [savingTime, setSavingTime] = useState(false);
-
-  const parseTimeToMinutes = (time: string | null | undefined): number => {
-    if (!time) return 9999;
-    const normalized = time.trim().toUpperCase();
-    const ampmMatch = normalized.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/);
-    if (ampmMatch) {
-      let h = parseInt(ampmMatch[1], 10);
-      const m = parseInt(ampmMatch[2], 10);
-      const meridiem = ampmMatch[3];
-      if (meridiem === 'PM' && h !== 12) h += 12;
-      if (meridiem === 'AM' && h === 12) h = 0;
-      return h * 60 + m;
-    }
-    const h24Match = normalized.match(/^(\d{1,2}):(\d{2})$/);
-    if (h24Match) return parseInt(h24Match[1], 10) * 60 + parseInt(h24Match[2], 10);
-    return 9999;
-  };
-
-  const formatTimeForInput = (time: string | null | undefined): string => {
-    if (!time) return '';
-    const normalized = time.trim().toUpperCase();
-    const ampmMatch = normalized.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/);
-    if (ampmMatch) {
-      let h = parseInt(ampmMatch[1], 10);
-      const m = parseInt(ampmMatch[2], 10);
-      const meridiem = ampmMatch[3];
-      if (meridiem === 'PM' && h !== 12) h += 12;
-      if (meridiem === 'AM' && h === 12) h = 0;
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    }
-    const h24Match = normalized.match(/^(\d{1,2}):(\d{2})$/);
-    if (h24Match) {
-      return `${String(parseInt(h24Match[1], 10)).padStart(2, '0')}:${h24Match[2]}`;
-    }
-    return '';
-  };
-
-  const fetchTodayServices = async () => {
-    setServicesLoading(true);
-    try {
-      const today = new Date().toISOString().slice(0, 10);
-      const qs = new URLSearchParams({ dateFrom: today, dateTo: today, limit: '100' });
-      const res = await fetch(apiUrl(`/api/admin/bookings?${qs.toString()}`), {
-        credentials: 'include',
-        headers: getAuthHeaders(),
-      });
-      const json = await res.json();
-      const bookings: DashboardBookingRecord[] = Array.isArray(json?.data) ? json.data : [];
-      const items = bookings
-        // Exclude "open service" tickets from dashboard day services
-        .filter((b) => {
-          const tripType = (b.tripType || '').toString().toLowerCase();
-          const notes = (b.notes || '').toString().toUpperCase();
-          return tripType !== 'open' && !notes.includes('[OPEN SERVICE]');
-        })
-        .map((b) => {
-        const pickup = (b.pickupLocation || '').toString().toLowerCase();
-        const dropoff = (b.dropoffLocation || '').toString().toLowerCase();
-        const isDeparture = dropoff.includes('airport') || pickup.includes('hotel');
-        const serviceKind: 'ARR' | 'DEP' = isDeparture ? 'DEP' : 'ARR';
-        const timeRaw = b.bookingTime || b.arrivalTime || '';
-        const serviceLabel = Array.isArray(b.items) && b.items.length > 0
-          ? b.items.map((i) => i.name).join(' • ')
-          : (b.type || 'Service');
-        return {
-          id: b.id,
-          bookingTimeRaw: timeRaw,
-          time: timeRaw || 'No time',
-          serviceKind,
-          customerName: b.customer?.name || 'Unknown customer',
-          serviceLabel,
-          location: b.dropoffLocation || b.pickupLocation || 'No location',
-        };
-      });
-      items.sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
-      setTodayServices(items);
-    } catch {
-      setTodayServices([]);
-    } finally {
-      setServicesLoading(false);
-    }
-  };
-
-  const startEditingServiceTime = (serviceId: string, currentTimeRaw: string) => {
-    setEditingServiceId(serviceId);
-    setEditingTime(formatTimeForInput(currentTimeRaw));
-  };
-
-  const saveServiceTime = async (serviceId: string) => {
-    if (!editingTime) return;
-    setSavingTime(true);
-    try {
-      const res = await fetch(apiUrl(`/api/admin/bookings/${serviceId}`), {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingTime: editingTime }),
-      });
-      const json = await res.json();
-      if (json?.success) {
-        setTodayServices(prev => {
-          const updated = prev.map(s => s.id === serviceId
-            ? { ...s, bookingTimeRaw: editingTime, time: editingTime }
-            : s);
-          updated.sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
-          return updated;
-        });
-        setEditingServiceId(null);
-        setEditingTime('');
-      }
-    } finally {
-      setSavingTime(false);
-    }
-  };
-
-  useEffect(() => {
-    fetch(apiUrl('/api/admin/stats'), { credentials: 'include', headers: getAuthHeaders() })
-      .then(r => r.json())
-      .then(json => { if (json.success) setStats(json.data); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [getAuthHeaders]);
-
-  if (loading) return (
-    <div className="flex items-center justify-center py-24">
-      <div className="text-center space-y-3">
-        <div className="w-8 h-8 border-2 border-gold/30 border-t-gold rounded-full animate-spin mx-auto" />
-        <p className="text-sm text-muted-foreground">Loading dashboard…</p>
-      </div>
-    </div>
-  );
-
-  if (!stats) return (
-    <div className="flex items-center justify-center py-24">
-      <p className="text-sm text-muted-foreground">Could not load stats</p>
-    </div>
-  );
-
-  const cards = [
-    {
-      label: "Bookings Today",
-      value: stats.bookingsToday,
-      icon: <CalendarCheck size={22} />,
-      accent: '#D4AF37',
-      bg: 'from-amber-50/80 to-white',
-      iconBg: 'bg-gold/10',
-      iconColor: 'text-gold',
-      border: 'border-gold/20',
-    },
-    {
-      label: "Revenue Today",
-      value: `$${stats.revenueToday}`,
-      icon: <TrendingUp size={22} />,
-      accent: '#10b981',
-      bg: 'from-emerald-50/80 to-white',
-      iconBg: 'bg-emerald-100',
-      iconColor: 'text-emerald-600',
-      border: 'border-emerald-200/60',
-    },
-    {
-      label: "Pending Payment",
-      value: stats.pendingCount,
-      icon: <Clock size={22} />,
-      accent: '#f59e0b',
-      bg: 'from-orange-50/80 to-white',
-      iconBg: 'bg-amber-100',
-      iconColor: 'text-amber-600',
-      border: 'border-amber-200/60',
-    },
-    {
-      label: "Emails Sent Today",
-      value: stats.emailsSentToday,
-      icon: <Mail size={22} />,
-      accent: '#3b82f6',
-      bg: 'from-blue-50/80 to-white',
-      iconBg: 'bg-blue-100',
-      iconColor: 'text-blue-600',
-      border: 'border-blue-200/60',
-    },
-  ];
-
-  return (
-    <div className="space-y-8">
-      {/* Page header */}
-      <div className="flex items-end justify-between">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gold mb-1">Overview</p>
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">Today's activity at a glance</p>
-        </div>
-        <span className="hidden md:block text-[11px] font-medium text-muted-foreground bg-muted/60 px-3 py-1.5 rounded-full">
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </span>
-      </div>
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map((c, i) => (
-          <motion.div
-            key={c.label}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.07, duration: 0.4 }}
-            onClick={i === 0 ? async () => {
-              const next = !showTodayServices;
-              setShowTodayServices(next);
-              if (next) await fetchTodayServices();
-            } : undefined}
-            className={`group relative rounded-2xl border ${c.border} bg-gradient-to-b ${c.bg} p-5 md:p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 overflow-hidden ${
-              i === 0 ? 'cursor-pointer' : ''
-            }`}
-          >
-            {/* Top accent line */}
-            <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl" style={{ background: c.accent }} />
-
-            <div className={`inline-flex items-center justify-center w-11 h-11 rounded-2xl ${c.iconBg} ${c.iconColor} mb-4`}>
-              {c.icon}
-            </div>
-            <p className="font-display text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-              {c.value}
-            </p>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mt-2">
-              {c.label}
-            </p>
-            {i === 0 && (
-              <p className="text-[10px] mt-1 text-gold/80 font-semibold uppercase tracking-wide">
-                Tap to view today's services
-              </p>
-            )}
-          </motion.div>
-        ))}
-      </div>
-
-      {showTodayServices && (
-        <div className="rounded-2xl border border-gold/20 bg-white/90 backdrop-blur-sm p-4 md:p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-display text-lg font-bold text-foreground">Today's Services</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowTodayServices(false)}
-              className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-lg hover:bg-muted/50 transition-colors"
-            >
-              <X size={12} /> Close
-            </button>
-          </div>
-          {servicesLoading ? (
-            <div className="flex items-center gap-2 py-6 justify-center text-muted-foreground text-sm">
-              <div className="w-4 h-4 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
-              Loading…
-            </div>
-          ) : todayServices.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
-              <CalendarCheck size={28} className="text-muted-foreground/30" />
-              <p className="text-sm text-muted-foreground">No transfers scheduled for today.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {todayServices.map((s) => (
-                <div key={s.id} className="rounded-xl border border-border/60 bg-white p-3.5 shadow-sm">
-                  <div className="flex items-start gap-3.5">
-                    <div className="flex flex-col items-center gap-1.5 min-w-[52px]">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                        s.serviceKind === 'ARR'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-amber-100 text-amber-700'
-                      }`}>
-                        {s.serviceKind}
-                      </span>
-                      <p className="font-mono text-base leading-none font-bold text-foreground">
-                        {formatTimeForInput(s.bookingTimeRaw) || '--:--'}
-                      </p>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold text-foreground leading-tight">{s.customerName}</p>
-                        {editingServiceId === s.id ? (
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <input
-                              type="time"
-                              value={editingTime}
-                              onChange={(e) => setEditingTime(e.target.value)}
-                              className="px-2 py-1 rounded-md border border-border text-xs"
-                            />
-                            <button
-                              type="button"
-                              disabled={savingTime}
-                              onClick={() => saveServiceTime(s.id)}
-                              className="p-1 rounded-md text-emerald-600 hover:bg-emerald-50"
-                              title="Save time"
-                            >
-                              <Check size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => { setEditingServiceId(null); setEditingTime(''); }}
-                              className="p-1 rounded-md text-muted-foreground hover:bg-muted"
-                              title="Cancel"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => startEditingServiceTime(s.id, s.bookingTimeRaw)}
-                            className="inline-flex items-center gap-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground shrink-0"
-                            title="Change time"
-                          >
-                            <Pencil size={11} />
-                            Edit
-                          </button>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{s.serviceLabel}</p>
-                      <p className="text-xs text-muted-foreground/60 mt-0.5 truncate">{s.location}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Info banner */}
-      <div className="flex items-start gap-3 rounded-2xl border border-emerald-200/70 bg-emerald-50/60 px-5 py-4">
-        <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
-        <p className="text-sm text-emerald-800/80">
-          Stats reflect today only. Go to{' '}
-          <strong className="font-semibold text-emerald-900">Bookings</strong>{' '}
-          to filter by week, month, or search by customer.
-        </p>
-      </div>
-    </div>
-  );
+  return <DashboardOverviewTab />;
 }
-
 // ─── Quick Booking Form ───────────────────────────────────────────────────────
 
 type PaymentMethod = 'none' | 'stripe' | 'cash';
@@ -892,6 +521,7 @@ const Admin = () => {
     { id: 'bookings',    label: 'Reservaciones',      icon: <CalendarCheck size={17} />,   mobileLabel: 'Res.',    group: 'OPERACIONES' },
     { id: 'new-booking', label: 'Nueva Reserva',      icon: <PlusCircle size={17} />,      mobileLabel: 'Nueva',   group: 'OPERACIONES' },
     { id: 'finanzas',    label: 'Finanzas',           icon: <BarChart2 size={17} />,       mobileLabel: 'Fin.',    group: 'ANALYTICS' },
+    { id: 'accounts',    label: 'Cuentas Abiertas',   icon: <CreditCard size={17} />,      mobileLabel: 'Acct.',   group: 'ANALYTICS' },
     { id: 'marketing',   label: 'Marketing',          icon: <Megaphone size={17} />,       mobileLabel: 'Mkt.',    group: 'ANALYTICS' },
     { id: 'rrhh',        label: 'Recursos Humanos',   icon: <Users size={17} />,           mobileLabel: 'RRHH',    group: 'EQUIPO' },
     { id: 'pricing',     label: 'Configuración',      icon: <Settings size={17} />,        mobileLabel: 'Config',  group: 'EQUIPO' },
@@ -946,11 +576,11 @@ const Admin = () => {
           })}
           <button onClick={() => setMobileMenu(true)}
             className="flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl text-muted-foreground">
-            <span className={`p-1 rounded-lg transition-all ${(['marketing', 'pricing'].includes(activeTab)) ? 'bg-gold/10' : ''}`}>
-              <MoreHorizontal size={17} className={['marketing', 'pricing'].includes(activeTab) ? 'text-gold' : ''} />
+            <span className={`p-1 rounded-lg transition-all ${(['marketing', 'pricing', 'accounts'].includes(activeTab)) ? 'bg-gold/10' : ''}`}>
+              <MoreHorizontal size={17} className={['marketing', 'pricing', 'accounts'].includes(activeTab) ? 'text-gold' : ''} />
             </span>
-            <span className={`text-[9px] font-bold uppercase tracking-wide ${['marketing', 'pricing'].includes(activeTab) ? 'text-gold' : 'text-muted-foreground/70'}`}>
-              {['marketing', 'pricing'].includes(activeTab) ? sidebarItems.find(s => s.id === activeTab)?.mobileLabel : 'Más'}
+            <span className={`text-[9px] font-bold uppercase tracking-wide ${['marketing', 'pricing', 'accounts'].includes(activeTab) ? 'text-gold' : 'text-muted-foreground/70'}`}>
+              {['marketing', 'pricing', 'accounts'].includes(activeTab) ? sidebarItems.find(s => s.id === activeTab)?.mobileLabel : 'Más'}
             </span>
           </button>
         </div>
@@ -1147,6 +777,8 @@ const Admin = () => {
 
           {activeTab === 'finanzas' && <FinanzasTab />}
 
+          {activeTab === 'accounts' && <AccountsTab />}
+
           {activeTab === 'marketing' && <MarketingTab />}
 
           {activeTab === 'rrhh' && <RRHHTab />}
@@ -1157,4 +789,5 @@ const Admin = () => {
 };
 
 export default Admin;
+
 

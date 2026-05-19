@@ -158,6 +158,35 @@ export const createVehicleSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
+export const createClientAccountSchema = z.object({
+  customerId: z.string().cuid().optional().nullable(),
+  name: z.string().min(1, 'Account name is required'),
+  company: z.string().optional().nullable(),
+  email: z.string().email('Invalid email').optional().nullable(),
+  phone: z.string().optional().nullable(),
+  currency: z.string().default('USD'),
+  status: z.enum(['OPEN', 'ON_HOLD', 'SETTLED', 'CLOSED']).default('OPEN'),
+  creditLimitCents: z.number().int().min(0).optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+export const createAccountChargeSchema = z.object({
+  bookingId: z.string().cuid().optional().nullable(),
+  description: z.string().min(1, 'Description is required'),
+  serviceDate: z.string().datetime().optional().nullable(),
+  amountCents: z.number().int().min(0, 'Amount must be non-negative'),
+  status: z.enum(['PENDING', 'INVOICED', 'PAID', 'VOID']).default('PENDING'),
+  notes: z.string().optional().nullable(),
+});
+
+export const createAccountPaymentSchema = z.object({
+  amountCents: z.number().int().positive('Amount must be greater than zero'),
+  method: z.enum(['CASH', 'BANK_TRANSFER', 'CARD', 'MANUAL']).default('MANUAL'),
+  reference: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  receivedAt: z.string().datetime().optional().nullable(),
+});
+
 export const manualBookingSchema = z
   .object({
     type: z.enum(['TRANSPORTATION', 'ACTIVITY', 'COMBO', 'CRAZY_COMBO']),
@@ -250,6 +279,9 @@ export type PriceOverrideInput = z.infer<typeof priceOverrideSchema>;
 export type AssignBookingExtendedInput = z.infer<typeof assignBookingSchemaExtended>;
 export type CreateDriverInput = z.infer<typeof createDriverSchema>;
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
+export type CreateClientAccountInput = z.infer<typeof createClientAccountSchema>;
+export type CreateAccountChargeInput = z.infer<typeof createAccountChargeSchema>;
+export type CreateAccountPaymentInput = z.infer<typeof createAccountPaymentSchema>;
 export type ManualBookingInput = z.infer<typeof manualBookingSchema>;
 export type UpdateBookingInput = z.infer<typeof updateBookingSchema>;
 

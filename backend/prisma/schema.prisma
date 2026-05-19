@@ -34,6 +34,7 @@ model Customer {
   updatedAt DateTime @updatedAt
 
   bookings Booking[]
+  accounts ClientAccount[]
 
   @@index([email])
   @@index([phone])
@@ -73,6 +74,7 @@ model Booking {
   // Customer reference
   customerId   String
   customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  accountCharges AccountCharge[]
 
   // Date and time
   bookingDate  DateTime      // Date of the service
@@ -526,5 +528,86 @@ model PricingExtra {
   @@index([active])
   @@index([code])
   @@index([included])
+}
+
+enum ClientAccountStatus {
+  OPEN
+  ON_HOLD
+  SETTLED
+  CLOSED
+}
+
+enum AccountChargeStatus {
+  PENDING
+  INVOICED
+  PAID
+  VOID
+}
+
+enum AccountPaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CARD
+  MANUAL
+}
+
+model ClientAccount {
+  id               String              @id @default(cuid())
+  customerId       String?
+  customer         Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  name             String
+  company          String?
+  email            String?
+  phone            String?
+  currency         String              @default("USD")
+  status           ClientAccountStatus @default(OPEN)
+  creditLimitCents Int?
+  balanceCents     Int                 @default(0)
+  notes            String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  charges          AccountCharge[]
+  payments         AccountPayment[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AccountCharge {
+  id            String            @id @default(cuid())
+  accountId     String
+  account       ClientAccount     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  bookingId     String?
+  booking       Booking?          @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  description   String
+  serviceDate   DateTime?
+  amountCents   Int
+  status        AccountChargeStatus @default(PENDING)
+  notes         String?
+  createdBy     String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([accountId, status])
+  @@index([bookingId])
+  @@index([serviceDate])
+}
+
+model AccountPayment {
+  id          String               @id @default(cuid())
+  accountId   String
+  account     ClientAccount        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  amountCents Int
+  method      AccountPaymentMethod @default(MANUAL)
+  reference   String?
+  notes       String?
+  receivedAt  DateTime             @default(now())
+  createdBy   String?
+  createdAt   DateTime             @default(now())
+
+  @@index([accountId])
+  @@index([receivedAt])
 }
 

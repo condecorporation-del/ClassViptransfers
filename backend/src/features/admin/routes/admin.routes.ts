@@ -10,6 +10,9 @@ import {
   assignBookingSchemaExtended,
   createDriverSchema,
   createVehicleSchema,
+  createClientAccountSchema,
+  createAccountChargeSchema,
+  createAccountPaymentSchema,
   manualBookingSchema,
 } from '../../../shared/lib/validation';
 
@@ -145,6 +148,40 @@ router.post(
   '/vehicles',
   validate(createVehicleSchema, 'body'),
   asyncHandler((req, res) => adminController.createVehicle(req, res))
+);
+
+// Client Accounts
+router.get(
+  '/accounts',
+  asyncHandler((req, res) => adminController.listClientAccounts(req, res))
+);
+
+router.post(
+  '/accounts',
+  validate(createClientAccountSchema, 'body'),
+  asyncHandler((req, res) => adminController.createClientAccount(req, res))
+);
+
+router.get(
+  '/accounts/:id',
+  asyncHandler((req, res) => adminController.getClientAccount(req, res))
+);
+
+router.post(
+  '/accounts/:id/charges',
+  validate(createAccountChargeSchema, 'body'),
+  asyncHandler((req, res) => adminController.createAccountCharge(req, res))
+);
+
+router.post(
+  '/accounts/:id/bookings',
+  asyncHandler((req, res) => adminController.attachBookingToAccount(req, res))
+);
+
+router.post(
+  '/accounts/:id/payments',
+  validate(createAccountPaymentSchema, 'body'),
+  asyncHandler((req, res) => adminController.createAccountPayment(req, res))
 );
 
 // Pricing Rules

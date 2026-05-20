@@ -16,6 +16,7 @@ import {
   createAccountChargeSchema,
   createAccountPaymentSchema,
   manualBookingSchema,
+  updateAccountChargeSchema,
   updateBookingSchema,
 } from '../../../shared/lib/validation';
 import { Prisma } from '@prisma/client';
@@ -359,6 +360,29 @@ export class AdminController {
         description: `Recorded account payment for ${id}`,
       });
       res.status(201).json({ success: true, data: payment });
+    } catch (error) {
+      res.status(400).json({ success: false, error: getErrorMessage(error) });
+    }
+  }
+
+  async updateAccountCharge(req: Request, res: Response) {
+    const accountId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const chargeId = Array.isArray(req.params.chargeId) ? req.params.chargeId[0] : req.params.chargeId;
+    if (!accountId || !chargeId) {
+      return res.status(400).json({ error: 'Account ID and charge ID are required' });
+    }
+
+    try {
+      const input = updateAccountChargeSchema.parse(req.body);
+      const charge = await clientAccountsService.updateCharge(accountId, chargeId, input, req.adminEmail);
+      await createAuditLog({
+        action: 'UPDATE',
+        entityType: 'AccountCharge',
+        entityId: charge.id,
+        userEmail: req.adminEmail,
+        description: `Updated charge ${charge.id} status to ${input.status}`,
+      });
+      res.json({ success: true, data: charge });
     } catch (error) {
       res.status(400).json({ success: false, error: getErrorMessage(error) });
     }

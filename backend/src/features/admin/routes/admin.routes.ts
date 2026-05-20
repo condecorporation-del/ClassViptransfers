@@ -14,6 +14,7 @@ import {
   createAccountChargeSchema,
   createAccountPaymentSchema,
   manualBookingSchema,
+  updateAccountChargeSchema,
 } from '../../../shared/lib/validation';
 
 const router = Router();
@@ -182,6 +183,12 @@ router.post(
   '/accounts/:id/payments',
   validate(createAccountPaymentSchema, 'body'),
   asyncHandler((req, res) => adminController.createAccountPayment(req, res))
+);
+
+router.patch(
+  '/accounts/:id/charges/:chargeId',
+  validate(updateAccountChargeSchema, 'body'),
+  asyncHandler((req, res) => adminController.updateAccountCharge(req, res))
 );
 
 // Pricing Rules

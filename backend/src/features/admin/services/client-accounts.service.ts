@@ -4,6 +4,7 @@ import {
   CreateAccountChargeInput,
   CreateAccountPaymentInput,
   CreateClientAccountInput,
+  UpdateAccountChargeInput,
 } from '../../../shared/lib/validation';
 
 function buildBalanceCents(charges: { amountCents: number; status: AccountChargeStatus }[], payments: { amountCents: number }[]) {
@@ -176,6 +177,47 @@ export class ClientAccountsService {
     });
 
     return payment;
+  }
+
+  async updateCharge(accountId: string, chargeId: string, input: UpdateAccountChargeInput, updatedBy?: string) {
+    const account = await prisma.clientAccount.findUnique({
+      where: { id: accountId },
+      include: {
+        charges: true,
+        payments: true,
+      },
+    });
+
+    if (!account) {
+      throw new Error('Account not found');
+    }
+
+    const existingCharge = account.charges.find((charge) => charge.id === chargeId);
+    if (!existingCharge) {
+      throw new Error('Charge not found');
+    }
+
+    const updatedCharge = await prisma.accountCharge.update({
+      where: { id: chargeId },
+      data: {
+        status: input.status,
+        notes: input.notes === undefined ? existingCharge.notes : input.notes,
+        createdBy: updatedBy || existingCharge.createdBy,
+      },
+    });
+
+    const recomputedCharges = account.charges.map((charge) => (charge.id === chargeId ? updatedCharge : charge));
+    const balanceCents = buildBalanceCents(recomputedCharges, account.payments);
+
+    await prisma.clientAccount.update({
+      where: { id: accountId },
+      data: {
+        balanceCents,
+        status: balanceCents <= 0 ? 'SETTLED' : 'OPEN',
+      },
+    });
+
+    return updatedCharge;
   }
 
   async attachBooking(accountId: string, bookingId: string, createdBy?: string) {

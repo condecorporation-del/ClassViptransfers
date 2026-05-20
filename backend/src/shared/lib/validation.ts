@@ -187,6 +187,11 @@ export const createAccountPaymentSchema = z.object({
   receivedAt: z.string().datetime().optional().nullable(),
 });
 
+export const updateAccountChargeSchema = z.object({
+  status: z.enum(['PENDING', 'INVOICED', 'PAID', 'VOID']),
+  notes: z.string().optional().nullable(),
+});
+
 export const manualBookingSchema = z
   .object({
     type: z.enum(['TRANSPORTATION', 'ACTIVITY', 'COMBO', 'CRAZY_COMBO']),
@@ -282,6 +287,7 @@ export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
 export type CreateClientAccountInput = z.infer<typeof createClientAccountSchema>;
 export type CreateAccountChargeInput = z.infer<typeof createAccountChargeSchema>;
 export type CreateAccountPaymentInput = z.infer<typeof createAccountPaymentSchema>;
+export type UpdateAccountChargeInput = z.infer<typeof updateAccountChargeSchema>;
 export type ManualBookingInput = z.infer<typeof manualBookingSchema>;
 export type UpdateBookingInput = z.infer<typeof updateBookingSchema>;
 

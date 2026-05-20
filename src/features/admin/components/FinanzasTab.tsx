@@ -31,6 +31,22 @@ type Booking = {
   customer?: { name?: string | null; email?: string | null };
 };
 
+type AccountCharge = {
+  id: string;
+  description: string;
+  amountCents: number;
+  status: 'PENDING' | 'INVOICED' | 'PAID' | 'VOID';
+  serviceDate?: string | null;
+  booking?: { confirmationCode?: string | null } | null;
+};
+
+type AccountDetail = {
+  id: string;
+  name: string;
+  company?: string | null;
+  charges: AccountCharge[];
+};
+
 const tabs: Array<{ id: FinanceTab; label: string }> = [
   { id: 'summary', label: 'Resumen Financiero' },
   { id: 'receivables', label: 'Cuentas por Cobrar' },
@@ -71,6 +87,17 @@ export function FinanzasTab() {
   const [activeTab, setActiveTab] = useState<FinanceTab>('summary');
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [accountReceivables, setAccountReceivables] = useState<Array<{
+    id: string;
+    source: 'account';
+    accountId: string;
+    accountName: string;
+    description: string;
+    status: string;
+    amountCents: number;
+    date: string;
+    reference?: string | null;
+  }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,19 +105,55 @@ export function FinanzasTab() {
     setLoading(true);
     setError(null);
     try {
-      const [dashboardResponse, bookingsResponse] = await Promise.all([
+      const [dashboardResponse, bookingsResponse, accountsResponse] = await Promise.all([
         fetch(apiUrl('/api/admin/dashboard'), { credentials: 'include', headers: getAuthHeaders() }),
         fetch(apiUrl(`/api/admin/bookings?limit=300&dateFrom=${dateNDaysAgo(90)}`), {
           credentials: 'include',
           headers: getAuthHeaders(),
         }),
+        fetch(apiUrl('/api/admin/accounts'), { credentials: 'include', headers: getAuthHeaders() }),
       ]);
 
       const dashboardJson = await dashboardResponse.json();
       const bookingsJson = await bookingsResponse.json();
+      const accountsJson = await accountsResponse.json();
 
       setDashboard(dashboardJson.success ? dashboardJson.data : null);
       setBookings(bookingsJson.success ? bookingsJson.data : []);
+
+      if (accountsJson.success) {
+        const accountDetails = await Promise.all(
+          (accountsJson.data as Array<{ id: string }>).map(async (account) => {
+            const response = await fetch(apiUrl(`/api/admin/accounts/${account.id}`), {
+              credentials: 'include',
+              headers: getAuthHeaders(),
+            });
+            const json = await response.json();
+            return json.success ? (json.data as AccountDetail) : null;
+          })
+        );
+
+        const charges = accountDetails
+          .filter((account): account is AccountDetail => Boolean(account))
+          .flatMap((account) =>
+            account.charges
+              .filter((charge) => charge.status === 'PENDING' || charge.status === 'INVOICED')
+              .map((charge) => ({
+                id: charge.id,
+                source: 'account' as const,
+                accountId: account.id,
+                accountName: account.name,
+                description: charge.description,
+                status: charge.status,
+                amountCents: charge.amountCents,
+                date: (charge.serviceDate || new Date().toISOString()).slice(0, 10),
+                reference: charge.booking?.confirmationCode || null,
+              }))
+          );
+        setAccountReceivables(charges);
+      } else {
+        setAccountReceivables([]);
+      }
     } catch {
       setError('No se pudo cargar la informacion financiera.');
     } finally {
@@ -103,7 +166,14 @@ export function FinanzasTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const receivables = useMemo(
+  useEffect(() => {
+    if (activeTab === 'receivables' || activeTab === 'accounts') {
+      void fetchData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  const bookingReceivables = useMemo(
     () => bookings
       .filter((booking) =>
         booking.totalAmount > 0 &&
@@ -112,6 +182,32 @@ export function FinanzasTab() {
       )
       .sort((a, b) => a.bookingDate.localeCompare(b.bookingDate)),
     [bookings],
+  );
+
+  const receivables = useMemo(
+    () => [
+      ...bookingReceivables.map((booking) => ({
+        id: booking.id,
+        source: 'booking' as const,
+        customer: booking.customer?.name || 'Cliente',
+        service: serviceLabel(booking),
+        amountCents: booking.totalAmount,
+        date: booking.bookingDate.slice(0, 10),
+        status: booking.status,
+        reference: booking.confirmationCode || null,
+      })),
+      ...accountReceivables.map((charge) => ({
+        id: charge.id,
+        source: 'account' as const,
+        customer: charge.accountName,
+        service: charge.description,
+        amountCents: charge.amountCents,
+        date: charge.date,
+        status: charge.status,
+        reference: charge.reference,
+      })),
+    ].sort((a, b) => a.date.localeCompare(b.date)),
+    [accountReceivables, bookingReceivables],
   );
 
   const chartData = useMemo(() => {
@@ -135,7 +231,7 @@ export function FinanzasTab() {
     }));
   }, [bookings]);
 
-  const receivableTotal = receivables.reduce((sum, booking) => sum + booking.totalAmount, 0);
+  const receivableTotal = receivables.reduce((sum, item) => sum + item.amountCents, 0);
   const averageTicket = dashboard?.totalMonth ? (dashboard.revenueMonth / dashboard.totalMonth) : 0;
 
   if (loading) {
@@ -243,7 +339,55 @@ export function FinanzasTab() {
             </span>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="space-y-3 p-4 md:hidden">
+            {receivables.map((item) => {
+              const days = daysOverdue(item.date);
+              return (
+                <div key={item.id} className="rounded-2xl border border-border/70 bg-background p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground">{item.customer}</p>
+                      {item.reference && <p className="mt-1 text-xs text-muted-foreground">{item.reference}</p>}
+                    </div>
+                    <p className="text-sm font-bold text-foreground">{usd(item.amountCents)}</p>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    <p className="text-sm text-muted-foreground">{item.service}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                        {item.source === 'account' ? 'Cuenta abierta' : 'Reserva'}
+                      </span>
+                      <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${urgencyClass(days)}`}>
+                        {days} dias
+                      </span>
+                      <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${
+                        item.status === 'PAID'
+                          ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                          : item.status === 'INVOICED'
+                            ? 'bg-blue-100 text-blue-700 border-blue-200'
+                            : 'bg-amber-100 text-amber-800 border-amber-200'
+                      }`}>
+                        {item.status === 'INVOICED' ? 'Facturado' : item.status === 'PAID' ? 'Pagado' : 'Por pagar'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground">
+                      <span>{item.date}</span>
+                      <button
+                        type="button"
+                        onClick={() => console.log('[Finance] Send reminder', item.id)}
+                        className="inline-flex items-center gap-1 rounded-xl border border-border px-3 py-2 font-bold text-foreground hover:border-gold/40 hover:bg-gold/10"
+                      >
+                        <Bell size={12} />
+                        Recordar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[780px] text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
@@ -255,23 +399,42 @@ export function FinanzasTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {receivables.map((booking) => {
-                  const days = daysOverdue(booking.bookingDate);
+                {receivables.map((item) => {
+                  const days = daysOverdue(item.date);
                   return (
-                    <tr key={booking.id} className="hover:bg-gold/5">
-                      <td className="px-4 py-3">{booking.bookingDate.slice(0, 10)}</td>
-                      <td className="px-4 py-3 font-semibold">{booking.customer?.name || 'Cliente'}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{serviceLabel(booking)}</td>
-                      <td className="px-4 py-3 font-bold">{usd(booking.totalAmount)}</td>
+                    <tr key={item.id} className="hover:bg-gold/5">
+                      <td className="px-4 py-3">{item.date}</td>
+                      <td className="px-4 py-3 font-semibold">
+                        <div>{item.customer}</div>
+                        {item.reference && <div className="text-xs text-muted-foreground">{item.reference}</div>}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        <div>{item.service}</div>
+                        <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                          {item.source === 'account' ? 'Cuenta abierta' : 'Reserva'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-bold">{usd(item.amountCents)}</td>
                       <td className="px-4 py-3">
                         <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${urgencyClass(days)}`}>
                           {days} dias
                         </span>
+                        <div className="mt-2">
+                          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${
+                            item.status === 'PAID'
+                              ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                              : item.status === 'INVOICED'
+                                ? 'bg-blue-100 text-blue-700 border-blue-200'
+                                : 'bg-amber-100 text-amber-800 border-amber-200'
+                          }`}>
+                            {item.status === 'INVOICED' ? 'Facturado' : item.status === 'PAID' ? 'Pagado' : 'Por pagar'}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <button
                           type="button"
-                          onClick={() => console.log('[Finance] Send reminder', booking.id)}
+                          onClick={() => console.log('[Finance] Send reminder', item.id)}
                           className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs font-bold hover:border-gold/40 hover:bg-gold/10"
                         >
                           <Bell size={13} />
@@ -304,7 +467,7 @@ export function FinanzasTab() {
               </div>
             </div>
           </div>
-          <AccountsTab />
+          <AccountsTab onDataChange={fetchData} />
         </div>
       )}
     </div>

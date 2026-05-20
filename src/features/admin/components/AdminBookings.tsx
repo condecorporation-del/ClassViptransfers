@@ -3,9 +3,19 @@ import {
   Mail, ChevronRight, ArrowLeft, RefreshCw, FileDown,
   Search, Edit2, X, Save, UserCheck, CheckCircle, XCircle,
   Car, Calendar, Filter, Download, Loader2, CalendarX,
+  Printer,
 } from 'lucide-react';
 import { useAdminAuth } from '@/features/admin/hooks/useAdminAuth';
+import {
+  compareOperationBookings,
+  getOperationBadge,
+  getOperationFlight,
+  getOperationHotel,
+  getOperationType,
+  getOperationTime,
+} from '@/features/admin/lib/booking-operations';
 import { getApiBaseUrl } from '@/shared/lib/api';
+import { cloudinaryAssets } from '@/shared/lib/cloudinary-assets';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -117,6 +127,21 @@ const STATUS_LABELS: Record<string, string> = {
   OFFLINE_HOLD:    'Hold',
 };
 
+const SERVICE_FILTERS = [
+  { value: '', label: 'Todos' },
+  { value: 'arrival', label: 'Llegada' },
+  { value: 'departure', label: 'Salida' },
+  { value: 'roundtrip', label: 'Redondo' },
+] as const;
+
+const STATUS_FILTERS = [
+  { value: '', label: 'Todos' },
+  { value: 'PENDING_PAYMENT', label: 'Pendiente' },
+  { value: 'CONFIRMED', label: 'Confirmado' },
+  { value: 'CANCELLED', label: 'Cancelado' },
+  { value: 'COMPLETED', label: 'Completado' },
+] as const;
+
 function today() { return new Date().toISOString().slice(0, 10); }
 function addDays(dateStr: string, n: number) {
   const d = new Date(dateStr); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10);
@@ -143,8 +168,10 @@ export const AdminBookings = () => {
   const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'custom'>('today');
   const [customFrom, setCustomFrom] = useState(today());
   const [customTo, setCustomTo] = useState(today());
+  const [dateFilter, setDateFilter] = useState(today());
   const [searchQ, setSearchQ] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [serviceFilter, setServiceFilter] = useState('');
 
   // Detail
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -164,9 +191,6 @@ export const AdminBookings = () => {
     try {
       const { dateFrom, dateTo } = getDateRange();
       const qs = new URLSearchParams({ dateFrom, dateTo, limit: '100' });
-      if (searchQ.trim()) qs.set('q', searchQ.trim());
-      if (statusFilter) qs.set('status', statusFilter);
-
       const res = await fetch(apiUrl(`/api/admin/bookings?${qs}`), {
         credentials: 'include', headers: getAuthHeaders(),
       });
@@ -179,7 +203,7 @@ export const AdminBookings = () => {
       }
     } catch { setBookings([]); setTotal(0); }
     finally { setLoading(false); }
-  }, [getDateRange, searchQ, statusFilter, getAuthHeaders]);
+  }, [getDateRange, getAuthHeaders]);
 
   useEffect(() => { fetchBookings(); }, [fetchBookings]);
 
@@ -205,6 +229,25 @@ export const AdminBookings = () => {
   const handleSearchKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') fetchBookings();
   };
+
+  const filteredBookings = bookings
+    .filter((booking) => {
+      const dateMatches = !dateFilter || booking.bookingDate.slice(0, 10) === dateFilter;
+      const type = getOperationType(booking);
+      const serviceMatches = !serviceFilter || type === serviceFilter;
+      const statusMatches = !statusFilter || booking.status === statusFilter;
+      const q = searchQ.trim().toLowerCase();
+      const searchMatches =
+        !q ||
+        booking.customer?.name?.toLowerCase().includes(q) ||
+        booking.confirmationCode?.toLowerCase().includes(q) ||
+        booking.customer?.email?.toLowerCase().includes(q);
+      return dateMatches && serviceMatches && statusMatches && searchMatches;
+    })
+    .sort(compareOperationBookings);
+
+  const printBookings = (dateFilter ? filteredBookings : bookings.filter((booking) => booking.bookingDate.slice(0, 10) === today()))
+    .sort(compareOperationBookings);
 
   if (selectedId) {
     return (
@@ -296,43 +339,129 @@ export const AdminBookings = () => {
           </div>
         )}
 
-        {/* Row 2: search + status */}
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Name, email, code…"
-              value={searchQ}
-              onChange={(e) => setSearchQ(e.target.value)}
-              onKeyDown={handleSearchKey}
-              className="w-full pl-8 pr-3 py-2 rounded-lg border border-border bg-background text-sm"
-            />
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-2 py-2 rounded-lg border border-border bg-background text-xs md:text-sm shrink-0"
-          >
-            <option value="">All statuses</option>
-            <option value="PENDING_PAYMENT">Pending Payment</option>
-            <option value="CONFIRMED">Confirmed</option>
-            <option value="OFFLINE_HOLD">Hold</option>
-            <option value="PAID">Paid</option>
-            <option value="COMPLETED">Completed</option>
-            <option value="CANCELLED">Cancelled</option>
-            <option value="DRAFT">Draft</option>
-          </select>
-        </div>
       </div>
 
       {/* ── Table ── */}
+      <div className="grid gap-2 rounded-2xl border border-border bg-card p-3 shadow-sm md:grid-cols-[160px_150px_170px_minmax(180px,1fr)_auto_auto]">
+        <input
+          type="date"
+          value={dateFilter}
+          onChange={(event) => setDateFilter(event.target.value)}
+          className="rounded-xl border-2 border-border bg-background px-3 py-2 text-sm focus:border-gold/60 focus:outline-none focus:ring-2 focus:ring-gold/20"
+        />
+        <select
+          value={serviceFilter}
+          onChange={(event) => setServiceFilter(event.target.value)}
+          className="rounded-xl border-2 border-border bg-background px-3 py-2 text-sm focus:border-gold/60 focus:outline-none focus:ring-2 focus:ring-gold/20"
+        >
+          {SERVICE_FILTERS.map((filter) => (
+            <option key={filter.value} value={filter.value}>{filter.label}</option>
+          ))}
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+          className="rounded-xl border-2 border-border bg-background px-3 py-2 text-sm focus:border-gold/60 focus:outline-none focus:ring-2 focus:ring-gold/20"
+        >
+          {STATUS_FILTERS.map((filter) => (
+            <option key={filter.value} value={filter.value}>{filter.label}</option>
+          ))}
+        </select>
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Cliente, email o codigo..."
+            value={searchQ}
+            onChange={(event) => setSearchQ(event.target.value)}
+            onKeyDown={handleSearchKey}
+            className="w-full rounded-xl border-2 border-border bg-background py-2 pl-8 pr-3 text-sm focus:border-gold/60 focus:outline-none focus:ring-2 focus:ring-gold/20"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setDateFilter(today())}
+          className="rounded-xl border border-border px-4 py-2 text-sm font-bold text-foreground transition-colors hover:border-gold/40 hover:bg-gold/10"
+        >
+          Hoy
+        </button>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-navy px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-navy/90"
+        >
+          <Printer size={15} />
+          Imprimir
+        </button>
+      </div>
+
+      <style>{`
+        @media screen {
+          #print-area { display: none; }
+        }
+        @media print {
+          body * { visibility: hidden !important; }
+          #print-area, #print-area * { visibility: visible !important; }
+          #print-area {
+            display: block !important;
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 100%;
+            padding: 28px;
+            background: #fff;
+            color: #111827;
+            font-family: Georgia, "Times New Roman", serif;
+          }
+          #print-area table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          #print-area th, #print-area td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
+          #print-area th { background: #f3f4f6; text-transform: uppercase; font-size: 10px; letter-spacing: 0.08em; }
+          @page { margin: 14mm; }
+        }
+      `}</style>
+
+      <div id="print-area">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <img src={cloudinaryAssets.logo} alt="Class VIP Transfers" style={{ height: 54, objectFit: 'contain' }} />
+          <div style={{ textAlign: 'right' }}>
+            <h1 style={{ margin: 0, fontSize: 22 }}>Servicios del Dia</h1>
+            <p style={{ margin: '4px 0 0', fontSize: 13 }}>{dateFilter || today()}</p>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Hora</th>
+              <th>Tipo</th>
+              <th>Cliente</th>
+              <th>Hotel</th>
+              <th>Pasajeros</th>
+              <th>Vuelo</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {printBookings.map((booking) => (
+              <tr key={booking.id}>
+                <td>{getOperationTime(booking)}</td>
+                <td>{getOperationBadge(booking).label}</td>
+                <td>{booking.customer?.name || '--'}</td>
+                <td>{getOperationHotel(booking)}</td>
+                <td>{booking.passengers}</td>
+                <td>{getOperationFlight(booking)}</td>
+                <td>{STATUS_LABELS[booking.status] ?? booking.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p style={{ marginTop: 20, fontSize: 12 }}>Class VIP Transfers · +52 624 122 2174</p>
+      </div>
+
       {loading ? (
         <div className="rounded-2xl border border-border bg-card p-14 flex flex-col items-center justify-center gap-3 text-muted-foreground">
           <Loader2 size={22} className="animate-spin text-gold" />
           <p className="text-sm font-medium">Loading bookings…</p>
         </div>
-      ) : bookings.length === 0 ? (
+      ) : filteredBookings.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card p-14 flex flex-col items-center justify-center gap-3 text-muted-foreground">
           <div className="w-12 h-12 rounded-2xl bg-muted/60 flex items-center justify-center">
             <CalendarX size={22} className="text-muted-foreground/60" />
@@ -344,10 +473,12 @@ export const AdminBookings = () => {
         </div>
       ) : (
         <div>
-          <p className="text-xs text-muted-foreground mb-2">{total} booking{total !== 1 ? 's' : ''} found</p>
+          <p className="text-xs text-muted-foreground mb-2">{filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''} found</p>
             {/* Mobile: card list */}
           <div className="md:hidden space-y-2">
-            {bookings.map((b) => (
+            {filteredBookings.map((b) => {
+              const op = getOperationBadge(b);
+              return (
               <button
                 key={b.id}
                 type="button"
@@ -362,20 +493,23 @@ export const AdminBookings = () => {
                     {STATUS_LABELS[b.status] ?? b.status.replace(/_/g, ' ')}
                   </span>
                 </div>
-                <p className="font-semibold text-sm text-foreground leading-tight">{b.customer?.name || '—'}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-sm text-foreground leading-tight">{b.customer?.name || '—'}</p>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${op.className}`}>{op.label}</span>
+                </div>
                 <p className="text-xs text-muted-foreground mt-0.5 mb-3">{b.customer?.email}</p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{fmt(b.bookingDate)}</span>
-                    {(b.arrivalTime || b.bookingTime) && (
-                      <span className="font-mono bg-muted/60 px-1.5 py-0.5 rounded">{b.arrivalTime || b.bookingTime}</span>
+                    {(b.arrivalTime || b.bookingTime || b.departureTime) && (
+                      <span className="font-mono bg-muted/60 px-1.5 py-0.5 rounded">{getOperationTime(b)}</span>
                     )}
-                    {b.flightNumber && <span className="font-mono">{b.flightNumber}</span>}
+                    {(b.flightNumber || b.departureFlightNumber) && <span className="font-mono">{getOperationFlight(b)}</span>}
                   </div>
                   <span className="font-bold text-sm text-foreground">{fmtCents(b.totalAmount)}</span>
                 </div>
               </button>
-            ))}
+            );})}
           </div>
 
           {/* Desktop: table */}
@@ -394,7 +528,9 @@ export const AdminBookings = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                {bookings.map((b) => (
+                {filteredBookings.map((b) => {
+                  const op = getOperationBadge(b);
+                  return (
                   <tr
                     key={b.id}
                     onClick={() => fetchDetail(b.id)}
@@ -405,12 +541,15 @@ export const AdminBookings = () => {
                     </td>
                     <td className="px-4 py-3.5 text-xs text-muted-foreground whitespace-nowrap">{fmt(b.bookingDate)}</td>
                     <td className="px-4 py-3.5">
-                      <p className="font-semibold text-sm text-foreground leading-tight">{b.customer?.name || '—'}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-sm text-foreground leading-tight">{b.customer?.name || '—'}</p>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${op.className}`}>{op.label}</span>
+                      </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{b.customer?.email}</p>
                     </td>
                     <td className="px-4 py-3.5 text-xs">
-                      <p className="font-mono font-semibold text-foreground">{b.flightNumber || '—'}</p>
-                      <p className="text-muted-foreground mt-0.5">{b.arrivalTime || b.bookingTime || '—'}</p>
+                      <p className="font-mono font-semibold text-foreground">{getOperationFlight(b)}</p>
+                      <p className="text-muted-foreground mt-0.5">{getOperationTime(b)}</p>
                     </td>
                     <td className="px-4 py-3.5 text-xs text-muted-foreground capitalize">
                       {[b.serviceType, b.route].filter(Boolean).join(' · ') || b.type.replace(/_/g, ' ')}
@@ -425,7 +564,7 @@ export const AdminBookings = () => {
                       <ChevronRight size={15} className="text-muted-foreground/40 group-hover:text-gold transition-colors" />
                     </td>
                   </tr>
-                ))}
+                );})}
               </tbody>
             </table>
           </div>

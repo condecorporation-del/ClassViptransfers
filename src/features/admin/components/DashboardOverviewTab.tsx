@@ -1,301 +1,437 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  ArrowUpRight,
-  CalendarCheck,
-  Clock3,
-  CreditCard,
-  Loader2,
-  Route,
-  TrendingUp,
-  Wallet,
-} from 'lucide-react';
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { AnimatePresence, motion } from 'framer-motion';
+import { AlertCircle, CalendarCheck, CheckCircle2, Clock3, Download, Loader2, TrendingUp } from 'lucide-react';
 import { useAdminAuth } from '@/features/admin/hooks/useAdminAuth';
+import {
+  compareOperationBookings,
+  getOperationBadge,
+  getOperationFlight,
+  getOperationHotel,
+  getOperationTime,
+  getOperationType,
+} from '@/features/admin/lib/booking-operations';
 import { getApiBaseUrl } from '@/shared/lib/api';
+import { cloudinaryAssets } from '@/shared/lib/cloudinary-assets';
 
 const apiUrl = (path: string) => {
   const base = getApiBaseUrl();
   return base ? `${base}${path}` : path;
 };
 
-type DashboardTrendPoint = {
-  date: string;
-  label: string;
-  bookings: number;
-  revenue: number;
+type Booking = {
+  id: string;
+  confirmationCode?: string | null;
+  status: string;
+  bookingDate: string;
+  bookingTime?: string | null;
+  pickupLocation?: string | null;
+  dropoffLocation?: string | null;
+  flightNumber?: string | null;
+  departureFlightNumber?: string | null;
+  totalAmount: number;
+  passengers: number;
+  route?: string | null;
+  tripType?: string | null;
+  notes?: string | null;
+  customer?: { name?: string | null };
 };
 
-type DashboardPayload = {
-  totalToday: number;
-  totalMonth: number;
-  revenueToday: string;
-  revenueMonth: string;
-  trends: {
-    last7Days: DashboardTrendPoint[];
-    statusCounts: Record<string, number>;
-    topRoutes: Array<{ route: string; count: number }>;
-  };
-  accounts: {
-    totalAccounts: number;
-    openAccounts: number;
-    outstandingBalanceCents: number;
-    settledAccounts: number;
-  };
+type Tarea = {
+  id: string;
+  titulo: string;
+  fecha: string;
+  status: 'pendiente' | 'completada' | 'cancelada';
 };
 
-function currency(value: number | string) {
-  const normalized = typeof value === 'string' ? Number(value) : value;
-  return `$${normalized.toLocaleString('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })}`;
+const statusTone: Record<string, string> = {
+  DRAFT: 'bg-slate-100 text-slate-700',
+  PENDING: 'bg-amber-100 text-amber-700',
+  PENDING_PAYMENT: 'bg-amber-100 text-amber-700',
+  CONFIRMED: 'bg-emerald-100 text-emerald-700',
+  PAID: 'bg-emerald-100 text-emerald-700',
+  COMPLETED: 'bg-blue-100 text-blue-700',
+  CANCELLED: 'bg-red-100 text-red-700',
+  OFFLINE_HOLD: 'bg-purple-100 text-purple-700',
+};
+
+const todayKey = () => new Date().toISOString().slice(0, 10);
+
+function addDays(date: string, days: number) {
+  const next = new Date(`${date}T12:00:00`);
+  next.setDate(next.getDate() + days);
+  return next.toISOString().slice(0, 10);
 }
 
-function TooltipCard({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string }) {
-  if (!active || !payload?.length) return null;
+function formatDay(date: string) {
+  const normalized = new Date(`${date}T12:00:00`);
+  const weekday = normalized.toLocaleDateString('es-MX', { weekday: 'long' });
+  const dayMonth = normalized.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} ${dayMonth}`;
+}
 
-  return (
-    <div
-      className="rounded-2xl px-3 py-2 shadow-2xl text-xs"
-      style={{ background: 'rgba(6,15,30,0.96)', border: '1px solid rgba(217,174,95,0.24)' }}
-    >
-      <p className="text-white/45 mb-1 font-semibold">{label}</p>
-      {payload.map((entry) => (
-        <div key={entry.name} className="flex items-center justify-between gap-3">
-          <span style={{ color: entry.color }}>{entry.name}</span>
-          <span className="font-bold text-white">{entry.name.toLowerCase().includes('revenue') ? currency(entry.value) : entry.value}</span>
-        </div>
-      ))}
-    </div>
-  );
+function sameDay(bookingDate: string, date: string) {
+  return bookingDate.slice(0, 10) === date;
+}
+
+function money(cents: number) {
+  return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function DashboardOverviewTab() {
   const { getAuthHeaders } = useAdminAuth();
-  const [data, setData] = useState<DashboardPayload | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [tasks, setTasks] = useState<Tarea[]>([]);
+  const [expanded, setExpanded] = useState<'today' | 'tomorrow' | null>('today');
   const [loading, setLoading] = useState(true);
+
+  const today = todayKey();
+  const tomorrow = addDays(today, 1);
+  const [printDate, setPrintDate] = useState(today);
 
   useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
+      setLoading(true);
       try {
-        const response = await fetch(apiUrl('/api/admin/dashboard'), {
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        const dateFrom = monthStart.toISOString().slice(0, 10);
+        const dateTo = addDays(today, 1);
+        const res = await fetch(apiUrl(`/api/admin/bookings?dateFrom=${dateFrom}&dateTo=${dateTo}&limit=500`), {
           credentials: 'include',
           headers: getAuthHeaders(),
         });
-        const json = await response.json();
-        if (!cancelled && json.success) {
-          setData(json.data);
+        const json = await res.json();
+        if (!cancelled) {
+          setBookings(json.success && Array.isArray(json.data) ? json.data : []);
         }
       } catch {
-        if (!cancelled) {
-          setData(null);
-        }
+        if (!cancelled) setBookings([]);
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     };
 
-    void load();
+    const storedTasks = localStorage.getItem('classvip-admin-tareas');
+    if (storedTasks) {
+      try {
+        const parsed = JSON.parse(storedTasks);
+        setTasks(Array.isArray(parsed) ? parsed : []);
+      } catch {
+        setTasks([]);
+      }
+    }
 
+    void load();
     return () => {
       cancelled = true;
     };
-  }, [getAuthHeaders]);
+  }, [getAuthHeaders, today]);
 
-  const statusRows = useMemo(() => {
-    const counts = data?.trends.statusCounts || {};
-    return [
-      { label: 'Confirmed', value: counts.CONFIRMED || 0, tone: 'text-emerald-600 bg-emerald-50 border-emerald-200/70' },
-      { label: 'Pending', value: counts.PENDING_PAYMENT || 0, tone: 'text-amber-600 bg-amber-50 border-amber-200/70' },
-      { label: 'Hold', value: counts.OFFLINE_HOLD || 0, tone: 'text-blue-600 bg-blue-50 border-blue-200/70' },
-      { label: 'Cancelled', value: counts.CANCELLED || 0, tone: 'text-slate-600 bg-slate-50 border-slate-200/70' },
-    ];
-  }, [data]);
+  const todayBookings = useMemo(
+    () => bookings.filter((booking) => sameDay(booking.bookingDate, today) && ['CONFIRMED', 'PENDING', 'PENDING_PAYMENT', 'DRAFT', 'OFFLINE_HOLD'].includes(booking.status)).sort(compareOperationBookings),
+    [bookings, today],
+  );
+
+  const tomorrowBookings = useMemo(
+    () => bookings.filter((booking) => sameDay(booking.bookingDate, tomorrow) && ['CONFIRMED', 'PENDING', 'PENDING_PAYMENT', 'DRAFT', 'OFFLINE_HOLD'].includes(booking.status)).sort(compareOperationBookings),
+    [bookings, tomorrow],
+  );
+
+  const monthBookings = useMemo(
+    () => bookings.filter((booking) => booking.status !== 'CANCELLED'),
+    [bookings],
+  );
+
+  const revenueMonth = monthBookings
+    .filter((booking) => ['PAID', 'CONFIRMED', 'COMPLETED'].includes(booking.status))
+    .reduce((sum, booking) => sum + (booking.totalAmount || 0), 0);
+
+  const pendingTasks = tasks.filter((task) => task.status === 'pendiente' && task.fecha <= today);
+  const pendingBookings = bookings.filter((booking) => ['PENDING', 'PENDING_PAYMENT', 'DRAFT'].includes(booking.status));
+  const printableBookings = (printDate === tomorrow ? tomorrowBookings : todayBookings).sort(compareOperationBookings);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="text-center space-y-3">
-          <Loader2 size={28} className="animate-spin text-gold mx-auto" />
-          <p className="text-sm text-muted-foreground">Loading dashboard…</p>
-        </div>
+        <Loader2 className="animate-spin text-gold" size={28} />
       </div>
     );
   }
 
-  if (!data) {
-    return <div className="text-sm text-muted-foreground">Could not load dashboard.</div>;
-  }
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gold mb-1">Operaciones</p>
+          <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">Dashboard del Dia</h1>
+          <p className="text-sm text-muted-foreground mt-1">Servicios, salidas, llegadas y pendientes operativos en una sola vista.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPrintDate(today)}
+            className={`rounded-xl px-4 py-2 text-sm font-bold transition-colors ${printDate === today ? 'bg-gold text-navy' : 'border border-border text-foreground hover:border-gold/40 hover:bg-gold/10'}`}
+          >
+            Imprimir hoy
+          </button>
+          <button
+            type="button"
+            onClick={() => setPrintDate(tomorrow)}
+            className={`rounded-xl px-4 py-2 text-sm font-bold transition-colors ${printDate === tomorrow ? 'bg-gold text-navy' : 'border border-border text-foreground hover:border-gold/40 hover:bg-gold/10'}`}
+          >
+            Imprimir manana
+          </button>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-2 text-sm font-bold text-white hover:bg-navy/90"
+          >
+            <Download size={15} />
+            PDF operacional
+          </button>
+        </div>
+      </div>
 
-  const cards = [
-    {
-      label: 'Bookings Today',
-      value: data.totalToday,
-      detail: `${data.totalMonth} this month`,
-      icon: <CalendarCheck size={18} />,
-      tone: 'from-amber-50 to-white border-gold/25 text-gold',
-    },
-    {
-      label: 'Revenue Today',
-      value: currency(data.revenueToday),
-      detail: `${currency(data.revenueMonth)} this month`,
-      icon: <TrendingUp size={18} />,
-      tone: 'from-emerald-50 to-white border-emerald-200/70 text-emerald-600',
-    },
-    {
-      label: 'Open Accounts',
-      value: data.accounts.openAccounts,
-      detail: currency(data.accounts.outstandingBalanceCents / 100),
-      icon: <Wallet size={18} />,
-      tone: 'from-blue-50 to-white border-blue-200/70 text-blue-600',
-    },
-    {
-      label: 'Settled Accounts',
-      value: data.accounts.settledAccounts,
-      detail: `${data.accounts.totalAccounts} total`,
-      icon: <CreditCard size={18} />,
-      tone: 'from-slate-50 to-white border-slate-200/70 text-slate-600',
-    },
-  ];
+      <style>{`
+        @media screen {
+          #operations-print-area { display: none; }
+        }
+        @media print {
+          body * { visibility: hidden !important; }
+          #operations-print-area, #operations-print-area * { visibility: visible !important; }
+          #operations-print-area {
+            display: block !important;
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 100%;
+            min-height: 100vh;
+            padding: 32px;
+            background: #ffffff;
+            color: #0f172a;
+            font-family: Georgia, "Times New Roman", serif;
+          }
+          #operations-print-area .watermark {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            opacity: 0.06;
+          }
+          #operations-print-area table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+          }
+          #operations-print-area th,
+          #operations-print-area td {
+            border: 1px solid #d1d5db;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+          }
+          #operations-print-area th {
+            background: #f8fafc;
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+          }
+          @page { margin: 12mm; }
+        }
+      `}</style>
+
+      <div id="operations-print-area">
+        <div className="watermark">
+          <img src={cloudinaryAssets.logo} alt="" style={{ width: 340, objectFit: 'contain' }} />
+        </div>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <img src={cloudinaryAssets.logo} alt="Class VIP Transfers" style={{ height: 62, objectFit: 'contain' }} />
+              <div>
+                <p style={{ margin: 0, fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#8a6a2f' }}>Class VIP Transfers</p>
+                <h1 style={{ margin: '6px 0 0', fontSize: 26 }}>Operacion del dia</h1>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ margin: 0, fontSize: 13 }}>Fecha</p>
+              <strong style={{ fontSize: 18 }}>{formatDay(printDate)}</strong>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Tipo</th>
+                <th>Cliente</th>
+                <th>Hotel</th>
+                <th>Vuelo</th>
+                <th>Pasajeros</th>
+                <th>Notas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {printableBookings.map((booking) => (
+                <tr key={booking.id}>
+                  <td>{getOperationTime(booking)}</td>
+                  <td>{getOperationBadge(booking).label}</td>
+                  <td>{booking.customer?.name || 'Cliente'}</td>
+                  <td>{getOperationHotel(booking)}</td>
+                  <td>{getOperationFlight(booking)}</td>
+                  <td>{booking.passengers}</td>
+                  <td>{booking.notes || '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div style={{ marginTop: 18, display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+            <span>Servicios ordenados por tipo operativo y horario.</span>
+            <span>Class VIP Transfers · +52 624 122 2174</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <OperationsCard
+          title="Servicios de Hoy"
+          dateLabel={formatDay(today)}
+          bookings={todayBookings}
+          expanded={expanded === 'today'}
+          onToggle={() => setExpanded(expanded === 'today' ? null : 'today')}
+        />
+        <OperationsCard
+          title="Servicios de Manana"
+          dateLabel={formatDay(tomorrow)}
+          bookings={tomorrowBookings}
+          expanded={expanded === 'tomorrow'}
+          onToggle={() => setExpanded(expanded === 'tomorrow' ? null : 'tomorrow')}
+        />
+
+        <div className="rounded-2xl border border-border bg-card shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">KPIs del Mes</p>
+              <h2 className="font-display text-2xl font-bold text-foreground mt-1">Resumen mensual</h2>
+            </div>
+            <TrendingUp className="text-gold" size={22} />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Metric label="Bookings" value={monthBookings.length} />
+            <Metric label="Revenue" value={money(revenueMonth)} />
+            <Metric label="Promedio" value={money(monthBookings.length ? revenueMonth / monthBookings.length : 0)} />
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Alertas / Pendientes</p>
+              <h2 className="font-display text-2xl font-bold text-foreground mt-1">Atencion requerida</h2>
+            </div>
+            <AlertCircle className="text-amber-500" size={22} />
+          </div>
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            <Metric label="Bookings pendientes" value={pendingBookings.length} />
+            <Metric label="Tareas vencen hoy" value={pendingTasks.length} />
+          </div>
+          <div className="space-y-2">
+            {pendingTasks.slice(0, 4).map((task) => (
+              <div key={task.id} className="flex items-center gap-3 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2">
+                <Clock3 size={14} className="text-amber-600" />
+                <span className="text-sm font-semibold text-amber-900 truncate">{task.titulo}</span>
+                <span className="ml-auto text-xs text-amber-700">{task.fecha}</span>
+              </div>
+            ))}
+            {pendingTasks.length === 0 && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle2 size={15} className="text-emerald-500" />
+                Sin tareas vencidas o de hoy.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OperationsCard({
+  title,
+  dateLabel,
+  bookings,
+  expanded,
+  onToggle,
+}: {
+  title: string;
+  dateLabel: string;
+  bookings: Booking[];
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const arrivals = bookings.filter((booking) => getOperationType(booking) === 'arrival').length;
+  const departures = bookings.filter((booking) => getOperationType(booking) === 'departure').length;
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-end justify-between gap-4 flex-wrap">
+    <button type="button" onClick={onToggle} className="rounded-2xl border border-border bg-card shadow-sm p-6 text-left">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gold mb-1">Overview</p>
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">Operations Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">Revenue, booking flow, and credit-account exposure in one place.</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">{title}</p>
+          <h2 className="font-display text-xl font-bold text-foreground mt-1">{dateLabel}</h2>
         </div>
-        <div className="rounded-full border border-border/60 bg-white px-3 py-1.5 text-xs font-semibold text-muted-foreground">
-          Last 7 days
-        </div>
+        <CalendarCheck className="text-gold" size={22} />
+      </div>
+      <div className="mt-5 flex items-end gap-3">
+        <span className="font-display text-5xl font-bold text-foreground leading-none">{bookings.length}</span>
+        <span className="text-sm text-muted-foreground pb-1">{arrivals} Llegadas · {departures} Salidas</span>
       </div>
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        {cards.map((card) => (
-          <div
-            key={card.label}
-            className={`rounded-2xl border bg-gradient-to-b ${card.tone} p-5 shadow-sm`}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-10 h-10 rounded-2xl bg-white/80 flex items-center justify-center">{card.icon}</div>
-              <ArrowUpRight size={14} className="text-foreground/30" />
-            </div>
-            <p className="text-3xl font-display font-bold text-foreground">{card.value}</p>
-            <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{card.label}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{card.detail}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-[1.45fr_1fr] gap-5">
-        <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
-          <div className="mb-4">
-            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gold mb-1">Trend</p>
-            <h2 className="font-display text-xl font-bold text-foreground">Bookings and Revenue</h2>
-          </div>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.trends.last7Days} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
-                <defs>
-                  <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#d9ae5f" stopOpacity={0.38} />
-                    <stop offset="100%" stopColor="#d9ae5f" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(10,22,40,0.08)" />
-                <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-                <YAxis yAxisId="left" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-                <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-                <Tooltip content={<TooltipCard />} />
-                <Bar yAxisId="left" dataKey="bookings" name="Bookings" fill="#0f172a" radius={[6, 6, 0, 0]} />
-                <Area yAxisId="right" type="monotone" dataKey="revenue" name="Revenue" stroke="#d9ae5f" fill="url(#revenueFill)" strokeWidth={3} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="space-y-5">
-          <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
-            <div className="mb-4">
-              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gold mb-1">Status Mix</p>
-              <h2 className="font-display text-xl font-bold text-foreground">Booking States</h2>
-            </div>
-            <div className="space-y-2">
-              {statusRows.map((row) => (
-                <div key={row.label} className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${row.tone}`}>
-                  <span className="text-sm font-semibold">{row.label}</span>
-                  <span className="text-lg font-display font-bold">{row.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
-            <div className="mb-4">
-              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gold mb-1">Routes</p>
-              <h2 className="font-display text-xl font-bold text-foreground">Top Demand</h2>
-            </div>
-            <div className="space-y-3">
-              {data.trends.topRoutes.length === 0 && (
-                <p className="text-sm text-muted-foreground">No route data yet.</p>
-              )}
-              {data.trends.topRoutes.map((item) => (
-                <div key={item.route} className="flex items-center gap-3 rounded-2xl bg-muted/40 px-4 py-3">
-                  <div className="w-9 h-9 rounded-2xl bg-gold/10 text-gold flex items-center justify-center shrink-0">
-                    <Route size={15} />
+            <div className="mt-5 space-y-2 border-t border-border pt-4">
+              {bookings.map((booking) => {
+                const badge = getOperationBadge(booking);
+                return (
+                  <div key={booking.id} className="grid grid-cols-[56px_76px_minmax(0,1fr)_auto] gap-3 items-center rounded-xl bg-muted/30 px-3 py-2">
+                    <span className="font-mono text-xs font-bold text-foreground">{getOperationTime(booking)}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase text-center ${badge.className}`}>{badge.label}</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{booking.customer?.name || 'Cliente'}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {getOperationHotel(booking)} · {booking.passengers} pax
+                        {(booking.flightNumber || booking.departureFlightNumber) ? ` · ${getOperationFlight(booking)}` : ''}
+                      </p>
+                    </div>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${statusTone[booking.status] || 'bg-slate-100 text-slate-700'}`}>
+                      {booking.status.replace(/_/g, ' ')}
+                    </span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-foreground truncate">{item.route}</p>
-                    <p className="text-xs text-muted-foreground">{item.count} bookings</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
+              {bookings.length === 0 && <p className="text-sm text-muted-foreground">No hay servicios programados.</p>}
             </div>
-          </div>
-        </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </button>
+  );
+}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <Clock3 size={16} className="text-amber-500" />
-            <h3 className="font-display text-lg font-bold text-foreground">Credit Exposure</h3>
-          </div>
-          <p className="text-3xl font-display font-bold text-foreground">{currency(data.accounts.outstandingBalanceCents / 100)}</p>
-          <p className="text-sm text-muted-foreground mt-1">Open client-account balance pending collection.</p>
-        </div>
-        <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <Wallet size={16} className="text-blue-500" />
-            <h3 className="font-display text-lg font-bold text-foreground">Open Accounts</h3>
-          </div>
-          <p className="text-3xl font-display font-bold text-foreground">{data.accounts.openAccounts}</p>
-          <p className="text-sm text-muted-foreground mt-1">Clients currently carrying running balances.</p>
-        </div>
-        <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp size={16} className="text-emerald-500" />
-            <h3 className="font-display text-lg font-bold text-foreground">Momentum</h3>
-          </div>
-          <p className="text-3xl font-display font-bold text-foreground">{data.trends.last7Days.reduce((sum, item) => sum + item.bookings, 0)}</p>
-          <p className="text-sm text-muted-foreground mt-1">Bookings captured over the last 7 operational days.</p>
-        </div>
-      </div>
+function Metric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-xl border border-border bg-background px-4 py-3">
+      <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
+      <p className="mt-2 font-display text-2xl font-bold text-foreground">{value}</p>
     </div>
   );
 }

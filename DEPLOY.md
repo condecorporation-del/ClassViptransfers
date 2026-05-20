@@ -67,6 +67,18 @@ The frontend SPA is still served from:
 
 Set these in the Vercel project.
 
+## Production cutover
+
+When the code is approved and you are ready to switch from test credentials to the client's real production setup, change variables in this order:
+
+1. Domain variables
+2. Admin credentials
+3. Stripe live keys
+4. Resend sender domain
+5. Final webhook secret
+
+This avoids mixing test and live systems during rollout.
+
 ### Frontend
 
 - `VITE_STRIPE_PUBLIC_KEY=pk_live_or_test_here`
@@ -81,6 +93,7 @@ Notes:
 
 - Leave `VITE_API_BASE_URL` empty or unset when frontend and API share the same Vercel deployment.
 - Set `VITE_API_BASE_URL` only if the frontend must temporarily call another backend host.
+- For this project, the preferred production setup is same-origin on Vercel, so `VITE_API_BASE_URL` should stay empty.
 
 ### Core backend
 
@@ -99,6 +112,12 @@ Recommended:
 
 - use `ALLOW_VERCEL_PREVIEW_ORIGINS=true` while testing preview deployments
 - once the final production domain is stable, tighten this if you want stricter CORS
+
+For the final Class VIP domain, these are the intended production values:
+
+- `FRONTEND_URL=https://www.classviptransfers.com`
+- `BACKEND_URL=https://www.classviptransfers.com`
+- `ALLOWED_ORIGINS=https://www.classviptransfers.com,https://classviptransfers.com`
 
 ### Admin auth
 
@@ -135,9 +154,44 @@ Recommended email vars:
 - `EMAIL_COMPANY_TO=...`
 - `EMAIL_FROM=Class VIP Transfers <reservations@yourdomain.com>`
 
+Resend testing mode before the domain is verified:
+
+- `EMAIL_FROM=Class VIP Transfers <onboarding@resend.dev>`
+
+Resend production mode after the client domain is verified in Resend:
+
+- `EMAIL_FROM=Class VIP Transfers <reservations@classviptransfers.com>`
+- `COMPANY_BOOKINGS_EMAIL=reservations@classviptransfers.com`
+
+If you want internal copies during rollout, you can temporarily set:
+
+- `COMPANY_BOOKINGS_EMAIL=condecorporation@gmail.com`
+
 ### Optional AI
 
 - `OPENAI_API_KEY=...`
+- `OPENAI_MODEL=gpt-4o`
+- `OPENAI_WHISPER_MODEL=whisper-1`
+- `OPENAI_TEMPERATURE=0.3`
+- `OPENAI_MAX_TOKENS=400`
+
+## Database notes
+
+The current production database already supports:
+
+- bookings
+- admin auth
+- client accounts / open accounts
+- account charges
+- account payments
+
+Important:
+
+- the app runtime uses the Supabase pooler connection in `DATABASE_URL`
+- Prisma schema push through the pooler can hang
+- for future schema changes, prefer a direct migration connection instead of relying on the pooler
+
+That means the project is ready to run on the current database, but future schema edits should use a safer migration path.
 
 ## Stripe webhook on Vercel
 
@@ -189,6 +243,22 @@ After the first Vercel deploy, verify:
 13. confirm / resend / cancel
 14. confirmation emails
 15. Stripe webhook confirmation path
+
+## Final launch checklist
+
+Before switching the public DNS to `www.classviptransfers.com`, confirm all of these:
+
+1. Admin login works with the final `ADMIN_EMAIL`
+2. Create an open account from admin and confirm it appears in `Finanzas > Cuentas Abiertas`
+3. Create a reservation from admin
+4. Edit the reservation from admin
+5. Reservation appears ordered correctly in operational views
+6. `PDF operacional` prints with logo and watermark
+7. Stripe card field loads with the live publishable key
+8. A live payment reaches success and updates the booking
+9. Resend sends from `onboarding@resend.dev` or the final verified domain
+10. Webhook events reach `/api/stripe/webhook`
+11. Frontend and admin both work on the final domain without CORS errors
 
 ## Final architecture target
 

@@ -12,9 +12,9 @@ import { PricingManager } from '@/features/admin/components/PricingManager';
 import { AdminBookings } from '@/features/admin/components/AdminBookings';
 import { FinanzasTab } from '@/features/admin/components/FinanzasTab';
 import { DashboardOverviewTab } from '@/features/admin/components/DashboardOverviewTab';
-import { AccountsTab } from '@/features/admin/components/AccountsTab';
 import { MarketingTab } from '@/features/admin/components/MarketingTab';
 import { RRHHTab } from '@/features/admin/components/RRHHTab';
+import { TareasTab } from '@/features/admin/components/TareasTab';
 import { getApiBaseUrl } from '@/shared/lib/api';
 import { cloudinaryAssets } from '@/shared/lib/cloudinary-assets';
 
@@ -23,7 +23,7 @@ const apiUrl = (path: string) => {
   return base ? `${base}${path}` : path;
 };
 
-type Tab = 'dashboard' | 'bookings' | 'pricing' | 'new-booking' | 'finanzas' | 'accounts' | 'marketing' | 'rrhh';
+type Tab = 'dashboard' | 'bookings' | 'pricing' | 'new-booking' | 'finanzas' | 'marketing' | 'rrhh' | 'tareas';
 
 // ─── Dashboard Stats ──────────────────────────────────────────────────────────
 
@@ -33,6 +33,13 @@ function DashboardTab() {
 // ─── Quick Booking Form ───────────────────────────────────────────────────────
 
 type PaymentMethod = 'none' | 'stripe' | 'cash';
+type QuickBookingMode = 'oneway' | 'roundtrip' | 'account';
+type QuickAccountSummary = {
+  id: string;
+  name: string;
+  company?: string | null;
+  balanceCents: number;
+};
 
 const PAYMENT_OPTIONS: Array<{
   id: PaymentMethod;
@@ -85,7 +92,7 @@ function QuickBookingTab() {
     customerName: '',
     customerEmail: '',
     customerPhone: '',
-    tripType: 'oneway' as 'oneway' | 'roundtrip' | 'open',
+    tripType: 'oneway' as QuickBookingMode,
     hotelName: '',
     passengers: '1',
     priceUsd: '',
@@ -97,7 +104,10 @@ function QuickBookingTab() {
     departureFlight: '',
     notes: '',
     serviceDescription: '',
+    accountId: '',
   });
+  const [accounts, setAccounts] = useState<QuickAccountSummary[]>([]);
+  const [accountsLoading, setAccountsLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('stripe');
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [showDepartureInfo, setShowDepartureInfo] = useState(false);
@@ -106,6 +116,34 @@ function QuickBookingTab() {
 
   const f = (key: keyof typeof form) => (v: string) => setForm(prev => ({ ...prev, [key]: v }));
   const computedPickupTime = calcPickupTime(form.departureTime);
+  const isAccountService = form.tripType === 'account';
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAccounts = async () => {
+      setAccountsLoading(true);
+      try {
+        const response = await fetch(apiUrl('/api/admin/accounts'), {
+          credentials: 'include',
+          headers: getAuthHeaders(),
+        });
+        const json = await response.json();
+        if (!cancelled && json.success) {
+          setAccounts(Array.isArray(json.data) ? json.data : []);
+        }
+      } catch {
+        if (!cancelled) setAccounts([]);
+      } finally {
+        if (!cancelled) setAccountsLoading(false);
+      }
+    };
+
+    void loadAccounts();
+    return () => {
+      cancelled = true;
+    };
+  }, [getAuthHeaders]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,18 +151,21 @@ function QuickBookingTab() {
     const email = form.customerEmail?.trim();
     const phone = form.customerPhone?.trim();
     const hotel = form.hotelName?.trim();
-    const isOpenService = form.tripType === 'open';
 
     if (!name || !email || !phone) {
       setResult({ success: false, message: 'Required: customer name, email, and phone.' });
       return;
     }
-    if (!isOpenService && (!form.arrivalDate || !hotel)) {
+    if (!isAccountService && (!form.arrivalDate || !hotel)) {
       setResult({ success: false, message: 'Required: arrival date and hotel / destination.' });
       return;
     }
-    if (isOpenService && !form.serviceDescription?.trim()) {
-      setResult({ success: false, message: 'Required: service description for open service.' });
+    if (isAccountService && !form.accountId) {
+      setResult({ success: false, message: 'Select the existing account that should carry this service.' });
+      return;
+    }
+    if (isAccountService && !form.serviceDescription?.trim()) {
+      setResult({ success: false, message: 'Required: service description for the account service.' });
       return;
     }
     setSubmitting(true);
@@ -132,14 +173,14 @@ function QuickBookingTab() {
 
     try {
       const priceNum = parseFloat(form.priceUsd) || 0;
-      const tripLabel = isOpenService ? 'Open Service' : form.tripType === 'roundtrip' ? 'Round Trip' : 'One Way';
-      const itemName = isOpenService
-        ? (form.serviceDescription?.trim() || 'Open Service')
+      const tripLabel = isAccountService ? 'Account Service' : form.tripType === 'roundtrip' ? 'Round Trip' : 'One Way';
+      const itemName = isAccountService
+        ? (form.serviceDescription?.trim() || 'Account Service')
         : `Private Transfer — ${hotel} (${tripLabel})`;
       const body = {
         type: 'TRANSPORTATION',
         customer: { name: name!, email: email!, phone: phone!, language: 'en' },
-        bookingDate: isOpenService
+        bookingDate: isAccountService
           ? new Date().toISOString()
           : new Date(form.arrivalDate + 'T12:00:00').toISOString(),
         bookingTime: form.arrivalTime || undefined,
@@ -147,17 +188,17 @@ function QuickBookingTab() {
         arrivalTime: form.arrivalTime?.trim() || undefined,
         departureFlightNumber: form.departureFlight?.trim() || undefined,
         departureTime: form.departureTime?.trim() || undefined,
-        pickupLocation: isOpenService ? undefined : 'SJD Airport',
-        dropoffLocation: isOpenService ? undefined : hotel!,
+        pickupLocation: isAccountService ? undefined : 'SJD Airport',
+        dropoffLocation: isAccountService ? undefined : hotel!,
         passengers: parseInt(form.passengers) || 1,
         serviceType: 'private',
-        tripType: isOpenService ? 'oneway' : form.tripType,
-        notes: isOpenService
-          ? `[OPEN SERVICE] ${form.serviceDescription?.trim()}\n${form.notes?.trim() || ''}`
+        tripType: isAccountService ? 'oneway' : form.tripType,
+        notes: isAccountService
+          ? `[ACCOUNT SERVICE] ${form.serviceDescription?.trim()}\n${form.notes?.trim() || ''}`
           : (form.notes?.trim() || undefined),
         status: paymentMethod === 'cash' ? 'CONFIRMED' : 'OFFLINE_HOLD',
         sendConfirmation: paymentMethod === 'cash',
-        sendPaymentLink: paymentMethod === 'stripe',
+        sendPaymentLink: !isAccountService && paymentMethod === 'stripe',
         items: [{ type: 'TRANSPORTATION' as const, name: itemName, quantity: 1, unitPrice: priceNum }],
       };
 
@@ -170,6 +211,15 @@ function QuickBookingTab() {
       const json = await res.json();
 
       if (json.success) {
+        if (isAccountService && form.accountId && json.data?.id) {
+          await fetch(apiUrl(`/api/admin/accounts/${form.accountId}/bookings`), {
+            method: 'POST',
+            credentials: 'include',
+            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bookingId: json.data.id }),
+          });
+        }
+
         const code = json.data?.confirmationCode || json.data?.id?.slice(0, 8).toUpperCase();
         const emailMeta = json.data?.email as
           | { mode?: 'payment-link' | 'confirmation' | 'none'; customerSent?: boolean; companySent?: boolean }
@@ -186,13 +236,19 @@ function QuickBookingTab() {
                   : 'Booking created, but confirmation email could not be sent. Check email provider configuration.')
             :
           'Booking saved (no email sent).';
-        setResult({ success: true, message: `Booking created: ${code}`, detail: emailMsg, code });
+        setResult({
+          success: true,
+          message: isAccountService ? `Service added to account: ${code}` : `Booking created: ${code}`,
+          detail: isAccountService ? 'The service was linked to the selected open account.' : emailMsg,
+          code,
+        });
         setForm({
           customerName: '', customerEmail: '', customerPhone: '',
           tripType: 'oneway', hotelName: '', passengers: '1', priceUsd: '',
           arrivalDate: '', arrivalTime: '', arrivalFlight: '',
           departureDate: '', departureTime: '', departureFlight: '', notes: '',
           serviceDescription: '',
+          accountId: '',
         });
         setShowDepartureInfo(false);
         setAttachedFile(null);
@@ -208,21 +264,42 @@ function QuickBookingTab() {
   };
 
   const submitLabel =
-    paymentMethod === 'stripe' ? 'Create & Send Stripe Link' :
-    paymentMethod === 'cash'   ? 'Create & Send Confirmation' :
-    'Save Booking';
-
-  const isOpenService = form.tripType === 'open';
+    isAccountService
+      ? 'Create Service & Add to Account'
+      : paymentMethod === 'stripe' ? 'Create & Send Stripe Link' :
+      paymentMethod === 'cash'   ? 'Create & Send Confirmation' :
+      'Save Booking';
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-5xl">
       {/* Page header */}
-      <div className="mb-8">
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gold mb-1">New Reservation</p>
-        <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">Quick Booking</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {isOpenService ? 'Custom service — send Stripe link or confirm manually.' : 'Manual reservation — private airport transfer.'}
-        </p>
+      <div className="mb-8 flex flex-col gap-5 xl:flex-row xl:items-stretch">
+        <div className="flex-1">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gold mb-1">New Reservation</p>
+          <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">Quick Booking</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isAccountService
+              ? 'Create a service and charge it to an existing open account.'
+              : 'Manual reservation entry with cleaner payment handling and better operational context.'}
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 xl:w-[560px]">
+          <QuickBookingStatCard
+            title="Booking Mode"
+            value={isAccountService ? 'Account Service' : form.tripType === 'roundtrip' ? 'Round Trip' : 'One Way'}
+            detail={isAccountService ? 'Open balance workflow' : 'Direct reservation flow'}
+          />
+          <QuickBookingStatCard
+            title="Payment"
+            value={isAccountService ? 'On Account' : paymentMethod === 'stripe' ? 'Stripe Link' : paymentMethod === 'cash' ? 'Cash' : 'Save Only'}
+            detail={isAccountService ? 'Settled later' : paymentMethod === 'stripe' ? 'Client pays remotely' : paymentMethod === 'cash' ? 'Confirmed immediately' : 'No email automation'}
+          />
+          <QuickBookingStatCard
+            title="Amount"
+            value={form.priceUsd ? `$${Number(form.priceUsd || 0).toFixed(2)}` : '$0.00'}
+            detail={isAccountService ? 'Added to ledger' : 'Current booking value'}
+          />
+        </div>
       </div>
 
       {/* Result banner */}
@@ -249,7 +326,7 @@ function QuickBookingTab() {
         )}
       </AnimatePresence>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
 
         {/* ── Customer ── */}
         <FormSection title="Customer" icon={<User size={14} />}>
@@ -264,27 +341,37 @@ function QuickBookingTab() {
         <FormSection title="Service Type" icon={<Truck size={14} />}>
           <div className="mb-4">
             <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-2">Service Type *</p>
-            <div className="flex rounded-xl border border-border overflow-hidden bg-muted/30">
+            <div className="grid md:grid-cols-3 gap-3">
               {([
-                { id: 'oneway', label: 'One Way' },
-                { id: 'roundtrip', label: 'Round Trip' },
-                { id: 'open', label: 'Open Service' },
+                { id: 'oneway', label: 'One Way', desc: 'Single transfer service for arrivals or departures.', badge: 'Transfer' },
+                { id: 'roundtrip', label: 'Round Trip', desc: 'Arrival and departure booked together.', badge: 'Transfer' },
+                { id: 'account', label: 'Add to Account', desc: 'Dinner, errands, private driver, or any service carried on credit.', badge: 'Account' },
               ] as const).map(t => (
                 <button key={t.id} type="button"
                   onClick={() => setForm(p => ({ ...p, tripType: t.id }))}
-                  className={`flex-1 py-3 text-sm font-bold transition-all ${
+                  className={`rounded-2xl border px-4 py-4 text-left transition-all ${
                     form.tripType === t.id
-                      ? 'bg-[hsl(var(--navy))] text-gold shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                      ? 'border-gold bg-[hsl(var(--navy))] text-white shadow-[0_10px_30px_rgba(10,22,40,0.12)]'
+                      : 'border-border bg-background text-muted-foreground hover:border-gold/30 hover:bg-muted/30'
                   }`}
                 >
-                  {t.label}
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className={`text-sm font-bold ${form.tripType === t.id ? 'text-gold' : 'text-foreground'}`}>{t.label}</p>
+                      <p className={`mt-1 text-xs leading-5 ${form.tripType === t.id ? 'text-white/70' : 'text-muted-foreground'}`}>{t.desc}</p>
+                    </div>
+                    <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${
+                      form.tripType === t.id ? 'bg-gold/15 text-gold' : 'bg-muted text-muted-foreground'
+                    }`}>
+                      {t.badge}
+                    </span>
+                  </div>
                 </button>
               ))}
             </div>
           </div>
 
-          {!isOpenService && (
+          {!isAccountService && (
             <>
               <div className="grid sm:grid-cols-2 gap-3 mb-3">
                 <QField label="Hotel / Property / Destination *" value={form.hotelName} onChange={f('hotelName')} placeholder="Pueblo Bonito, Villa Serena…" />
@@ -302,15 +389,34 @@ function QuickBookingTab() {
             </>
           )}
 
-          {isOpenService && (
+          {isAccountService && (
             <div className="space-y-3">
+              <div className="rounded-2xl border border-blue-200/70 bg-blue-50/70 px-4 py-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-blue-700 mb-1">Account Workflow</p>
+                <p className="text-sm text-blue-900">Use this when the guest or villa keeps an open balance and settles later.</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-2">Existing Open Account *</p>
+                <select
+                  value={form.accountId}
+                  onChange={e => setForm(p => ({ ...p, accountId: e.target.value }))}
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold/50 transition-all"
+                >
+                  <option value="">{accountsLoading ? 'Loading accounts...' : 'Select an open account'}</option>
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}{account.company ? ` - ${account.company}` : ''} ({`$${(account.balanceCents / 100).toFixed(2)}`})
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-2">Service Description *</p>
                 <textarea
                   value={form.serviceDescription}
                   onChange={e => setForm(p => ({ ...p, serviceDescription: e.target.value }))}
                   rows={4}
-                  placeholder="Describe the service in detail — group transfer, multi-day hire, special event, etc."
+                  placeholder="Example: Dinner transfer to Flora Farms, private driver 4 hours, airport errand, grocery stop..."
                   className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold/50 transition-all"
                 />
               </div>
@@ -348,7 +454,7 @@ function QuickBookingTab() {
         </FormSection>
 
         {/* ── Arrival ── */}
-        {!isOpenService && (
+        {!isAccountService && (
           <FormSection title="Arrival" icon={<Plane size={14} className="rotate-[-45deg]" />}>
             <div className="grid sm:grid-cols-3 gap-3">
               <QField label="Arrival Date *" type="date" value={form.arrivalDate} onChange={f('arrivalDate')} />
@@ -359,7 +465,7 @@ function QuickBookingTab() {
         )}
 
         {/* ── Departure ── */}
-        {!isOpenService && (form.tripType === 'roundtrip' || showDepartureInfo || form.departureTime || form.departureFlight) && (
+        {!isAccountService && (form.tripType === 'roundtrip' || showDepartureInfo || form.departureTime || form.departureFlight) && (
           <FormSection title="Departure" icon={<Plane size={14} className="rotate-45" />}>
             <div className="grid sm:grid-cols-3 gap-3">
               {form.tripType === 'roundtrip' && (
@@ -383,7 +489,7 @@ function QuickBookingTab() {
           </FormSection>
         )}
 
-        {!isOpenService && form.tripType === 'oneway' && !showDepartureInfo && !form.departureTime && !form.departureFlight && (
+        {!isAccountService && form.tripType === 'oneway' && !showDepartureInfo && !form.departureTime && !form.departureFlight && (
           <button
             type="button"
             onClick={() => setShowDepartureInfo(true)}
@@ -410,13 +516,15 @@ function QuickBookingTab() {
           <div className="grid sm:grid-cols-3 gap-3">
             {PAYMENT_OPTIONS.map(opt => {
               const active = paymentMethod === opt.id;
+              const disabled = isAccountService && opt.id === 'stripe';
               return (
-                <button key={opt.id} type="button" onClick={() => setPaymentMethod(opt.id)}
+                <button key={opt.id} type="button" onClick={() => !disabled && setPaymentMethod(opt.id)}
+                  disabled={disabled}
                   className={`flex flex-col items-start gap-2 p-4 rounded-2xl border-2 text-left transition-all duration-200 ${
                     active
                       ? 'border-gold bg-[hsl(var(--navy))] shadow-md'
                       : 'border-border bg-background hover:border-gold/30 hover:bg-muted/40'
-                  }`}
+                  } ${disabled ? 'cursor-not-allowed opacity-45' : ''}`}
                 >
                   <div className={`flex items-center gap-2 ${active ? 'text-gold' : 'text-muted-foreground'}`}>
                     <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${active ? 'border-gold bg-gold' : 'border-muted-foreground/40'}`}>
@@ -434,13 +542,19 @@ function QuickBookingTab() {
             })}
           </div>
 
-          {paymentMethod === 'stripe' && (
+          {isAccountService && (
+            <div className="mt-3 flex items-start gap-2.5 p-3 rounded-xl bg-slate-50/80 border border-slate-200/70 text-slate-700 text-xs">
+              <CreditCard size={13} className="mt-0.5 shrink-0" />
+              <span>Account services should remain on the client ledger. Use Save Only or Paid in Cash, then settle from Cuentas Abiertas.</span>
+            </div>
+          )}
+          {!isAccountService && paymentMethod === 'stripe' && (
             <div className="mt-3 flex items-start gap-2.5 p-3 rounded-xl bg-indigo-50/80 border border-indigo-200/70 text-indigo-700 text-xs">
               <CreditCard size={13} className="mt-0.5 shrink-0" />
               <span>Client receives a Stripe payment link by email. Booking confirmed automatically when payment is completed.</span>
             </div>
           )}
-          {paymentMethod === 'stripe' && (!form.priceUsd || parseFloat(form.priceUsd) <= 0) && (
+          {!isAccountService && paymentMethod === 'stripe' && (!form.priceUsd || parseFloat(form.priceUsd) <= 0) && (
             <div className="mt-2 flex items-start gap-2.5 p-3 rounded-xl bg-amber-50/80 border border-amber-200/70 text-amber-700 text-xs">
               <AlertCircle size={13} className="mt-0.5 shrink-0" />
               <span>A price greater than $0 is required to generate a Stripe payment link.</span>
@@ -457,7 +571,14 @@ function QuickBookingTab() {
         {/* Submit */}
         <button
           type="submit"
-          disabled={submitting || !form.customerName?.trim() || !form.customerEmail?.trim() || !form.customerPhone?.trim() || (!isOpenService && (!form.hotelName?.trim() || !form.arrivalDate)) || (isOpenService && !form.serviceDescription?.trim())}
+          disabled={
+            submitting ||
+            !form.customerName?.trim() ||
+            !form.customerEmail?.trim() ||
+            !form.customerPhone?.trim() ||
+            (!isAccountService && (!form.hotelName?.trim() || !form.arrivalDate)) ||
+            (isAccountService && (!form.serviceDescription?.trim() || !form.accountId))
+          }
           className="w-full py-4 rounded-2xl font-bold text-sm tracking-wide transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 hover:shadow-[0_6px_24px_rgba(212,175,55,0.35)]"
           style={{ background: 'linear-gradient(135deg, #c9a227, #f0c040, #c9a227)', color: '#0A1628' }}
         >
@@ -486,6 +607,16 @@ function FormSection({ title, icon, children }: { title: string; icon: React.Rea
         <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-foreground/70">{title}</span>
       </div>
       <div className="p-4 bg-card">{children}</div>
+    </div>
+  );
+}
+
+function QuickBookingStatCard({ title, value, detail }: { title: string; value: string | number; detail: string }) {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-white/90 px-4 py-3 shadow-sm">
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gold mb-1">{title}</p>
+      <p className="text-lg font-display font-bold text-foreground leading-none">{value}</p>
+      <p className="text-xs text-muted-foreground mt-1">{detail}</p>
     </div>
   );
 }
@@ -520,8 +651,8 @@ const Admin = () => {
     { id: 'dashboard',   label: 'Dashboard',         icon: <LayoutDashboard size={17} />, mobileLabel: 'Home',    group: 'OPERACIONES' },
     { id: 'bookings',    label: 'Reservaciones',      icon: <CalendarCheck size={17} />,   mobileLabel: 'Res.',    group: 'OPERACIONES' },
     { id: 'new-booking', label: 'Nueva Reserva',      icon: <PlusCircle size={17} />,      mobileLabel: 'Nueva',   group: 'OPERACIONES' },
+    { id: 'tareas',      label: 'Tareas',             icon: <CheckCircle2 size={17} />,    mobileLabel: 'Tareas',  group: 'OPERACIONES' },
     { id: 'finanzas',    label: 'Finanzas',           icon: <BarChart2 size={17} />,       mobileLabel: 'Fin.',    group: 'ANALYTICS' },
-    { id: 'accounts',    label: 'Cuentas Abiertas',   icon: <CreditCard size={17} />,      mobileLabel: 'Acct.',   group: 'ANALYTICS' },
     { id: 'marketing',   label: 'Marketing',          icon: <Megaphone size={17} />,       mobileLabel: 'Mkt.',    group: 'ANALYTICS' },
     { id: 'rrhh',        label: 'Recursos Humanos',   icon: <Users size={17} />,           mobileLabel: 'RRHH',    group: 'EQUIPO' },
     { id: 'pricing',     label: 'Configuración',      icon: <Settings size={17} />,        mobileLabel: 'Config',  group: 'EQUIPO' },
@@ -556,7 +687,7 @@ const Admin = () => {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-white/95 backdrop-blur-xl"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="flex items-center justify-around h-[58px]">
-          {(['dashboard', 'bookings', 'new-booking', 'finanzas', 'rrhh'] as Tab[]).map(tabId => {
+          {(['dashboard', 'bookings', 'new-booking', 'tareas', 'finanzas'] as Tab[]).map(tabId => {
             const item = sidebarItems.find(s => s.id === tabId)!;
             return (
               <button key={item.id}
@@ -576,11 +707,11 @@ const Admin = () => {
           })}
           <button onClick={() => setMobileMenu(true)}
             className="flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl text-muted-foreground">
-            <span className={`p-1 rounded-lg transition-all ${(['marketing', 'pricing', 'accounts'].includes(activeTab)) ? 'bg-gold/10' : ''}`}>
-              <MoreHorizontal size={17} className={['marketing', 'pricing', 'accounts'].includes(activeTab) ? 'text-gold' : ''} />
+            <span className={`p-1 rounded-lg transition-all ${(['marketing', 'pricing', 'rrhh'].includes(activeTab)) ? 'bg-gold/10' : ''}`}>
+              <MoreHorizontal size={17} className={['marketing', 'pricing', 'rrhh'].includes(activeTab) ? 'text-gold' : ''} />
             </span>
-            <span className={`text-[9px] font-bold uppercase tracking-wide ${['marketing', 'pricing', 'accounts'].includes(activeTab) ? 'text-gold' : 'text-muted-foreground/70'}`}>
-              {['marketing', 'pricing', 'accounts'].includes(activeTab) ? sidebarItems.find(s => s.id === activeTab)?.mobileLabel : 'Más'}
+            <span className={`text-[9px] font-bold uppercase tracking-wide ${['marketing', 'pricing', 'rrhh'].includes(activeTab) ? 'text-gold' : 'text-muted-foreground/70'}`}>
+              {['marketing', 'pricing', 'rrhh'].includes(activeTab) ? sidebarItems.find(s => s.id === activeTab)?.mobileLabel : 'Mas'}
             </span>
           </button>
         </div>
@@ -777,7 +908,7 @@ const Admin = () => {
 
           {activeTab === 'finanzas' && <FinanzasTab />}
 
-          {activeTab === 'accounts' && <AccountsTab />}
+          {activeTab === 'tareas' && <TareasTab />}
 
           {activeTab === 'marketing' && <MarketingTab />}
 

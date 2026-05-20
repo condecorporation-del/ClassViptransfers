@@ -704,8 +704,8 @@ export class BookingService {
         skip,
         take: limit,
         orderBy: [
-          { bookingTime: 'asc' },
           { bookingDate: 'asc' },
+          { bookingTime: 'asc' },
         ],
         include: {
           customer: true,
@@ -775,8 +775,8 @@ export class BookingService {
         },
       },
       orderBy: [
-        { bookingTime: 'asc' },
         { bookingDate: 'asc' },
+        { bookingTime: 'asc' },
       ],
     });
 

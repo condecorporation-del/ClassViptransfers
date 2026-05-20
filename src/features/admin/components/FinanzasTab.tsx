@@ -1,10 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { AlertCircle, Loader2, RefreshCw, ArrowUpRight, CheckCircle2 } from 'lucide-react';
-import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, CartesianGrid,
-} from 'recharts';
+import { useEffect, useMemo, useState } from 'react';
+import { AlertCircle, ArrowUpRight, Bell, Loader2, RefreshCw, WalletCards } from 'lucide-react';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { AccountsTab } from '@/features/admin/components/AccountsTab';
 import { useAdminAuth } from '@/features/admin/hooks/useAdminAuth';
 import { getApiBaseUrl } from '@/shared/lib/api';
 
@@ -13,39 +10,7 @@ const apiUrl = (path: string) => {
   return base ? `${base}${path}` : path;
 };
 
-const fmtUSDDecimal = (cents: number) =>
-  `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('es-MX', { month: 'short', day: 'numeric', year: 'numeric' });
-
-function daysBetween(isoDate: string): number {
-  const now = new Date();
-  const then = new Date(isoDate);
-  return Math.floor((now.getTime() - then.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-function dateNDaysAgo(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().slice(0, 10);
-}
-
-function useCountUp(target: number, duration = 1300) {
-  const [value, setValue] = useState(0);
-  useEffect(() => {
-    if (target === 0) { setValue(0); return; }
-    const start = performance.now();
-    const run = (now: number) => {
-      const t = Math.min((now - start) / duration, 1);
-      setValue(Math.round(target * (1 - Math.pow(1 - t, 3))));
-      if (t < 1) requestAnimationFrame(run);
-    };
-    const id = requestAnimationFrame(run);
-    return () => cancelAnimationFrame(id);
-  }, [target, duration]);
-  return value;
-}
+type FinanceTab = 'summary' | 'receivables' | 'accounts';
 
 type DashboardData = {
   totalToday: number;
@@ -60,49 +25,50 @@ type Booking = {
   status: string;
   totalAmount: number;
   bookingDate: string;
-  customer: { name: string; email: string };
+  serviceType?: string | null;
+  route?: string | null;
+  tripType?: string | null;
+  customer?: { name?: string | null; email?: string | null };
 };
 
-const GOLD = '#D9AE5F';
-const STATUS_COLORS: Record<string, string> = {
-  CONFIRMED: '#10b981',
-  PENDING_PAYMENT: '#f59e0b',
-  OFFLINE_HOLD: '#3b82f6',
-  CANCELLED: '#6b7280',
-};
+const tabs: Array<{ id: FinanceTab; label: string }> = [
+  { id: 'summary', label: 'Resumen Financiero' },
+  { id: 'receivables', label: 'Cuentas por Cobrar' },
+  { id: 'accounts', label: 'Cuentas Abiertas' },
+];
 
-function GlassTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-xl px-3.5 py-2.5 shadow-2xl text-sm pointer-events-none"
-      style={{ background: 'rgba(6,15,30,0.95)', border: '1px solid rgba(212,175,55,0.3)', backdropFilter: 'blur(16px)' }}>
-      <p className="text-[10px] font-medium mb-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{label}</p>
-      <p className="font-black text-sm" style={{ color: GOLD }}>${payload[0].value.toLocaleString('en-US')}</p>
-    </div>
-  );
+function usd(cents: number) {
+  return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function StatusPill({ status }: { status: string }) {
-  const map: Record<string, { label: string; color: string; bg: string }> = {
-    PENDING_PAYMENT: { label: 'Pendiente', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-    OFFLINE_HOLD:    { label: 'En Espera', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)'  },
-    CONFIRMED:       { label: 'Confirmada',color: '#10b981', bg: 'rgba(16,185,129,0.1)'  },
-    CANCELLED:       { label: 'Cancelada', color: '#6b7280', bg: 'rgba(107,114,128,0.1)' },
-  };
-  const s = map[status] ?? { label: status, color: '#6b7280', bg: 'rgba(107,114,128,0.1)' };
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
-      style={{ color: s.color, background: s.bg, border: `1px solid ${s.color}25` }}>
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: s.color }} />
-      {s.label}
-    </span>
-  );
+function daysOverdue(date: string) {
+  const today = new Date();
+  const bookingDate = new Date(`${date.slice(0, 10)}T12:00:00`);
+  return Math.max(0, Math.floor((today.getTime() - bookingDate.getTime()) / 86_400_000));
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+function urgencyClass(days: number) {
+  if (days > 14) return 'bg-red-100 text-red-700 border-red-200';
+  if (days >= 7) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+  return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+}
+
+function serviceLabel(booking: Booking) {
+  if (booking.tripType === 'roundtrip') return 'Redondo';
+  if (booking.route === 'airport-hotel') return 'Llegada';
+  if (booking.route === 'hotel-airport') return 'Salida';
+  return booking.serviceType || 'Servicio';
+}
+
+function dateNDaysAgo(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date.toISOString().slice(0, 10);
+}
 
 export function FinanzasTab() {
   const { getAuthHeaders } = useAdminAuth();
+  const [activeTab, setActiveTab] = useState<FinanceTab>('summary');
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,400 +78,235 @@ export function FinanzasTab() {
     setLoading(true);
     setError(null);
     try {
-      const dateFrom = dateNDaysAgo(60);
-      const [dashRes, bookRes] = await Promise.all([
+      const [dashboardResponse, bookingsResponse] = await Promise.all([
         fetch(apiUrl('/api/admin/dashboard'), { credentials: 'include', headers: getAuthHeaders() }),
-        fetch(apiUrl(`/api/admin/bookings?limit=200&dateFrom=${dateFrom}`), { credentials: 'include', headers: getAuthHeaders() }),
+        fetch(apiUrl(`/api/admin/bookings?limit=300&dateFrom=${dateNDaysAgo(90)}`), {
+          credentials: 'include',
+          headers: getAuthHeaders(),
+        }),
       ]);
-      const dashJson = await dashRes.json();
-      const bookJson = await bookRes.json();
-      if (dashJson.success && dashJson.data) setDashboard(dashJson.data);
-      if (bookJson.success && bookJson.data) setBookings(bookJson.data);
+
+      const dashboardJson = await dashboardResponse.json();
+      const bookingsJson = await bookingsResponse.json();
+
+      setDashboard(dashboardJson.success ? dashboardJson.data : null);
+      setBookings(bookingsJson.success ? bookingsJson.data : []);
     } catch {
-      setError('No se pudo cargar la información financiera.');
+      setError('No se pudo cargar la informacion financiera.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { void fetchData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    void fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const pendingBookings = useMemo(
+  const receivables = useMemo(
     () => bookings
-      .filter((b) => b.status === 'PENDING_PAYMENT' || b.status === 'OFFLINE_HOLD')
-      .sort((a, b) => new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime()),
+      .filter((booking) =>
+        booking.totalAmount > 0 &&
+        ['PENDING_PAYMENT', 'OFFLINE_HOLD', 'CONFIRMED'].includes(booking.status) &&
+        booking.status !== 'PAID'
+      )
+      .sort((a, b) => a.bookingDate.localeCompare(b.bookingDate)),
     [bookings],
   );
 
-  const cuentasPorCobrar = useMemo(
-    () => pendingBookings.reduce((sum, b) => sum + b.totalAmount, 0),
-    [pendingBookings],
-  );
-
-  const tasaCobro = useMemo(() => {
-    const nonCancelled = bookings.filter((b) => b.status !== 'CANCELLED');
-    if (nonCancelled.length === 0) return 0;
-    return Math.round((bookings.filter((b) => b.status === 'CONFIRMED').length / nonCancelled.length) * 100);
-  }, [bookings]);
-
-  const revenueChartData = useMemo(() => {
-    const cutoff = dateNDaysAgo(29);
-    const byDay: Record<string, number> = {};
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i);
-      byDay[d.toISOString().slice(0, 10)] = 0;
+  const chartData = useMemo(() => {
+    const days: Record<string, number> = {};
+    for (let index = 29; index >= 0; index -= 1) {
+      const date = new Date();
+      date.setDate(date.getDate() - index);
+      days[date.toISOString().slice(0, 10)] = 0;
     }
-    bookings.forEach((b) => {
-      const day = b.bookingDate.slice(0, 10);
-      if (day >= cutoff && b.status !== 'CANCELLED' && day in byDay)
-        byDay[day] = (byDay[day] || 0) + b.totalAmount;
+
+    bookings.forEach((booking) => {
+      const day = booking.bookingDate.slice(0, 10);
+      if (day in days && booking.status !== 'CANCELLED') {
+        days[day] += booking.totalAmount;
+      }
     });
-    return Object.entries(byDay).map(([date, cents]) => ({
-      date,
-      label: new Date(date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      value: Math.round(cents / 100),
+
+    return Object.entries(days).map(([date, cents]) => ({
+      date: new Date(`${date}T12:00:00`).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }),
+      revenue: Math.round(cents / 100),
     }));
   }, [bookings]);
 
-  const statusCounts = useMemo(() => {
-    const c: Record<string, number> = { CONFIRMED: 0, PENDING_PAYMENT: 0, OFFLINE_HOLD: 0, CANCELLED: 0 };
-    bookings.forEach((b) => { c[b.status in c ? b.status : 'CANCELLED']++; });
-    return [
-      { name: 'Confirmadas', key: 'CONFIRMED',       value: c.CONFIRMED,       color: STATUS_COLORS.CONFIRMED       },
-      { name: 'Pendientes',  key: 'PENDING_PAYMENT',  value: c.PENDING_PAYMENT,  color: STATUS_COLORS.PENDING_PAYMENT  },
-      { name: 'En Espera',   key: 'OFFLINE_HOLD',     value: c.OFFLINE_HOLD,     color: STATUS_COLORS.OFFLINE_HOLD     },
-      { name: 'Canceladas',  key: 'CANCELLED',        value: c.CANCELLED,        color: STATUS_COLORS.CANCELLED        },
-    ];
-  }, [bookings]);
+  const receivableTotal = receivables.reduce((sum, booking) => sum + booking.totalAmount, 0);
+  const averageTicket = dashboard?.totalMonth ? (dashboard.revenueMonth / dashboard.totalMonth) : 0;
 
-  const animRevMonth  = useCountUp(Math.round((dashboard?.revenueMonth ?? 0) / 100));
-  const animRevToday  = useCountUp(Math.round((dashboard?.revenueToday ?? 0) / 100));
-  const animPendiente = useCountUp(Math.round(cuentasPorCobrar / 100));
-
-  if (loading) return (
-    <div className="flex flex-col items-center justify-center py-36 gap-5">
-      <div className="relative w-16 h-16">
-        <div className="absolute inset-0 rounded-full animate-ping" style={{ border: '2px solid rgba(217,174,95,0.25)' }} />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Loader2 size={24} className="animate-spin text-gold" />
-        </div>
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-28 text-muted-foreground">
+        <Loader2 className="animate-spin text-gold" size={24} />
+        <p className="text-sm font-semibold">Cargando finanzas...</p>
       </div>
-      <p className="text-sm font-medium text-muted-foreground">Cargando datos financieros…</p>
-    </div>
-  );
+    );
+  }
 
-  if (error) return (
-    <div className="rounded-2xl border border-red-200/70 bg-red-50/60 p-6 flex items-start gap-3 text-red-700">
-      <AlertCircle size={18} className="shrink-0 mt-0.5" />
-      <div>
-        <p className="font-semibold text-sm">{error}</p>
-        <button onClick={() => void fetchData()} className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:text-red-800 transition-colors">
-          <RefreshCw size={11} /> Reintentar
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
+        <div className="flex items-center gap-2 font-bold">
+          <AlertCircle size={18} />
+          {error}
+        </div>
+        <button onClick={() => void fetchData()} className="mt-3 inline-flex items-center gap-2 text-sm font-bold">
+          <RefreshCw size={14} />
+          Reintentar
         </button>
       </div>
-    </div>
-  );
-
-  const subMetrics = [
-    { label: 'Reservaciones', value: String(dashboard?.totalMonth ?? 0), sub: `${dashboard?.totalToday ?? 0} hoy`, accent: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.08)', color: '#fff' },
-    { label: 'Por Cobrar',    value: `$${animPendiente.toLocaleString('en-US')}`, sub: `${pendingBookings.length} pendiente${pendingBookings.length !== 1 ? 's' : ''}`, accent: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.2)', color: '#fbbf24' },
-    { label: 'Tasa de Cobro', value: `${tasaCobro}%`,  sub: 'de confirmadas', accent: 'rgba(16,185,129,0.06)', border: 'rgba(16,185,129,0.2)', color: '#34d399' },
-  ];
+    );
+  }
 
   return (
-    <div className="space-y-6">
-
-      {/* ── Hero card ─────────────────────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: 28 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-        className="relative rounded-3xl overflow-hidden"
-        style={{
-          background: 'linear-gradient(135deg, #060f1e 0%, #0c1829 45%, #050d1a 100%)',
-          border: '1px solid rgba(212,175,55,0.18)',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.28), inset 0 1px 0 rgba(212,175,55,0.06)',
-        }}
-      >
-        {/* Glow */}
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(212,175,55,0.07) 0%, transparent 65%)' }} />
-        <div className="absolute -bottom-16 left-1/4 w-64 h-64 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(16,185,129,0.04) 0%, transparent 65%)' }} />
-
-        {/* Background sparkline */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none opacity-[0.07]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={revenueChartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-              <defs>
-                <linearGradient id="heroBg" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#D9AE5F" stopOpacity={1} />
-                  <stop offset="100%" stopColor="#D9AE5F" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area type="monotone" dataKey="value" stroke="#D9AE5F" strokeWidth={1.5} fill="url(#heroBg)" dot={false} isAnimationActive={false} />
-            </AreaChart>
-          </ResponsiveContainer>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Finanzas</p>
+          <h2 className="font-serif text-2xl font-bold text-foreground">Control financiero</h2>
         </div>
+        <div className="inline-flex rounded-xl bg-muted/40 p-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`rounded-lg px-4 py-2 text-xs font-bold transition-colors ${
+                activeTab === tab.id ? 'bg-gold text-navy' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <div className="relative p-6 md:p-8">
-          {/* Top bar */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.4em] mb-1.5" style={{ color: 'rgba(212,175,55,0.45)' }}>
-                Class VIP · Finanzas
-              </p>
-              <p className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.25)' }}>
-                {new Date().toLocaleDateString('es-MX', { weekday: 'long', month: 'long', year: 'numeric' })}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => void fetchData()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all hover:scale-105"
-                style={{ background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.22)', color: '#D9AE5F' }}>
-                <RefreshCw size={9} /> Actualizar
-              </button>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-                style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.22)' }}>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400">Live</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Main number */}
-          <div className="mb-8">
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] mb-3" style={{ color: 'rgba(255,255,255,0.25)' }}>
-              Ingresos del Mes
-            </p>
-            <div className="flex items-end gap-4 flex-wrap">
-              <span className="font-display font-black leading-none"
-                style={{
-                  fontSize: 'clamp(2.8rem, 8vw, 4.5rem)',
-                  color: '#D9AE5F',
-                  textShadow: '0 0 60px rgba(217,174,95,0.3), 0 0 120px rgba(217,174,95,0.12)',
-                  letterSpacing: '-0.02em',
-                }}>
-                ${animRevMonth.toLocaleString('en-US')}
-              </span>
-              <div className="mb-2 flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-                style={{ background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.2)' }}>
-                <ArrowUpRight size={11} style={{ color: '#D9AE5F' }} />
-                <span className="text-xs font-bold" style={{ color: '#D9AE5F' }}>
-                  ${animRevToday.toLocaleString('en-US')} hoy
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Sub-metrics */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {subMetrics.map((m) => (
-              <div key={m.label} className="rounded-2xl p-4 transition-all"
-                style={{ background: m.accent, border: `1px solid ${m.border}` }}>
-                <p className="text-[9px] font-black uppercase tracking-[0.25em] mb-2" style={{ color: m.color, opacity: 0.55 }}>
-                  {m.label}
-                </p>
-                <p className="text-2xl font-black leading-none mb-1" style={{ color: m.color }}>
-                  {m.value}
-                </p>
-                <p className="text-[10px]" style={{ color: m.color, opacity: 0.35 }}>{m.sub}</p>
+      {activeTab === 'summary' && (
+        <div className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-4">
+            {[
+              ['Revenue Mes', usd(dashboard?.revenueMonth ?? 0), `${dashboard?.totalMonth ?? 0} reservas`],
+              ['Revenue Hoy', usd(dashboard?.revenueToday ?? 0), `${dashboard?.totalToday ?? 0} servicios`],
+              ['Por Cobrar', usd(receivableTotal), `${receivables.length} cuentas`],
+              ['Promedio', usd(averageTicket), 'por servicio'],
+            ].map(([label, value, sub]) => (
+              <div key={label} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
+                <p className="mt-3 text-2xl font-black text-foreground">{value}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
               </div>
             ))}
           </div>
-        </div>
-      </motion.div>
 
-      {/* ── Charts ─────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-        {/* Area chart */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.15 }}
-          className="lg:col-span-2 rounded-2xl bg-white p-5 shadow-sm"
-          style={{ border: '1px solid rgba(0,0,0,0.06)' }}
-        >
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.25em] mb-0.5" style={{ color: GOLD }}>Tendencia</p>
-              <p className="font-bold text-sm text-foreground">Ingresos — Últimos 30 días</p>
-            </div>
-            <div className="w-2 h-2 rounded-full" style={{ background: GOLD, boxShadow: `0 0 8px ${GOLD}99` }} />
-          </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={revenueChartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-              <defs>
-                <linearGradient id="areaGold" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#D9AE5F" stopOpacity={0.22} />
-                  <stop offset="100%" stopColor="#D9AE5F" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'rgba(0,0,0,0.35)', fontWeight: 600 }} tickLine={false} axisLine={false} interval={4} />
-              <YAxis tick={{ fontSize: 10, fill: 'rgba(0,0,0,0.35)', fontWeight: 600 }} tickLine={false} axisLine={false}
-                tickFormatter={(v: number) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} width={44} />
-              <Tooltip content={<GlassTooltip />} cursor={{ stroke: GOLD, strokeWidth: 1, strokeDasharray: '4 2' }} />
-              <Area type="monotone" dataKey="value" stroke={GOLD} strokeWidth={2.5} fill="url(#areaGold)" dot={false}
-                activeDot={{ r: 5, fill: GOLD, strokeWidth: 0, style: { filter: 'drop-shadow(0 0 6px rgba(217,174,95,0.9))' } }} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </motion.div>
-
-        {/* Pie donut */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.24 }}
-          className="rounded-2xl bg-white p-5 shadow-sm flex flex-col"
-          style={{ border: '1px solid rgba(0,0,0,0.06)' }}
-        >
-          <div className="mb-4">
-            <p className="text-[9px] font-black uppercase tracking-[0.25em] mb-0.5" style={{ color: GOLD }}>Distribución</p>
-            <p className="font-bold text-sm text-foreground">Estado — 60 días</p>
-          </div>
-          <div className="flex-1 flex flex-col items-center">
-            <div className="relative">
-              <ResponsiveContainer width={168} height={168}>
-                <PieChart>
-                  <Pie data={statusCounts} cx="50%" cy="50%" innerRadius={50} outerRadius={76}
-                    dataKey="value" startAngle={90} endAngle={-270} strokeWidth={3} stroke="white">
-                    {statusCounts.map((e) => <Cell key={e.key} fill={e.color} />)}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl font-black text-foreground leading-none">{bookings.length}</span>
-                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground mt-1">total</span>
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Tendencia</p>
+                <h3 className="text-lg font-bold text-foreground">Revenue ultimos 30 dias</h3>
               </div>
+              <ArrowUpRight className="text-gold" size={18} />
             </div>
-            <div className="mt-4 w-full space-y-3">
-              {statusCounts.map((e) => (
-                <div key={e.key} className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: e.color }} />
-                    <span className="text-xs font-medium text-muted-foreground truncate">{e.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="h-1 rounded-full overflow-hidden" style={{ width: 44, background: 'rgba(0,0,0,0.06)' }}>
-                      <div className="h-full rounded-full transition-all duration-700"
-                        style={{ width: `${bookings.length > 0 ? (e.value / bookings.length) * 100 : 0}%`, background: e.color }} />
-                    </div>
-                    <span className="text-xs font-black w-5 text-right" style={{ color: e.color }}>{e.value}</span>
-                  </div>
-                </div>
-              ))}
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ left: 0, right: 12, top: 10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="financeGold" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#D9AE5F" stopOpacity={0.45} />
+                      <stop offset="100%" stopColor="#D9AE5F" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.18} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip formatter={(value) => [`$${value}`, 'Revenue']} />
+                  <Area type="monotone" dataKey="revenue" stroke="#D9AE5F" strokeWidth={2} fill="url(#financeGold)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
-        </motion.div>
-      </div>
-
-      {/* ── Cuentas por Cobrar ─────────────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, delay: 0.32 }}
-      >
-        <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.25em] mb-0.5" style={{ color: GOLD }}>Cobros Pendientes</p>
-            <p className="font-display text-xl font-bold text-foreground">Cuentas por Cobrar</p>
-          </div>
-          {pendingBookings.length > 0 && (
-            <div className="rounded-xl px-4 py-2.5 text-right"
-              style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.22)' }}>
-              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-600 mb-0.5">Total por cobrar</p>
-              <p className="font-black text-xl text-amber-700 leading-none">{fmtUSDDecimal(cuentasPorCobrar)}</p>
-            </div>
-          )}
         </div>
+      )}
 
-        {pendingBookings.length === 0 ? (
-          <div className="rounded-2xl bg-white p-12 flex flex-col items-center gap-3 text-center"
-            style={{ border: '1px solid rgba(0,0,0,0.06)' }}>
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-              style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
-              <CheckCircle2 size={22} className="text-emerald-500" />
+      {activeTab === 'receivables' && (
+        <div className="rounded-2xl border border-border bg-card shadow-sm">
+          <div className="flex items-center justify-between border-b border-border p-5">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Cobranza</p>
+              <h3 className="text-lg font-bold text-foreground">Cuentas por cobrar</h3>
             </div>
-            <p className="font-bold text-sm text-foreground">Sin cuentas pendientes</p>
-            <p className="text-xs text-muted-foreground">No hay reservaciones con cobro pendiente en los últimos 60 días.</p>
+            <span className="rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-bold text-gold">
+              {usd(receivableTotal)}
+            </span>
           </div>
-        ) : (
-          <div className="rounded-2xl bg-white overflow-hidden shadow-sm" style={{ border: '1px solid rgba(0,0,0,0.06)' }}>
-            {/* Mobile cards */}
-            <div className="md:hidden divide-y divide-border/40">
-              {pendingBookings.map((b, i) => {
-                const dias = daysBetween(b.bookingDate);
-                return (
-                  <motion.div key={b.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }} className="p-4">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className="font-mono text-xs font-bold" style={{ color: GOLD }}>
-                        {b.confirmationCode || b.id.slice(0, 8).toUpperCase()}
-                      </span>
-                      <StatusPill status={b.status} />
-                    </div>
-                    <p className="font-semibold text-sm text-foreground">{b.customer?.name || '—'}</p>
-                    <p className="text-xs text-muted-foreground mb-2">{fmtDate(b.bookingDate)}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm text-foreground">{fmtUSDDecimal(b.totalAmount)}</span>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${dias > 7 ? 'bg-red-100 text-red-700' : 'bg-muted text-muted-foreground'}`}>
-                        {dias}d pendiente
-                      </span>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-            {/* Desktop table */}
-            <table className="hidden md:table w-full text-sm min-w-[640px]">
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[780px] text-sm">
               <thead>
-                <tr style={{ background: 'rgba(0,0,0,0.02)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-                  {['ID', 'Cliente', 'Fecha', 'Monto', 'Estado', 'Antiguedad'].map((h, i) => (
-                    <th key={h} className={`px-5 py-3.5 text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground ${i >= 3 ? 'text-right' : 'text-left'}`}>{h}</th>
+                <tr className="border-b border-border bg-muted/30">
+                  {['Fecha', 'Cliente', 'Servicio', 'Monto', 'Dias vencido', 'Accion'].map((header) => (
+                    <th key={header} className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                      {header}
+                    </th>
                   ))}
                 </tr>
               </thead>
-              <tbody>
-                {pendingBookings.map((b, i) => {
-                  const dias = daysBetween(b.bookingDate);
+              <tbody className="divide-y divide-border/60">
+                {receivables.map((booking) => {
+                  const days = daysOverdue(booking.bookingDate);
                   return (
-                    <motion.tr key={b.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
-                      className="border-b border-border/30 transition-colors hover:bg-muted/20">
-                      <td className="px-5 py-4">
-                        <span className="font-mono text-xs font-bold" style={{ color: GOLD }}>
-                          {b.confirmationCode || b.id.slice(0, 8).toUpperCase()}
+                    <tr key={booking.id} className="hover:bg-gold/5">
+                      <td className="px-4 py-3">{booking.bookingDate.slice(0, 10)}</td>
+                      <td className="px-4 py-3 font-semibold">{booking.customer?.name || 'Cliente'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{serviceLabel(booking)}</td>
+                      <td className="px-4 py-3 font-bold">{usd(booking.totalAmount)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${urgencyClass(days)}`}>
+                          {days} dias
                         </span>
                       </td>
-                      <td className="px-5 py-4">
-                        <p className="font-semibold text-sm text-foreground">{b.customer?.name || '—'}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{b.customer?.email}</p>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => console.log('[Finance] Send reminder', booking.id)}
+                          className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs font-bold hover:border-gold/40 hover:bg-gold/10"
+                        >
+                          <Bell size={13} />
+                          Enviar recordatorio
+                        </button>
                       </td>
-                      <td className="px-5 py-4 text-xs text-muted-foreground whitespace-nowrap">{fmtDate(b.bookingDate)}</td>
-                      <td className="px-5 py-4 text-right font-black text-sm text-foreground whitespace-nowrap">{fmtUSDDecimal(b.totalAmount)}</td>
-                      <td className="px-5 py-4 text-right"><StatusPill status={b.status} /></td>
-                      <td className="px-5 py-4 text-right">
-                        <span className={`text-xs font-black px-2.5 py-1 rounded-full ${dias > 7 ? 'bg-red-100 text-red-700' : 'bg-muted text-muted-foreground'}`}>
-                          {dias}d
-                        </span>
-                      </td>
-                    </motion.tr>
+                    </tr>
                   );
                 })}
               </tbody>
-              <tfoot>
-                <tr style={{ background: 'rgba(0,0,0,0.02)', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
-                  <td colSpan={3} className="px-5 py-3.5 text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">
-                    Total — {pendingBookings.length} registro{pendingBookings.length !== 1 ? 's' : ''}
-                  </td>
-                  <td className="px-5 py-3.5 text-right font-black text-sm text-foreground">{fmtUSDDecimal(cuentasPorCobrar)}</td>
-                  <td colSpan={2} />
-                </tr>
-              </tfoot>
             </table>
           </div>
-        )}
-      </motion.div>
+
+          {receivables.length === 0 && (
+            <div className="p-10 text-center text-sm text-muted-foreground">No hay cuentas por cobrar pendientes.</div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'accounts' && (
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-gold/10 p-3 text-gold">
+                <WalletCards size={20} />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Cuentas abiertas</p>
+                <h3 className="text-lg font-bold text-foreground">Clientes con credito abierto y saldo por liquidar</h3>
+              </div>
+            </div>
+          </div>
+          <AccountsTab />
+        </div>
+      )}
     </div>
   );
 }

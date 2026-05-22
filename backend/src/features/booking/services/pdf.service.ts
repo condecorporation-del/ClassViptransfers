@@ -6,12 +6,16 @@ import { BookingService } from './booking.service';
 import { EmailService } from './email.service';
 import type { Booking, Customer, BookingItem } from '@prisma/client';
 
-const BOOKING_PDF_TOKEN_SECRET = process.env.BOOKING_PDF_SECRET || process.env.JWT_SECRET || (() => {
+function getPdfTokenSecret(): string {
+  const configured = process.env.BOOKING_PDF_SECRET || process.env.JWT_SECRET;
+  if (configured) return configured;
+
   if (process.env.NODE_ENV === 'production') {
-    console.error('[PDF] BOOKING_PDF_SECRET and JWT_SECRET not set — PDF links will fail in production.');
+    throw new Error('BOOKING_PDF_SECRET or JWT_SECRET must be set in production');
   }
+
   return 'dev-only-pdf-secret';
-})();
+}
 const TOKEN_EXPIRY = '7d';
 
 interface BookingWithRelations extends Booking {
@@ -34,7 +38,7 @@ export class PdfService {
   createPdfToken(bookingId: string): string {
     return jwt.sign(
       { bookingId, purpose: 'confirmation-pdf' },
-      BOOKING_PDF_TOKEN_SECRET,
+      getPdfTokenSecret(),
       { expiresIn: TOKEN_EXPIRY }
     );
   }
@@ -44,7 +48,7 @@ export class PdfService {
    */
   verifyPdfToken(token: string): string | null {
     try {
-      const decoded = jwt.verify(token, BOOKING_PDF_TOKEN_SECRET) as { bookingId?: string; purpose?: string };
+      const decoded = jwt.verify(token, getPdfTokenSecret()) as { bookingId?: string; purpose?: string };
       if (decoded?.bookingId && decoded?.purpose === 'confirmation-pdf') {
         return decoded.bookingId;
       }

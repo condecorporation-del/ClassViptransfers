@@ -9,10 +9,14 @@ import { prisma } from '../lib/prisma';
  */
 export const requireAdminAuth = async (req: Request, res: Response, next: NextFunction) => {
   // Dev bypass
-  if (process.env.ADMIN_AUTH_DISABLED === 'true') {
+  if (process.env.ADMIN_AUTH_DISABLED === 'true' && process.env.NODE_ENV !== 'production') {
     req.adminEmail = process.env.ADMIN_EMAIL || 'dev@admin.com';
     req.adminRole = 'admin';
     return next();
+  }
+
+  if (process.env.ADMIN_AUTH_DISABLED === 'true' && process.env.NODE_ENV === 'production') {
+    console.error('[Auth] ADMIN_AUTH_DISABLED is not allowed in production.');
   }
 
   const jwtSecret = process.env.ADMIN_JWT_SECRET;
@@ -87,10 +91,13 @@ export const requireAdminAuth = async (req: Request, res: Response, next: NextFu
  * Optional auth: if valid token present, set req.adminEmail and req.adminRole. Never blocks.
  */
 export const optionalAdminAuth = async (req: Request, _res: Response, next: NextFunction) => {
-  if (process.env.ADMIN_AUTH_DISABLED === 'true') {
+  if (process.env.ADMIN_AUTH_DISABLED === 'true' && process.env.NODE_ENV !== 'production') {
     req.adminEmail = process.env.ADMIN_EMAIL || 'dev@admin.com';
     req.adminRole = 'admin';
     return next();
+  }
+  if (process.env.ADMIN_AUTH_DISABLED === 'true' && process.env.NODE_ENV === 'production') {
+    console.error('[Auth] ADMIN_AUTH_DISABLED is not allowed in production.');
   }
   const jwtSecret = process.env.ADMIN_JWT_SECRET;
   if (!jwtSecret) return next();

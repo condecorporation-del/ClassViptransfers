@@ -95,7 +95,7 @@ These are the next important blocks to finish before calling the project truly p
 
 ### 1. Functional Verification
 
-- [~] Complete full visual booking flow from `/book` to `/checkout`
+- [x] Complete full visual booking flow from `/book` to `/checkout`
 - [~] Confirm Stripe renders consistently in checkout
 - [x] Confirm success / cancel flows visually
 - [x] Log into `/admin/login` visually in browser
@@ -143,9 +143,9 @@ These are the next important blocks to finish before calling the project truly p
 - [x] Review admin auth/session lifecycle carefully
 - [x] Review protected routes and token handling
 - [x] Review booking lookup token flow
-- [~] Review booking confirmation flow
+- [x] Review booking confirmation flow
 - [x] Review Stripe confirmation flow
-- [~] Review Resend/email flow end-to-end
+- [x] Review Resend/email flow end-to-end
 - [x] Review logging and audit behavior
 - [~] Review edge cases for broken/incomplete bookings
 
@@ -178,23 +178,23 @@ These are the next important blocks to finish before calling the project truly p
 - [x] Prepare frontend for Vercel production deploy
 - [x] Prepare backend deployment strategy
 - [x] Clean production env variables
-- [ ] Configure Vercel project settings
+- [x] Configure Vercel project settings
 - [ ] Configure Stripe envs and webhook target
 - [x] Configure Resend envs (or GMAIL_USER + GMAIL_APP_PASSWORD + COMPANY_BOOKINGS_EMAIL)
-- [ ] Verify CORS and allowed origins for deployed domains
+- [x] Verify CORS and allowed origins for deployed domains
 - [ ] Create stable preview/staging environment
 
 ### 8. Final Production Readiness
 
-- [ ] Full smoke test on deployed environment
+- [~] Full smoke test on deployed environment
 - [ ] Mobile QA
 - [ ] Desktop QA
-- [ ] Admin QA
-- [ ] Booking QA
-- [ ] Email QA
+- [~] Admin QA
+- [~] Booking QA
+- [x] Email QA
 - [ ] Final visual pass for consistency
 - [ ] Final cleanup of leftover temporary/debug code
-- [ ] Decide whether to replace official site with this version
+- [x] Decide whether to replace official site with this version
 
 ---
 
@@ -219,13 +219,13 @@ We can call this project professionally ready when:
 
 - [ ] repo is clean and maintainable
 - [ ] frontend and backend builds pass cleanly
-- [ ] critical flows work visually and by API
+- [~] critical flows work visually and by API
 - [ ] booking flow feels polished
 - [ ] admin feels production-grade
 - [ ] i18n is clean in English and Spanish
 - [ ] Stripe works correctly
-- [ ] email confirmations work correctly
-- [ ] Vercel deployment is configured and stable
+- [x] email confirmations work correctly
+- [~] Vercel deployment is configured and stable
 - [ ] no visible debug/dev noise remains
 
 ---
@@ -261,6 +261,12 @@ We can call this project professionally ready when:
 - Public verification already completed:
   - `/api/pricing/hotels` returns `252` hotels
   - `/api/hotels` returns `252` hotels with slugs
+- Official domain cutover completed (2026-05-21):
+  - `classviptransfers.com` and `www.classviptransfers.com` now point to the Vercel deployment
+  - SSL is active and the browser reports the production domain as a secure connection
+  - production booking flow creates reservations successfully on the official domain
+  - production email notifications are confirmed reaching both the customer recipient and the company recipient
+  - production reservations are visible in the admin after creation
 - Backend deployment prep already completed:
   - Express app extracted into `backend/src/app.ts`
   - `backend/src/server.ts` now only owns local startup concerns

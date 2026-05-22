@@ -25,6 +25,9 @@ ALTER TABLE "Hotel" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Area" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "EmailLog" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "AIConversation" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ClientAccount" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "AccountCharge" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "AccountPayment" ENABLE ROW LEVEL SECURITY;
 
 -- 2. Create RESTRICTIVE policies: No access for anon/authenticated by default.
 --    The backend (postgres/service_role) bypasses RLS.
@@ -93,6 +96,18 @@ CREATE POLICY "EmailLog: no anon access" ON "EmailLog"
 
 DROP POLICY IF EXISTS "AIConversation: no anon access" ON "AIConversation";
 CREATE POLICY "AIConversation: no anon access" ON "AIConversation"
+  FOR ALL USING (false) WITH CHECK (false);
+
+DROP POLICY IF EXISTS "ClientAccount: no anon access" ON "ClientAccount";
+CREATE POLICY "ClientAccount: no anon access" ON "ClientAccount"
+  FOR ALL USING (false) WITH CHECK (false);
+
+DROP POLICY IF EXISTS "AccountCharge: no anon access" ON "AccountCharge";
+CREATE POLICY "AccountCharge: no anon access" ON "AccountCharge"
+  FOR ALL USING (false) WITH CHECK (false);
+
+DROP POLICY IF EXISTS "AccountPayment: no anon access" ON "AccountPayment";
+CREATE POLICY "AccountPayment: no anon access" ON "AccountPayment"
   FOR ALL USING (false) WITH CHECK (false);
 
 COMMIT;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, ArrowUpRight, Bell, Loader2, RefreshCw, WalletCards } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, Bell, CreditCard, Loader2, RefreshCw, WalletCards } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AccountsTab } from '@/features/admin/components/AccountsTab';
 import { useAdminAuth } from '@/features/admin/hooks/useAdminAuth';
@@ -29,6 +29,14 @@ type Booking = {
   route?: string | null;
   tripType?: string | null;
   customer?: { name?: string | null; email?: string | null };
+  payments?: Array<{
+    id: string;
+    provider: string;
+    status: string;
+    amount: number;
+    completedAt?: string | null;
+    createdAt?: string;
+  }>;
 };
 
 type AccountCharge = {
@@ -80,6 +88,16 @@ function dateNDaysAgo(days: number) {
   const date = new Date();
   date.setDate(date.getDate() - days);
   return date.toISOString().slice(0, 10);
+}
+
+function sameMonth(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+}
+
+function sameDay(dateString: string) {
+  return dateString.slice(0, 10) === new Date().toISOString().slice(0, 10);
 }
 
 export function FinanzasTab() {
@@ -177,10 +195,33 @@ export function FinanzasTab() {
     () => bookings
       .filter((booking) =>
         booking.totalAmount > 0 &&
-        ['PENDING_PAYMENT', 'OFFLINE_HOLD', 'CONFIRMED'].includes(booking.status) &&
-        booking.status !== 'PAID'
+        booking.status !== 'CANCELLED' &&
+        booking.payments?.every((payment) => payment.status !== 'COMPLETED') !== false &&
+        ['PENDING_PAYMENT', 'OFFLINE_HOLD', 'CONFIRMED', 'DRAFT'].includes(booking.status)
       )
       .sort((a, b) => a.bookingDate.localeCompare(b.bookingDate)),
+    [bookings],
+  );
+
+  const collectedReservations = useMemo(
+    () =>
+      bookings
+        .flatMap((booking) => {
+          const latestPayment = booking.payments?.find((payment) => payment.status === 'COMPLETED');
+          if (!latestPayment) return [];
+          const completedAt = latestPayment.completedAt || latestPayment.createdAt || booking.bookingDate;
+          return [{
+            id: latestPayment.id,
+            bookingId: booking.id,
+            confirmationCode: booking.confirmationCode || null,
+            customer: booking.customer?.name || 'Cliente',
+            amountCents: latestPayment.amount || booking.totalAmount,
+            provider: latestPayment.provider,
+            completedAt,
+            service: serviceLabel(booking),
+          }];
+        })
+        .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()),
     [bookings],
   );
 
@@ -218,10 +259,10 @@ export function FinanzasTab() {
       days[date.toISOString().slice(0, 10)] = 0;
     }
 
-    bookings.forEach((booking) => {
-      const day = booking.bookingDate.slice(0, 10);
-      if (day in days && booking.status !== 'CANCELLED') {
-        days[day] += booking.totalAmount;
+    collectedReservations.forEach((payment) => {
+      const day = payment.completedAt.slice(0, 10);
+      if (day in days) {
+        days[day] += payment.amountCents;
       }
     });
 
@@ -229,10 +270,14 @@ export function FinanzasTab() {
       date: new Date(`${date}T12:00:00`).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }),
       revenue: Math.round(cents / 100),
     }));
-  }, [bookings]);
+  }, [collectedReservations]);
 
   const receivableTotal = receivables.reduce((sum, item) => sum + item.amountCents, 0);
-  const averageTicket = dashboard?.totalMonth ? (dashboard.revenueMonth / dashboard.totalMonth) : 0;
+  const collectedThisMonth = collectedReservations.filter((payment) => sameMonth(payment.completedAt));
+  const collectedToday = collectedReservations.filter((payment) => sameDay(payment.completedAt));
+  const averageTicket = collectedThisMonth.length
+    ? collectedThisMonth.reduce((sum, payment) => sum + payment.amountCents, 0) / collectedThisMonth.length
+    : 0;
 
   if (loading) {
     return (
@@ -265,19 +310,29 @@ export function FinanzasTab() {
           <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Finanzas</p>
           <h2 className="font-serif text-2xl font-bold text-foreground">Control financiero</h2>
         </div>
-        <div className="inline-flex rounded-xl bg-muted/40 p-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`rounded-lg px-4 py-2 text-xs font-bold transition-colors ${
-                activeTab === tab.id ? 'bg-gold text-navy' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-xl bg-muted/40 p-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`rounded-lg px-4 py-2 text-xs font-bold transition-colors ${
+                  activeTab === tab.id ? 'bg-gold text-navy' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => void fetchData()}
+            className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs font-bold text-foreground transition-colors hover:border-gold/40 hover:bg-gold/10"
+          >
+            <RefreshCw size={14} />
+            Actualizar
+          </button>
         </div>
       </div>
 
@@ -285,10 +340,10 @@ export function FinanzasTab() {
         <div className="space-y-5">
           <div className="grid gap-4 md:grid-cols-4">
             {[
-              ['Revenue Mes', usd(dashboard?.revenueMonth ?? 0), `${dashboard?.totalMonth ?? 0} reservas`],
-              ['Revenue Hoy', usd(dashboard?.revenueToday ?? 0), `${dashboard?.totalToday ?? 0} servicios`],
+              ['Cobrado Mes', usd(dashboard?.revenueMonth ?? 0), `${collectedThisMonth.length} pagos aplicados`],
+              ['Cobrado Hoy', usd(dashboard?.revenueToday ?? 0), `${collectedToday.length} ingresos registrados`],
               ['Por Cobrar', usd(receivableTotal), `${receivables.length} cuentas`],
-              ['Promedio', usd(averageTicket), 'por servicio'],
+              ['Ticket Promedio', usd(averageTicket), 'por reservacion cobrada'],
             ].map(([label, value, sub]) => (
               <div key={label} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                 <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
@@ -322,6 +377,43 @@ export function FinanzasTab() {
                   <Area type="monotone" dataKey="revenue" stroke="#D9AE5F" strokeWidth={2} fill="url(#financeGold)" />
                 </AreaChart>
               </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Ingresos recientes</p>
+                <h3 className="text-lg font-bold text-foreground">Reservaciones cobradas</h3>
+              </div>
+              <div className="rounded-xl bg-emerald-50 p-2 text-emerald-700">
+                <CreditCard size={18} />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {collectedReservations.slice(0, 8).map((payment) => (
+                <div key={payment.id} className="flex flex-col gap-2 rounded-2xl border border-border/70 bg-background p-4 md:flex-row md:items-center md:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">
+                      {payment.customer}
+                      {payment.confirmationCode && (
+                        <span className="ml-2 text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                          {payment.confirmationCode}
+                        </span>
+                      )}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">{payment.service}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {new Date(payment.completedAt).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })} · {payment.provider}
+                    </p>
+                  </div>
+                  <span className="text-lg font-black text-emerald-700">{usd(payment.amountCents)}</span>
+                </div>
+              ))}
+              {collectedReservations.length === 0 && (
+                <p className="text-sm text-muted-foreground">Todavia no hay ingresos cobrados registrados.</p>
+              )}
             </div>
           </div>
         </div>

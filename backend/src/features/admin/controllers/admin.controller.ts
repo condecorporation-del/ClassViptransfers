@@ -103,14 +103,14 @@ export class AdminController {
       })),
     ]);
 
-    const revenueResult = await prisma.booking.aggregate({
+    const revenueResult = await prisma.payment.aggregate({
       where: {
-        bookingDate: { gte: today, lt: tomorrow },
-        status: { in: ['PAID', 'CONFIRMED', 'COMPLETED'] },
+        completedAt: { gte: today, lt: tomorrow },
+        status: 'COMPLETED',
       },
-      _sum: { totalAmount: true },
+      _sum: { amount: true },
     });
-    const revenueCents = revenueResult._sum.totalAmount || 0;
+    const revenueCents = revenueResult._sum.amount || 0;
 
     res.json({
       success: true,
@@ -118,7 +118,7 @@ export class AdminController {
         bookingsToday,
         emailsSentToday,
         pendingCount,
-        revenueToday: (revenueCents / 100).toFixed(2),
+        revenueToday: revenueCents,
         accounts: accountsSummary,
       },
     });
@@ -147,6 +147,7 @@ export class AdminController {
       bookingsTodayList,
       bookingsRecentList,
       bookingsLast7,
+      completedPaymentsLast7,
       accountsSummary,
     ] = await Promise.all([
       prisma.booking.count({
@@ -161,19 +162,19 @@ export class AdminController {
           status: { not: 'CANCELLED' },
         },
       }),
-      prisma.booking.aggregate({
+      prisma.payment.aggregate({
         where: {
-          bookingDate: { gte: todayStart, lt: todayEnd },
-          status: { in: ['PAID', 'CONFIRMED', 'COMPLETED'] },
+          completedAt: { gte: todayStart, lt: todayEnd },
+          status: 'COMPLETED',
         },
-        _sum: { totalAmount: true },
+        _sum: { amount: true },
       }),
-      prisma.booking.aggregate({
+      prisma.payment.aggregate({
         where: {
-          bookingDate: { gte: monthStart, lt: monthEnd },
-          status: { in: ['PAID', 'CONFIRMED', 'COMPLETED'] },
+          completedAt: { gte: monthStart, lt: monthEnd },
+          status: 'COMPLETED',
         },
-        _sum: { totalAmount: true },
+        _sum: { amount: true },
       }),
       prisma.booking.findMany({
         where: {
@@ -203,6 +204,16 @@ export class AdminController {
           tripType: true,
         },
       }),
+      prisma.payment.findMany({
+        where: {
+          completedAt: { gte: last7Start, lt: todayEnd },
+          status: 'COMPLETED',
+        },
+        select: {
+          amount: true,
+          completedAt: true,
+        },
+      }),
       clientAccountsService.getAccountsSummary().catch(() => ({
         totalAccounts: 0,
         openAccounts: 0,
@@ -224,9 +235,14 @@ export class AdminController {
       const existing = bookingsByDayMap.get(key);
       if (!existing) continue;
       existing.bookings += booking.status === 'CANCELLED' ? 0 : 1;
-      if (['PAID', 'CONFIRMED', 'COMPLETED'].includes(booking.status)) {
-        existing.revenueCents += booking.totalAmount;
-      }
+    }
+
+    for (const payment of completedPaymentsLast7) {
+      if (!payment.completedAt) continue;
+      const key = payment.completedAt.toISOString().slice(0, 10);
+      const existing = bookingsByDayMap.get(key);
+      if (!existing) continue;
+      existing.revenueCents += payment.amount;
     }
 
     const statusCounts = bookingsLast7.reduce<Record<string, number>>((acc, booking) => {
@@ -250,8 +266,8 @@ export class AdminController {
       data: {
         totalToday,
         totalMonth,
-        revenueToday: ((revenueTodayResult._sum.totalAmount || 0) / 100).toFixed(2),
-        revenueMonth: ((revenueMonthResult._sum.totalAmount || 0) / 100).toFixed(2),
+        revenueToday: revenueTodayResult._sum.amount || 0,
+        revenueMonth: revenueMonthResult._sum.amount || 0,
         bookingsToday: bookingsTodayList,
         bookingsRecent: bookingsRecentList,
         trends: {

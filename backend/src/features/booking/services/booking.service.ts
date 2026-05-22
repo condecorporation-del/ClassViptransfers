@@ -695,6 +695,12 @@ export class BookingService {
         { customer: { name: { contains: searchTerm, mode: 'insensitive' } } },
         { customer: { email: { contains: searchTerm, mode: 'insensitive' } } },
         { customer: { phone: { contains: searchTerm, mode: 'insensitive' } } },
+        { pickupLocation: { contains: searchTerm, mode: 'insensitive' } },
+        { dropoffLocation: { contains: searchTerm, mode: 'insensitive' } },
+        { flightNumber: { contains: searchTerm, mode: 'insensitive' } },
+        { departureFlightNumber: { contains: searchTerm, mode: 'insensitive' } },
+        { notes: { contains: searchTerm, mode: 'insensitive' } },
+        { internalNotes: { contains: searchTerm, mode: 'insensitive' } },
       ];
     }
 

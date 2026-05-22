@@ -36,6 +36,8 @@ type Payment = {
   status: string;
   amount: number;
   orderId?: string | null;
+  completedAt?: string | null;
+  createdAt?: string;
 };
 
 type EmailLog = {
@@ -51,6 +53,8 @@ type Booking = {
   confirmationCode?: string | null;
   type: string; status: string; source: string;
   bookingDate: string;
+  createdAt?: string;
+  confirmedAt?: string | null;
   bookingTime: string | null;
   pickupTime: string | null;
   pickupLocation: string | null;
@@ -66,7 +70,7 @@ type Booking = {
   route: string | null;
   notes: string | null;
   internalNotes: string | null;
-  customer: { name: string; email: string; phone: string };
+  customer: { name: string; email: string; phone: string; country?: string | null; language?: string | null };
   items: BookingItem[];
   payments?: Payment[];
   assignments?: Assignment[];
@@ -85,6 +89,18 @@ type BookingUpdateInput = {
   dropoffLocation: string | null;
   notes: string | null;
   internalNotes: string | null;
+};
+
+type CustomerUpdateInput = {
+  name: string;
+  email: string;
+  phone: string;
+  country?: string | null;
+};
+
+type BookingEditorPayload = {
+  booking: BookingUpdateInput;
+  customer: CustomerUpdateInput;
 };
 
 type AssignmentUpdateInput = {
@@ -106,6 +122,12 @@ const fmt = (d: string) =>
 const fmtCents = (c: number) => `$${(c / 100).toFixed(2)}`;
 const fmtDateTime = (d: string) =>
   new Date(d).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+
+const normalizeText = (value?: string | null) =>
+  (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT:           'bg-gray-200 text-gray-700',
@@ -168,7 +190,7 @@ export const AdminBookings = () => {
   const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'custom'>('today');
   const [customFrom, setCustomFrom] = useState(today());
   const [customTo, setCustomTo] = useState(today());
-  const [dateFilter, setDateFilter] = useState(today());
+  const [dateFilter, setDateFilter] = useState('');
   const [searchQ, setSearchQ] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [serviceFilter, setServiceFilter] = useState('');
@@ -190,7 +212,8 @@ export const AdminBookings = () => {
     setLoading(true);
     try {
       const { dateFrom, dateTo } = getDateRange();
-      const qs = new URLSearchParams({ dateFrom, dateTo, limit: '100' });
+      const qs = new URLSearchParams({ dateFrom, dateTo, limit: searchQ.trim() ? '250' : '100' });
+      if (searchQ.trim()) qs.set('q', searchQ.trim());
       const res = await fetch(apiUrl(`/api/admin/bookings?${qs}`), {
         credentials: 'include', headers: getAuthHeaders(),
       });
@@ -203,9 +226,14 @@ export const AdminBookings = () => {
       }
     } catch { setBookings([]); setTotal(0); }
     finally { setLoading(false); }
-  }, [getDateRange, getAuthHeaders]);
+  }, [getDateRange, getAuthHeaders, searchQ]);
 
-  useEffect(() => { fetchBookings(); }, [fetchBookings]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void fetchBookings();
+    }, searchQ.trim() ? 250 : 0);
+    return () => window.clearTimeout(timer);
+  }, [fetchBookings, searchQ]);
 
   const fetchDetail = async (id: string) => {
     setDetailLoading(true);
@@ -236,12 +264,20 @@ export const AdminBookings = () => {
       const type = getOperationType(booking);
       const serviceMatches = !serviceFilter || type === serviceFilter;
       const statusMatches = !statusFilter || booking.status === statusFilter;
-      const q = searchQ.trim().toLowerCase();
+      const q = normalizeText(searchQ.trim());
       const searchMatches =
         !q ||
-        booking.customer?.name?.toLowerCase().includes(q) ||
-        booking.confirmationCode?.toLowerCase().includes(q) ||
-        booking.customer?.email?.toLowerCase().includes(q);
+        normalizeText(booking.customer?.name).includes(q) ||
+        normalizeText(booking.confirmationCode).includes(q) ||
+        normalizeText(booking.customer?.email).includes(q) ||
+        normalizeText(booking.customer?.phone).includes(q) ||
+        normalizeText(booking.pickupLocation).includes(q) ||
+        normalizeText(booking.dropoffLocation).includes(q) ||
+        normalizeText(booking.flightNumber).includes(q) ||
+        normalizeText(booking.departureFlightNumber).includes(q) ||
+        normalizeText(booking.notes).includes(q) ||
+        normalizeText(booking.internalNotes).includes(q) ||
+        normalizeText(booking.id).includes(q);
       return dateMatches && serviceMatches && statusMatches && searchMatches;
     })
     .sort(compareOperationBookings);
@@ -436,6 +472,7 @@ export const AdminBookings = () => {
               <th>Hotel</th>
               <th>Pasajeros</th>
               <th>Vuelo</th>
+              <th>Notas</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -448,6 +485,7 @@ export const AdminBookings = () => {
                 <td>{getOperationHotel(booking)}</td>
                 <td>{booking.passengers}</td>
                 <td>{getOperationFlight(booking)}</td>
+                <td>{booking.notes || booking.internalNotes || '--'}</td>
                 <td>{STATUS_LABELS[booking.status] ?? booking.status}</td>
               </tr>
             ))}
@@ -623,7 +661,7 @@ function BookingDetailView({
       const res = await fetch(apiUrl(`/api/admin/bookings/${booking.id}/confirmation-pdf`), {
         credentials: 'include', headers: getAuthHeaders(),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error('server-pdf-failed');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -631,7 +669,10 @@ function BookingDetailView({
       a.download = `reservation-${(booking.confirmationCode || booking.id.slice(0, 8)).toUpperCase()}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch { flash('Failed to generate PDF', true); }
+    } catch {
+      window.print();
+      flash('Opened printable reservation view. Use "Save as PDF" in the print dialog.');
+    }
     finally { setBusy(null); }
   };
 
@@ -681,9 +722,135 @@ function BookingDetailView({
   const currentDriver = booking.assignments?.find(a => a.type === 'DRIVER')?.driver;
   const currentVehicle = booking.assignments?.find(a => a.type === 'VEHICLE')?.vehicle;
   const lastPayment = booking.payments?.[0];
+  const paymentState = lastPayment?.status === 'COMPLETED'
+    ? 'Pagado'
+    : booking.status === 'PENDING_PAYMENT'
+      ? 'Pendiente de cobro'
+      : booking.status === 'OFFLINE_HOLD'
+        ? 'Por cobrar'
+        : booking.status === 'CONFIRMED'
+          ? 'Confirmada'
+          : booking.status.replace(/_/g, ' ');
 
   return (
     <div className="space-y-4 max-w-4xl">
+      <style>{`
+        @media screen {
+          #booking-print-area { display: none; }
+        }
+        @media print {
+          body * { visibility: hidden !important; }
+          #booking-print-area, #booking-print-area * { visibility: visible !important; }
+          #booking-print-area {
+            display: block !important;
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 100%;
+            padding: 28px;
+            background: #fff;
+            color: #0f172a;
+            font-family: Georgia, "Times New Roman", serif;
+          }
+          #booking-print-area .watermark {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.05;
+            pointer-events: none;
+          }
+          #booking-print-area table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+          }
+          #booking-print-area th, #booking-print-area td {
+            border: 1px solid #d1d5db;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+          }
+          #booking-print-area th {
+            background: #f8fafc;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.08em;
+          }
+          @page { margin: 12mm; }
+        }
+      `}</style>
+
+      <div id="booking-print-area">
+        <div className="watermark">
+          <img src={cloudinaryAssets.logo} alt="" style={{ width: 340, objectFit: 'contain' }} />
+        </div>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <img src={cloudinaryAssets.logo} alt="Class VIP Transfers" style={{ height: 58, objectFit: 'contain' }} />
+              <div>
+                <p style={{ margin: 0, fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#8a6a2f' }}>Class VIP Transfers</p>
+                <h1 style={{ margin: '6px 0 0', fontSize: 26 }}>Reservation Dossier</h1>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ margin: 0, fontSize: 13 }}>Confirmation</p>
+              <strong style={{ fontSize: 18 }}>{booking.confirmationCode || booking.id.slice(0, 8).toUpperCase()}</strong>
+            </div>
+          </div>
+
+          <table>
+            <tbody>
+              <tr>
+                <th>Cliente</th>
+                <td>{booking.customer?.name || '-'}</td>
+                <th>Email</th>
+                <td>{booking.customer?.email || '-'}</td>
+              </tr>
+              <tr>
+                <th>Telefono</th>
+                <td>{booking.customer?.phone || '-'}</td>
+                <th>Estado</th>
+                <td>{paymentState}</td>
+              </tr>
+              <tr>
+                <th>Fecha servicio</th>
+                <td>{fmt(booking.bookingDate)}</td>
+                <th>Hora</th>
+                <td>{booking.bookingTime || booking.arrivalTime || booking.pickupTime || '-'}</td>
+              </tr>
+              <tr>
+                <th>Pickup</th>
+                <td>{booking.pickupLocation || '-'}</td>
+                <th>Dropoff</th>
+                <td>{booking.dropoffLocation || '-'}</td>
+              </tr>
+              <tr>
+                <th>Vuelo llegada</th>
+                <td>{booking.flightNumber || '-'}</td>
+                <th>Vuelo salida</th>
+                <td>{booking.departureFlightNumber || '-'}</td>
+              </tr>
+              <tr>
+                <th>Pasajeros</th>
+                <td>{booking.passengers}</td>
+                <th>Total</th>
+                <td>{fmtCents(booking.totalAmount)}</td>
+              </tr>
+              <tr>
+                <th>Notas cliente</th>
+                <td colSpan={3}>{booking.notes || '-'}</td>
+              </tr>
+              <tr>
+                <th>Notas internas</th>
+                <td colSpan={3}>{booking.internalNotes || '-'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Alerts */}
       {error && (
         <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
@@ -767,12 +934,22 @@ function BookingDetailView({
       {showEditForm && (
         <EditBookingForm
           booking={booking}
-          onSave={async (data) => {
+          onSave={async ({ booking: bookingData, customer }) => {
             setBusy('save');
             try {
-              const json = await doPatch(`/api/admin/bookings/${booking.id}`, data);
-              if (json.success) { setShowEditForm(false); flash('Booking updated'); onRefetchDetail(); }
-              else flash(json.error || 'Failed to update', true);
+              const [bookingJson, customerJson] = await Promise.all([
+                doPatch(`/api/admin/bookings/${booking.id}`, bookingData),
+                doPatch(`/api/bookings/${booking.id}/customer`, customer),
+              ]);
+              if (bookingJson.success && customerJson.success) {
+                setShowEditForm(false);
+                flash('Booking updated');
+                onRefresh();
+                onRefetchDetail();
+              }
+              else {
+                flash(bookingJson.error || customerJson.error || 'Failed to update', true);
+              }
             } finally { setBusy(null); }
           }}
           onCancel={() => setShowEditForm(false)}
@@ -790,7 +967,7 @@ function BookingDetailView({
             setBusy('assign');
             try {
               const json = await doPost(`/api/admin/bookings/${booking.id}/assign`, data);
-              if (json.success) { setShowAssignForm(false); flash('Driver/vehicle assigned'); onRefetchDetail(); }
+              if (json.success) { setShowAssignForm(false); flash('Driver/vehicle assigned'); onRefresh(); onRefetchDetail(); }
               else flash(json.error || 'Failed to assign', true);
             } finally { setBusy(null); }
           }}
@@ -800,13 +977,14 @@ function BookingDetailView({
       )}
 
       {/* ── Main Info ── */}
-      <div className="grid sm:grid-cols-2 gap-3">
+      <div className="grid gap-3 xl:grid-cols-3">
         {/* Customer */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Customer</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Customer Dossier</p>
           <p className="font-bold text-base text-foreground leading-tight">{booking.customer?.name}</p>
           <p className="text-sm text-muted-foreground mt-1">{booking.customer?.email}</p>
           <p className="text-sm text-muted-foreground">{booking.customer?.phone}</p>
+          <p className="text-sm text-muted-foreground">{booking.customer?.country || 'Country pending'}</p>
         </div>
 
         {/* Booking Details */}
@@ -939,11 +1117,15 @@ function EditBookingForm({
   booking, onSave, onCancel, saving,
 }: {
   booking: Booking;
-  onSave: (data: BookingUpdateInput) => void;
+  onSave: (data: BookingEditorPayload) => void;
   onCancel: () => void;
   saving: boolean;
 }) {
   const [form, setForm] = useState({
+    customerName: booking.customer?.name || '',
+    customerEmail: booking.customer?.email || '',
+    customerPhone: booking.customer?.phone || '',
+    customerCountry: booking.customer?.country || '',
     bookingDate: booking.bookingDate.slice(0, 10),
     bookingTime: booking.bookingTime || '',
     passengers: String(booking.passengers),
@@ -960,17 +1142,25 @@ function EditBookingForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
-      ...form,
-      passengers: parseInt(form.passengers) || 1,
-      bookingTime: form.bookingTime || null,
-      flightNumber: form.flightNumber || null,
-      arrivalTime: form.arrivalTime || null,
-      departureFlightNumber: form.departureFlightNumber || null,
-      departureTime: form.departureTime || null,
-      pickupLocation: form.pickupLocation || null,
-      dropoffLocation: form.dropoffLocation || null,
-      notes: form.notes || null,
-      internalNotes: form.internalNotes || null,
+      booking: {
+        bookingDate: form.bookingDate,
+        passengers: parseInt(form.passengers) || 1,
+        bookingTime: form.bookingTime || null,
+        flightNumber: form.flightNumber || null,
+        arrivalTime: form.arrivalTime || null,
+        departureFlightNumber: form.departureFlightNumber || null,
+        departureTime: form.departureTime || null,
+        pickupLocation: form.pickupLocation || null,
+        dropoffLocation: form.dropoffLocation || null,
+        notes: form.notes || null,
+        internalNotes: form.internalNotes || null,
+      },
+      customer: {
+        name: form.customerName.trim(),
+        email: form.customerEmail.trim(),
+        phone: form.customerPhone.trim(),
+        country: form.customerCountry.trim() || null,
+      },
     });
   };
 
@@ -978,6 +1168,19 @@ function EditBookingForm({
     <div className="rounded-2xl border border-gold/30 bg-card p-5 shadow-sm">
       <h3 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2"><Edit2 size={15} className="text-gold" /> Edit Booking</h3>
       <form onSubmit={handleSubmit} className="grid sm:grid-cols-2 gap-3 text-sm">
+        <div className="sm:col-span-2 rounded-xl border border-border/70 bg-muted/20 p-4">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Customer profile</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Full name" value={form.customerName} onChange={(v) => setForm({ ...form, customerName: v })} />
+            <Field label="Email" type="email" value={form.customerEmail} onChange={(v) => setForm({ ...form, customerEmail: v })} />
+            <Field label="Phone" value={form.customerPhone} onChange={(v) => setForm({ ...form, customerPhone: v })} />
+            <Field label="Country" value={form.customerCountry} onChange={(v) => setForm({ ...form, customerCountry: v })} />
+          </div>
+        </div>
+
+        <div className="sm:col-span-2 rounded-xl border border-border/70 bg-muted/20 p-4">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Service details</p>
+          <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Date" type="date" value={form.bookingDate} onChange={(v) => setForm({ ...form, bookingDate: v })} />
         <Field label="Time" type="time" value={form.bookingTime} onChange={(v) => setForm({ ...form, bookingTime: v })} />
         <Field label="Passengers" type="number" value={form.passengers} onChange={(v) => setForm({ ...form, passengers: v })} />
@@ -987,6 +1190,8 @@ function EditBookingForm({
         <Field label="Departure time" value={form.departureTime} onChange={(v) => setForm({ ...form, departureTime: v })} placeholder="HH:MM" />
         <Field label="Pickup location" value={form.pickupLocation} onChange={(v) => setForm({ ...form, pickupLocation: v })} />
         <Field label="Dropoff location" value={form.dropoffLocation} onChange={(v) => setForm({ ...form, dropoffLocation: v })} />
+          </div>
+        </div>
         <div className="sm:col-span-2">
           <label className="block text-xs font-medium text-muted-foreground mb-1">Customer notes</label>
           <textarea

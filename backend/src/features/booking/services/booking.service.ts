@@ -657,24 +657,35 @@ export class BookingService {
     const skip = (page - 1) * limit;
 
     const where: Prisma.BookingWhereInput = {};
+    const parseBusinessDateBoundary = (value: string, boundary: 'start' | 'end') => {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split('-').map(Number);
+        return boundary === 'start'
+          ? new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0))
+          : new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+      }
+
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) {
+        throw new Error(`Invalid date filter: ${value}`);
+      }
+
+      if (boundary === 'start') parsed.setHours(0, 0, 0, 0);
+      else parsed.setHours(23, 59, 59, 999);
+      return parsed;
+    };
 
     if (filters.dateFrom || filters.dateTo) {
       where.bookingDate = {};
       if (filters.dateFrom) {
-        const d = new Date(filters.dateFrom);
-        d.setHours(0, 0, 0, 0);
-        where.bookingDate.gte = d;
+        where.bookingDate.gte = parseBusinessDateBoundary(filters.dateFrom, 'start');
       }
       if (filters.dateTo) {
-        const d = new Date(filters.dateTo);
-        d.setHours(23, 59, 59, 999);
-        where.bookingDate.lte = d;
+        where.bookingDate.lte = parseBusinessDateBoundary(filters.dateTo, 'end');
       }
     } else if (filters.date) {
-      const startDate = new Date(filters.date);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(filters.date);
-      endDate.setHours(23, 59, 59, 999);
+      const startDate = parseBusinessDateBoundary(filters.date, 'start');
+      const endDate = parseBusinessDateBoundary(filters.date, 'end');
       where.bookingDate = { gte: startDate, lte: endDate };
     }
 
@@ -760,10 +771,9 @@ export class BookingService {
    * Export bookings to CSV (Daily Manifest)
    */
   async exportBookingsToCSV(date: string): Promise<string> {
-    const startDate = new Date(date);
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
+    const [year, month, day] = date.split('-').map(Number);
+    const startDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+    const endDate = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
 
     const bookings = await prisma.booking.findMany({
       where: {
@@ -1151,6 +1161,7 @@ export class BookingService {
     }
 
     if (data.bookingTime !== undefined) update.bookingTime = data.bookingTime;
+    if (data.pickupTime !== undefined) update.pickupTime = data.pickupTime;
     if (data.passengers !== undefined) update.passengers = data.passengers;
     if (data.notes !== undefined) update.notes = data.notes;
     if (data.internalNotes !== undefined) update.internalNotes = data.internalNotes;

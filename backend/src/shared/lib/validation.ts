@@ -118,6 +118,7 @@ export const listBookingsSchema = z.object({
 export const updateBookingSchema = z.object({
   bookingDate: z.string().optional(),
   bookingTime: z.string().optional().nullable(),
+  pickupTime: z.string().optional().nullable(),
   passengers: z.coerce.number().int().min(1).optional(),
   notes: z.string().optional().nullable(),
   internalNotes: z.string().optional().nullable(),

@@ -3,6 +3,7 @@ import { AlertCircle, ArrowUpRight, Bell, CreditCard, Loader2, RefreshCw, Wallet
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AccountsTab } from '@/features/admin/components/AccountsTab';
 import { useAdminAuth } from '@/features/admin/hooks/useAdminAuth';
+import { localDateKey } from '@/features/admin/lib/admin-date';
 import { getApiBaseUrl } from '@/shared/lib/api';
 
 const apiUrl = (path: string) => {
@@ -37,6 +38,12 @@ type Booking = {
     completedAt?: string | null;
     createdAt?: string;
   }>;
+};
+
+type PaymentRollup = {
+  completedCents: number;
+  outstandingCents: number;
+  completedPayments: Array<NonNullable<Booking['payments']>[number]>;
 };
 
 type AccountCharge = {
@@ -78,16 +85,44 @@ function urgencyClass(days: number) {
 }
 
 function serviceLabel(booking: Booking) {
-  if (booking.tripType === 'roundtrip') return 'Redondo';
   if (booking.route === 'airport-hotel') return 'Llegada';
   if (booking.route === 'hotel-airport') return 'Salida';
   return booking.serviceType || 'Servicio';
 }
 
+function rollupBookingPayments(booking: Booking): PaymentRollup {
+  const completedPayments = (booking.payments || []).filter((payment) => payment.status === 'COMPLETED');
+  const completedCents = completedPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+  const outstandingCents = Math.max(0, booking.totalAmount - completedCents);
+  return { completedCents, outstandingCents, completedPayments };
+}
+
+function receivableStatus(booking: Booking, outstandingCents: number, completedCents: number) {
+  if (outstandingCents <= 0 && completedCents > 0) return 'PAID';
+  if (completedCents > 0) return 'PARTIAL';
+  if (booking.status === 'OFFLINE_HOLD') return 'OFFLINE_HOLD';
+  if (booking.status === 'CONFIRMED') return 'CONFIRMED';
+  return booking.status;
+}
+
+function receivableStatusLabel(status: string) {
+  if (status === 'INVOICED') return 'Facturado';
+  if (status === 'PAID') return 'Pagado';
+  if (status === 'PARTIAL') return 'Parcial';
+  return 'Por pagar';
+}
+
+function receivableStatusTone(status: string) {
+  if (status === 'PAID') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+  if (status === 'INVOICED') return 'bg-blue-100 text-blue-700 border-blue-200';
+  if (status === 'PARTIAL') return 'bg-purple-100 text-purple-700 border-purple-200';
+  return 'bg-amber-100 text-amber-800 border-amber-200';
+}
+
 function dateNDaysAgo(days: number) {
   const date = new Date();
   date.setDate(date.getDate() - days);
-  return date.toISOString().slice(0, 10);
+  return localDateKey(date);
 }
 
 function sameMonth(dateString: string) {
@@ -97,10 +132,10 @@ function sameMonth(dateString: string) {
 }
 
 function sameDay(dateString: string) {
-  return dateString.slice(0, 10) === new Date().toISOString().slice(0, 10);
+  return dateString.slice(0, 10) === localDateKey();
 }
 
-export function FinanzasTab() {
+export function FinanzasTab({ refreshToken = 0 }: { refreshToken?: number }) {
   const { getAuthHeaders } = useAdminAuth();
   const [activeTab, setActiveTab] = useState<FinanceTab>('summary');
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
@@ -185,6 +220,11 @@ export function FinanzasTab() {
   }, []);
 
   useEffect(() => {
+    void fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshToken]);
+
+  useEffect(() => {
     if (activeTab === 'receivables' || activeTab === 'accounts') {
       void fetchData();
     }
@@ -192,14 +232,23 @@ export function FinanzasTab() {
   }, [activeTab]);
 
   const bookingReceivables = useMemo(
-    () => bookings
-      .filter((booking) =>
-        booking.totalAmount > 0 &&
-        booking.status !== 'CANCELLED' &&
-        booking.payments?.every((payment) => payment.status !== 'COMPLETED') !== false &&
-        ['PENDING_PAYMENT', 'OFFLINE_HOLD', 'CONFIRMED', 'DRAFT'].includes(booking.status)
-      )
-      .sort((a, b) => a.bookingDate.localeCompare(b.bookingDate)),
+    () =>
+      bookings
+        .map((booking) => {
+          const { completedCents, outstandingCents } = rollupBookingPayments(booking);
+          return {
+            booking,
+            completedCents,
+            outstandingCents,
+            state: receivableStatus(booking, outstandingCents, completedCents),
+          };
+        })
+        .filter(({ booking, outstandingCents }) =>
+          booking.totalAmount > 0 &&
+          booking.status !== 'CANCELLED' &&
+          outstandingCents > 0
+        )
+        .sort((a, b) => a.booking.bookingDate.localeCompare(b.booking.bookingDate)),
     [bookings],
   );
 
@@ -207,19 +256,17 @@ export function FinanzasTab() {
     () =>
       bookings
         .flatMap((booking) => {
-          const latestPayment = booking.payments?.find((payment) => payment.status === 'COMPLETED');
-          if (!latestPayment) return [];
-          const completedAt = latestPayment.completedAt || latestPayment.createdAt || booking.bookingDate;
-          return [{
-            id: latestPayment.id,
+          const { completedPayments } = rollupBookingPayments(booking);
+          return completedPayments.map((payment) => ({
+            id: payment.id,
             bookingId: booking.id,
             confirmationCode: booking.confirmationCode || null,
             customer: booking.customer?.name || 'Cliente',
-            amountCents: latestPayment.amount || booking.totalAmount,
-            provider: latestPayment.provider,
-            completedAt,
+            amountCents: payment.amount || 0,
+            provider: payment.provider,
+            completedAt: payment.completedAt || payment.createdAt || booking.bookingDate,
             service: serviceLabel(booking),
-          }];
+          }));
         })
         .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()),
     [bookings],
@@ -227,14 +274,16 @@ export function FinanzasTab() {
 
   const receivables = useMemo(
     () => [
-      ...bookingReceivables.map((booking) => ({
+      ...bookingReceivables.map(({ booking, outstandingCents, state, completedCents }) => ({
         id: booking.id,
         source: 'booking' as const,
         customer: booking.customer?.name || 'Cliente',
         service: serviceLabel(booking),
-        amountCents: booking.totalAmount,
+        amountCents: outstandingCents,
+        originalAmountCents: booking.totalAmount,
+        collectedAmountCents: completedCents,
         date: booking.bookingDate.slice(0, 10),
-        status: booking.status,
+        status: state,
         reference: booking.confirmationCode || null,
       })),
       ...accountReceivables.map((charge) => ({
@@ -243,6 +292,8 @@ export function FinanzasTab() {
         customer: charge.accountName,
         service: charge.description,
         amountCents: charge.amountCents,
+        originalAmountCents: charge.amountCents,
+        collectedAmountCents: 0,
         date: charge.date,
         status: charge.status,
         reference: charge.reference,
@@ -275,8 +326,12 @@ export function FinanzasTab() {
   const receivableTotal = receivables.reduce((sum, item) => sum + item.amountCents, 0);
   const collectedThisMonth = collectedReservations.filter((payment) => sameMonth(payment.completedAt));
   const collectedToday = collectedReservations.filter((payment) => sameDay(payment.completedAt));
+  const collectedMonthTotal = collectedThisMonth.reduce((sum, payment) => sum + payment.amountCents, 0);
+  const collectedTodayTotal = collectedToday.reduce((sum, payment) => sum + payment.amountCents, 0);
+  const displayedRevenueMonth = collectedThisMonth.length > 0 ? collectedMonthTotal : (dashboard?.revenueMonth ?? 0);
+  const displayedRevenueToday = collectedToday.length > 0 ? collectedTodayTotal : (dashboard?.revenueToday ?? 0);
   const averageTicket = collectedThisMonth.length
-    ? collectedThisMonth.reduce((sum, payment) => sum + payment.amountCents, 0) / collectedThisMonth.length
+    ? collectedMonthTotal / collectedThisMonth.length
     : 0;
 
   if (loading) {
@@ -340,8 +395,8 @@ export function FinanzasTab() {
         <div className="space-y-5">
           <div className="grid gap-4 md:grid-cols-4">
             {[
-              ['Cobrado Mes', usd(dashboard?.revenueMonth ?? 0), `${collectedThisMonth.length} pagos aplicados`],
-              ['Cobrado Hoy', usd(dashboard?.revenueToday ?? 0), `${collectedToday.length} ingresos registrados`],
+              ['Cobrado Mes', usd(displayedRevenueMonth), `${collectedThisMonth.length} pagos aplicados`],
+              ['Cobrado Hoy', usd(displayedRevenueToday), `${collectedToday.length} ingresos registrados`],
               ['Por Cobrar', usd(receivableTotal), `${receivables.length} cuentas`],
               ['Ticket Promedio', usd(averageTicket), 'por reservacion cobrada'],
             ].map(([label, value, sub]) => (
@@ -405,7 +460,7 @@ export function FinanzasTab() {
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">{payment.service}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {new Date(payment.completedAt).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })} · {payment.provider}
+                      {new Date(payment.completedAt).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })} | {payment.provider}
                     </p>
                   </div>
                   <span className="text-lg font-black text-emerald-700">{usd(payment.amountCents)}</span>
@@ -452,16 +507,15 @@ export function FinanzasTab() {
                       <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${urgencyClass(days)}`}>
                         {days} dias
                       </span>
-                      <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${
-                        item.status === 'PAID'
-                          ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                          : item.status === 'INVOICED'
-                            ? 'bg-blue-100 text-blue-700 border-blue-200'
-                            : 'bg-amber-100 text-amber-800 border-amber-200'
-                      }`}>
-                        {item.status === 'INVOICED' ? 'Facturado' : item.status === 'PAID' ? 'Pagado' : 'Por pagar'}
+                      <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${receivableStatusTone(item.status)}`}>
+                        {receivableStatusLabel(item.status)}
                       </span>
                     </div>
+                    {item.source === 'booking' && item.collectedAmountCents > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Cobrado: {usd(item.collectedAmountCents)} de {usd(item.originalAmountCents)}
+                      </p>
+                    )}
                     <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground">
                       <span>{item.date}</span>
                       <button
@@ -512,16 +566,15 @@ export function FinanzasTab() {
                           {days} dias
                         </span>
                         <div className="mt-2">
-                          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${
-                            item.status === 'PAID'
-                              ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                              : item.status === 'INVOICED'
-                                ? 'bg-blue-100 text-blue-700 border-blue-200'
-                                : 'bg-amber-100 text-amber-800 border-amber-200'
-                          }`}>
-                            {item.status === 'INVOICED' ? 'Facturado' : item.status === 'PAID' ? 'Pagado' : 'Por pagar'}
+                          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${receivableStatusTone(item.status)}`}>
+                            {receivableStatusLabel(item.status)}
                           </span>
                         </div>
+                        {item.source === 'booking' && item.collectedAmountCents > 0 && (
+                          <div className="mt-2 text-xs text-muted-foreground">
+                            Cobrado: {usd(item.collectedAmountCents)} de {usd(item.originalAmountCents)}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <button

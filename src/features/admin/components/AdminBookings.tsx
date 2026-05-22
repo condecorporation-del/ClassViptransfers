@@ -8,16 +8,19 @@ import {
 import { useAdminAuth } from '@/features/admin/hooks/useAdminAuth';
 import {
   compareOperationBookings,
+  expandBookingOperations,
   getOperationBadge,
   getOperationFlight,
   getOperationHotel,
   getOperationType,
   getOperationTime,
+  type AdminOperationEvent,
 } from '@/features/admin/lib/booking-operations';
+import { addLocalDays, localDateKey, monthEndKey, monthStartKey, startOfCurrentWeekKey } from '@/features/admin/lib/admin-date';
 import { getApiBaseUrl } from '@/shared/lib/api';
 import { cloudinaryAssets } from '@/shared/lib/cloudinary-assets';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// âââ Types ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 type Driver = { id: string; name: string; phone: string; email?: string; isActive: boolean };
 type Vehicle = { id: string; make: string; model: string; year?: number; licensePlate: string; capacity: number; isActive: boolean };
@@ -80,6 +83,7 @@ type Booking = {
 type BookingUpdateInput = {
   bookingDate: string;
   bookingTime: string | null;
+  pickupTime: string | null;
   passengers: number;
   flightNumber: string | null;
   arrivalTime: string | null;
@@ -103,6 +107,8 @@ type BookingEditorPayload = {
   customer: CustomerUpdateInput;
 };
 
+type BookingOperationRow = AdminOperationEvent<Booking>;
+
 type AssignmentUpdateInput = {
   driverId: string | null;
   vehicleId: string | null;
@@ -110,7 +116,7 @@ type AssignmentUpdateInput = {
   internalNotes?: string;
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// âââ Helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 const apiUrl = (path: string) => {
   const base = getApiBaseUrl();
@@ -153,7 +159,6 @@ const SERVICE_FILTERS = [
   { value: '', label: 'Todos' },
   { value: 'arrival', label: 'Llegada' },
   { value: 'departure', label: 'Salida' },
-  { value: 'roundtrip', label: 'Redondo' },
 ] as const;
 
 const STATUS_FILTERS = [
@@ -164,27 +169,20 @@ const STATUS_FILTERS = [
   { value: 'COMPLETED', label: 'Completado' },
 ] as const;
 
-function today() { return new Date().toISOString().slice(0, 10); }
-function addDays(dateStr: string, n: number) {
-  const d = new Date(dateStr); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10);
-}
-function weekStart() {
-  const d = new Date(); d.setDate(d.getDate() - d.getDay()); return d.toISOString().slice(0, 10);
-}
-function monthStart() {
-  const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
-}
-function monthEnd() {
-  const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
-}
+function today() { return localDateKey(); }
+function addDays(dateStr: string, n: number) { return addLocalDays(dateStr, n); }
+function weekStart() { return startOfCurrentWeekKey(); }
+function monthStart() { return monthStartKey(); }
+function monthEnd() { return monthEndKey(); }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// âââ Main Component âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
-export const AdminBookings = () => {
+export const AdminBookings = ({ onDataChanged }: { onDataChanged?: () => void }) => {
   const { getAuthHeaders } = useAdminAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Filters
   const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'custom'>('today');
@@ -210,9 +208,15 @@ export const AdminBookings = () => {
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const { dateFrom, dateTo } = getDateRange();
-      const qs = new URLSearchParams({ dateFrom, dateTo, limit: searchQ.trim() ? '250' : '100' });
+      const sourceFrom = addDays(dateFrom, -120);
+      const qs = new URLSearchParams({
+        dateFrom: sourceFrom,
+        dateTo,
+        limit: searchQ.trim() ? '1200' : '800',
+      });
       if (searchQ.trim()) qs.set('q', searchQ.trim());
       const res = await fetch(apiUrl(`/api/admin/bookings?${qs}`), {
         credentials: 'include', headers: getAuthHeaders(),
@@ -222,9 +226,15 @@ export const AdminBookings = () => {
         setBookings(json.data);
         setTotal(json.total ?? json.data.length);
       } else {
-        setBookings([]); setTotal(0);
+        setLoadError(json.error || 'No se pudieron cargar las reservaciones.');
+        setBookings([]);
+        setTotal(0);
       }
-    } catch { setBookings([]); setTotal(0); }
+    } catch {
+      setLoadError('No se pudieron cargar las reservaciones.');
+      setBookings([]);
+      setTotal(0);
+    }
     finally { setLoading(false); }
   }, [getDateRange, getAuthHeaders, searchQ]);
 
@@ -253,15 +263,23 @@ export const AdminBookings = () => {
     window.open(apiUrl(`/api/admin/bookings/export?date=${dateFrom}&format=csv`), '_blank');
   };
 
-  // ── Search on Enter ──
+  const refreshAdminData = async () => {
+    await fetchBookings();
+    onDataChanged?.();
+  };
+
+  // Search on Enter
   const handleSearchKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') fetchBookings();
   };
 
-  const filteredBookings = bookings
-    .filter((booking) => {
-      const dateMatches = !dateFilter || booking.bookingDate.slice(0, 10) === dateFilter;
-      const type = getOperationType(booking);
+  const operationRows: BookingOperationRow[] = bookings.flatMap((booking) => expandBookingOperations(booking));
+
+  const filteredBookings = operationRows
+    .filter((event) => {
+      const booking = event.booking;
+      const dateMatches = !dateFilter || event.serviceDate === dateFilter;
+      const type = event.operationType;
       const serviceMatches = !serviceFilter || type === serviceFilter;
       const statusMatches = !statusFilter || booking.status === statusFilter;
       const q = normalizeText(searchQ.trim());
@@ -282,8 +300,13 @@ export const AdminBookings = () => {
     })
     .sort(compareOperationBookings);
 
-  const printBookings = (dateFilter ? filteredBookings : bookings.filter((booking) => booking.bookingDate.slice(0, 10) === today()))
-    .sort(compareOperationBookings);
+  const printBookings = [...filteredBookings].sort(compareOperationBookings);
+  const operationalSummary = {
+    total: filteredBookings.length,
+    arrivals: filteredBookings.filter((event) => event.operationType === 'arrival').length,
+    departures: filteredBookings.filter((event) => event.operationType === 'departure').length,
+    pending: filteredBookings.filter((event) => ['DRAFT', 'PENDING_PAYMENT', 'OFFLINE_HOLD'].includes(event.booking.status)).length,
+  };
 
   if (selectedId) {
     return (
@@ -297,12 +320,12 @@ export const AdminBookings = () => {
         {detailLoading ? (
           <div className="rounded-2xl border border-border bg-card p-12 flex flex-col items-center justify-center gap-3 text-muted-foreground">
             <Loader2 size={22} className="animate-spin text-gold" />
-            <p className="text-sm font-medium">Loading booking…</p>
+            <p className="text-sm font-medium">Loading bookingâ¦</p>
           </div>
         ) : bookingDetail ? (
           <BookingDetailView
             booking={bookingDetail}
-            onRefresh={fetchBookings}
+            onRefresh={refreshAdminData}
             onRefetchDetail={() => fetchDetail(selectedId)}
           />
         ) : (
@@ -316,7 +339,13 @@ export const AdminBookings = () => {
 
   return (
     <div className="space-y-5">
-      {/* ── Toolbar ── */}
+      {loadError && (
+        <div className="flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          <AlertCircle size={16} className="shrink-0" />
+          {loadError}
+        </div>
+      )}
+      {/* ââ Toolbar ââ */}
       <div className="space-y-2.5">
         {/* Row 1: period + actions */}
         <div className="flex items-center gap-2">
@@ -360,7 +389,7 @@ export const AdminBookings = () => {
               onChange={(e) => setCustomFrom(e.target.value)}
               className="px-2 py-1.5 rounded-lg border border-border bg-background text-sm flex-1 min-w-[130px]"
             />
-            <span className="text-muted-foreground text-sm">→</span>
+            <span className="text-muted-foreground text-sm">â</span>
             <input
               type="date" value={customTo}
               onChange={(e) => setCustomTo(e.target.value)}
@@ -377,7 +406,7 @@ export const AdminBookings = () => {
 
       </div>
 
-      {/* ── Table ── */}
+      {/* ââ Table ââ */}
       <div className="grid gap-2 rounded-2xl border border-border bg-card p-3 shadow-sm md:grid-cols-[160px_150px_170px_minmax(180px,1fr)_auto_auto]">
         <input
           type="date"
@@ -477,27 +506,27 @@ export const AdminBookings = () => {
             </tr>
           </thead>
           <tbody>
-            {printBookings.map((booking) => (
-              <tr key={booking.id}>
-                <td>{getOperationTime(booking)}</td>
-                <td>{getOperationBadge(booking).label}</td>
-                <td>{booking.customer?.name || '--'}</td>
-                <td>{getOperationHotel(booking)}</td>
-                <td>{booking.passengers}</td>
-                <td>{getOperationFlight(booking)}</td>
-                <td>{booking.notes || booking.internalNotes || '--'}</td>
-                <td>{STATUS_LABELS[booking.status] ?? booking.status}</td>
+            {printBookings.map((event) => (
+              <tr key={event.key}>
+                <td>{getOperationTime(event)}</td>
+                <td>{getOperationBadge(event).label}</td>
+                <td>{event.booking.customer?.name || '--'}</td>
+                <td>{getOperationHotel(event)}</td>
+                <td>{event.booking.passengers}</td>
+                <td>{getOperationFlight(event)}</td>
+                <td>{event.booking.notes || event.booking.internalNotes || '--'}</td>
+                <td>{STATUS_LABELS[event.booking.status] | event.booking.status}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p style={{ marginTop: 20, fontSize: 12 }}>Class VIP Transfers · +52 624 122 2174</p>
+        <p style={{ marginTop: 20, fontSize: 12 }}>Class VIP Transfers Â· +52 624 122 2174</p>
       </div>
 
       {loading ? (
         <div className="rounded-2xl border border-border bg-card p-14 flex flex-col items-center justify-center gap-3 text-muted-foreground">
           <Loader2 size={22} className="animate-spin text-gold" />
-          <p className="text-sm font-medium">Loading bookings…</p>
+          <p className="text-sm font-medium">Loading bookingsâ¦</p>
         </div>
       ) : filteredBookings.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card p-14 flex flex-col items-center justify-center gap-3 text-muted-foreground">
@@ -510,15 +539,36 @@ export const AdminBookings = () => {
           </div>
         </div>
       ) : (
-        <div>
-          <p className="text-xs text-muted-foreground mb-2">{filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''} found</p>
+        <div className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Servicios</p>
+              <p className="mt-2 font-display text-2xl font-bold text-foreground">{operationalSummary.total}</p>
+            </div>
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 shadow-sm">
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-blue-700">Llegadas</p>
+              <p className="mt-2 font-display text-2xl font-bold text-blue-900">{operationalSummary.arrivals}</p>
+            </div>
+            <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 shadow-sm">
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-orange-700">Salidas</p>
+              <p className="mt-2 font-display text-2xl font-bold text-orange-900">{operationalSummary.departures}</p>
+            </div>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-amber-700">Pendientes</p>
+              <p className="mt-2 font-display text-2xl font-bold text-amber-900">{operationalSummary.pending}</p>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {filteredBookings.length} servicio{filteredBookings.length !== 1 ? 's' : ''} operativo{filteredBookings.length !== 1 ? 's' : ''} encontrado{filteredBookings.length !== 1 ? 's' : ''} de {total}
+          </p>
             {/* Mobile: card list */}
           <div className="md:hidden space-y-2">
-            {filteredBookings.map((b) => {
-              const op = getOperationBadge(b);
+            {filteredBookings.map((event) => {
+              const b = event.booking;
+              const op = getOperationBadge(event);
               return (
               <button
-                key={b.id}
+                key={event.key}
                 type="button"
                 onClick={() => fetchDetail(b.id)}
                 className="w-full text-left rounded-2xl border border-border bg-card p-4 hover:border-gold/40 hover:bg-gold/5 active:scale-[0.99] transition-all shadow-sm"
@@ -528,23 +578,28 @@ export const AdminBookings = () => {
                     {b.confirmationCode || b.id.slice(0, 8).toUpperCase()}
                   </span>
                   <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold shrink-0 ${STATUS_COLORS[b.status] || 'bg-gray-100 text-gray-700'}`}>
-                    {STATUS_LABELS[b.status] ?? b.status.replace(/_/g, ' ')}
+                    {STATUS_LABELS[b.status] | b.status.replace(/_/g, ' ')}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold text-sm text-foreground leading-tight">{b.customer?.name || '—'}</p>
+                  <p className="font-semibold text-sm text-foreground leading-tight">{b.customer?.name || '--'}</p>
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${op.className}`}>{op.label}</span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5 mb-3">{b.customer?.email}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{b.customer?.email}</p>
+                <p className="mb-3 mt-1 text-xs text-muted-foreground">{event.routeLabel} / {getOperationHotel(event)}</p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{fmt(b.bookingDate)}</span>
-                    {(b.arrivalTime || b.bookingTime || b.departureTime) && (
-                      <span className="font-mono bg-muted/60 px-1.5 py-0.5 rounded">{getOperationTime(b)}</span>
+                    <span>{fmt(event.serviceDate)}</span>
+                    {(b.arrivalTime || b.bookingTime || b.departureTime || b.pickupTime) && (
+                      <span className="font-mono bg-muted/60 px-1.5 py-0.5 rounded">{getOperationTime(event)}</span>
                     )}
-                    {(b.flightNumber || b.departureFlightNumber) && <span className="font-mono">{getOperationFlight(b)}</span>}
+                    {(b.flightNumber || b.departureFlightNumber) && <span className="font-mono">{getOperationFlight(event)}</span>}
                   </div>
                   <span className="font-bold text-sm text-foreground">{fmtCents(b.totalAmount)}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{b.passengers} pax</span>
+                  <span className="truncate pl-3">{b.notes || b.internalNotes || 'Sin notas'}</span>
                 </div>
               </button>
             );})}
@@ -552,49 +607,61 @@ export const AdminBookings = () => {
 
           {/* Desktop: table */}
           <div className="hidden md:block rounded-2xl border border-border bg-card overflow-hidden overflow-x-auto shadow-sm">
-            <table className="w-full text-sm min-w-[780px]">
+            <table className="w-full text-sm min-w-[980px]">
               <thead>
                 <tr className="border-b border-border/80 bg-muted/40">
                   <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Confirmation</th>
                   <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Date</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Hora</th>
                   <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Customer</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Flight / Time</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Service</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Vuelo</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Operacion</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Notas</th>
                   <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
                   <th className="text-right px-4 py-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Total</th>
                   <th className="px-4 py-3 w-8" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                {filteredBookings.map((b) => {
-                  const op = getOperationBadge(b);
+                {filteredBookings.map((event) => {
+                  const b = event.booking;
+                  const op = getOperationBadge(event);
                   return (
                   <tr
-                    key={b.id}
+                    key={event.key}
                     onClick={() => fetchDetail(b.id)}
                     className="hover:bg-gold/5 cursor-pointer transition-colors group"
                   >
                     <td className="px-4 py-3.5 font-mono text-xs font-bold text-gold">
                       {b.confirmationCode || b.id.slice(0, 8).toUpperCase()}
                     </td>
-                    <td className="px-4 py-3.5 text-xs text-muted-foreground whitespace-nowrap">{fmt(b.bookingDate)}</td>
+                    <td className="px-4 py-3.5 text-xs text-muted-foreground whitespace-nowrap">{fmt(event.serviceDate)}</td>
+                    <td className="px-4 py-3.5 text-xs">
+                      <p className="font-mono font-semibold text-foreground">{getOperationTime(event)}</p>
+                      <p className="mt-0.5 text-muted-foreground">{b.passengers} pax</p>
+                    </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-sm text-foreground leading-tight">{b.customer?.name || '—'}</p>
+                        <p className="font-semibold text-sm text-foreground leading-tight">{b.customer?.name || '--'}</p>
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${op.className}`}>{op.label}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">{b.customer?.email}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{b.customer?.email || '--'}</p>
+                      <p className="text-xs text-muted-foreground">{b.customer?.phone || '--'}</p>
                     </td>
                     <td className="px-4 py-3.5 text-xs">
-                      <p className="font-mono font-semibold text-foreground">{getOperationFlight(b)}</p>
-                      <p className="text-muted-foreground mt-0.5">{getOperationTime(b)}</p>
+                      <p className="font-mono font-semibold text-foreground">{getOperationFlight(event)}</p>
+                      <p className="text-muted-foreground mt-0.5">{event.routeLabel}</p>
                     </td>
-                    <td className="px-4 py-3.5 text-xs text-muted-foreground capitalize">
-                      {[b.serviceType, b.route].filter(Boolean).join(' · ') || b.type.replace(/_/g, ' ')}
+                    <td className="px-4 py-3.5 text-xs text-muted-foreground">
+                      <p className="font-semibold text-foreground">{event.routeLabel}</p>
+                      <p className="mt-0.5">{getOperationHotel(event)}</p>
+                    </td>
+                    <td className="px-4 py-3.5 text-xs text-muted-foreground">
+                      <div className="max-w-[220px] truncate">{b.notes || b.internalNotes || 'Sin notas'}</div>
                     </td>
                     <td className="px-4 py-3.5">
                       <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold leading-none ${STATUS_COLORS[b.status] || 'bg-gray-100 text-gray-700'}`}>
-                        {STATUS_LABELS[b.status] ?? b.status.replace(/_/g, ' ')}
+                        {STATUS_LABELS[b.status] | b.status.replace(/_/g, ' ')}
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-right font-bold text-sm">{fmtCents(b.totalAmount)}</td>
@@ -612,7 +679,7 @@ export const AdminBookings = () => {
   );
 };
 
-// ─── Detail View ──────────────────────────────────────────────────────────────
+// âââ Detail View ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 function BookingDetailView({
   booking,
@@ -655,6 +722,117 @@ function BookingDetailView({
     return res.json();
   };
 
+  const getPrintableHtml = () => {
+    const operationRows = expandBookingOperations(booking).map((event) => {
+      const badge = getOperationBadge(event);
+      return `
+        <tr>
+          <td>${fmt(event.serviceDate)}</td>
+          <td>${getOperationTime(event)}</td>
+          <td>${badge.label}</td>
+          <td>${event.routeLabel}</td>
+          <td>${event.hotel}</td>
+          <td>${event.flight}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Reservation ${booking.confirmationCode || booking.id.slice(0, 8).toUpperCase()}</title>
+    <style>
+      body { margin: 0; padding: 32px; background: #fff; color: #0f172a; font-family: Georgia, "Times New Roman", serif; }
+      .sheet { position: relative; }
+      .watermark { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0.05; pointer-events: none; }
+      .header { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 24px; }
+      .brand { display: flex; align-items: center; gap: 16px; }
+      .eyebrow { margin: 0; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #8a6a2f; }
+      h1 { margin: 6px 0 0; font-size: 28px; }
+      .card { position: relative; z-index: 1; border: 1px solid #d4d4d8; border-radius: 18px; padding: 18px 20px; margin-bottom: 18px; }
+      .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+      .label { display: block; margin-bottom: 4px; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; }
+      .value { font-size: 14px; line-height: 1.45; }
+      table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      th, td { border: 1px solid #d4d4d8; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; text-transform: uppercase; font-size: 10px; letter-spacing: 0.08em; }
+      .footer { margin-top: 18px; color: #64748b; font-size: 11px; text-align: center; }
+      @page { margin: 12mm; }
+    </style>
+  </head>
+  <body>
+    <div class="watermark"><img src="${cloudinaryAssets.logo}" alt="" style="width:340px;object-fit:contain;" /></div>
+    <div class="sheet">
+      <div class="header">
+        <div class="brand">
+          <img src="${cloudinaryAssets.logo}" alt="Class VIP Transfers" style="height:58px;object-fit:contain;" />
+          <div>
+            <p class="eyebrow">Class VIP Transfers</p>
+            <h1>Reservation Dossier</h1>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <p style="margin:0;font-size:13px;">Confirmation</p>
+          <strong style="font-size:18px;">${booking.confirmationCode || booking.id.slice(0, 8).toUpperCase()}</strong>
+        </div>
+      </div>
+      <div class="card">
+        <div class="grid">
+          <div><span class="label">Guest</span><div class="value">${booking.customer?.name || '-'}</div></div>
+          <div><span class="label">Email</span><div class="value">${booking.customer?.email || '-'}</div></div>
+          <div><span class="label">Phone</span><div class="value">${booking.customer?.phone || '-'}</div></div>
+          <div><span class="label">Status</span><div class="value">${paymentState}</div></div>
+          <div><span class="label">Service Date</span><div class="value">${fmt(booking.bookingDate)}</div></div>
+          <div><span class="label">Passengers</span><div class="value">${booking.passengers}</div></div>
+          <div><span class="label">Pickup</span><div class="value">${booking.pickupLocation || '-'}</div></div>
+          <div><span class="label">Dropoff</span><div class="value">${booking.dropoffLocation || '-'}</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <p class="eyebrow" style="margin-bottom:12px;">Operational Timeline</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Operation</th>
+              <th>Route</th>
+              <th>Hotel</th>
+              <th>Flight</th>
+            </tr>
+          </thead>
+          <tbody>${operationRows}</tbody>
+        </table>
+      </div>
+      <div class="card">
+        <span class="label">Customer Notes</span>
+        <div class="value">${booking.notes || '-'}</div>
+        <div style="height:12px;"></div>
+        <span class="label">Internal Notes</span>
+        <div class="value">${booking.internalNotes || '-'}</div>
+      </div>
+      <div class="footer">Class VIP Transfers Â· +52 624 122 2174</div>
+    </div>
+  </body>
+</html>`;
+  };
+
+  const openPrintableReservationView = () => {
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1024,height=900');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+    printWindow.document.open();
+    printWindow.document.write(getPrintableHtml());
+    printWindow.document.close();
+    printWindow.focus();
+    window.setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   const downloadPdf = async () => {
     setBusy('pdf');
     try {
@@ -670,8 +848,8 @@ function BookingDetailView({
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      window.print();
-      flash('Opened printable reservation view. Use "Save as PDF" in the print dialog.');
+      openPrintableReservationView();
+      flash('Opened professional print view. Use "Save as PDF" in the print dialog.');
     }
     finally { setBusy(null); }
   };
@@ -696,7 +874,7 @@ function BookingDetailView({
   };
 
   const cancelBooking = async () => {
-    const reason = prompt('Reason for cancellation (optional):') ?? undefined;
+    const reason = prompt('Reason for cancellation (optional):') | undefined;
     if (reason === null) return;
     setBusy('cancel');
     try {
@@ -731,6 +909,13 @@ function BookingDetailView({
         : booking.status === 'CONFIRMED'
           ? 'Confirmada'
           : booking.status.replace(/_/g, ' ');
+  const operationEvents = expandBookingOperations(booking);
+  const serviceDescriptor = [booking.serviceType, booking.tripType?.replace('_', ' ')].filter(Boolean).join(' Â· ') || 'Service pending';
+  const routeDescriptor = booking.route === 'airport-hotel'
+    ? 'Airport -> Hotel'
+    : booking.route === 'hotel-airport'
+      ? 'Hotel -> Airport'
+      : booking.route || 'Route pending';
 
   return (
     <div className="space-y-4 max-w-4xl">
@@ -863,7 +1048,7 @@ function BookingDetailView({
         </div>
       )}
 
-      {/* ── Header ── */}
+      {/* ââ Header ââ */}
       <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -873,7 +1058,7 @@ function BookingDetailView({
             </h2>
             <div className="flex flex-wrap items-center gap-2 mt-2.5">
               <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_COLORS[booking.status] || ''}`}>
-                {STATUS_LABELS[booking.status] ?? booking.status.replace(/_/g, ' ')}
+                {STATUS_LABELS[booking.status] | booking.status.replace(/_/g, ' ')}
               </span>
               <span className="text-xs text-muted-foreground/70 capitalize">{booking.source}</span>
               <span className="text-xs text-muted-foreground/70 capitalize">{booking.type.replace(/_/g, ' ')}</span>
@@ -894,7 +1079,7 @@ function BookingDetailView({
                 disabled={busy === 'confirm'}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium transition-colors"
               >
-                <CheckCircle size={13} /> {busy === 'confirm' ? 'Confirming…' : 'Confirm (offline)'}
+                <CheckCircle size={13} /> {busy === 'confirm' ? 'Confirming...' : 'Confirm (offline)'}
               </button>
             )}
             {!['CANCELLED', 'COMPLETED'].includes(booking.status) && (
@@ -903,7 +1088,7 @@ function BookingDetailView({
                 disabled={busy === 'cancel'}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 text-sm font-medium border border-red-200 transition-colors"
               >
-                <XCircle size={13} /> {busy === 'cancel' ? 'Cancelling…' : 'Cancel'}
+                <XCircle size={13} /> {busy === 'cancel' ? 'Cancelling...' : 'Cancel'}
               </button>
             )}
             <button
@@ -917,20 +1102,20 @@ function BookingDetailView({
               disabled={busy === 'resend'}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border hover:bg-muted text-sm font-medium disabled:opacity-50 transition-colors"
             >
-              <Mail size={13} /> {busy === 'resend' ? 'Sending…' : 'Resend'}
+              <Mail size={13} /> {busy === 'resend' ? 'Sending...' : 'Resend'}
             </button>
             <button
               onClick={downloadPdf}
               disabled={busy === 'pdf'}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[hsl(var(--navy))] text-white hover:opacity-90 disabled:opacity-50 text-sm font-medium transition-all"
             >
-              <FileDown size={13} /> {busy === 'pdf' ? 'Generating…' : 'PDF'}
+              <FileDown size={13} /> {busy === 'pdf' ? 'Generating...' : 'PDF / Print'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* ── Edit Form ── */}
+      {/* ââ Edit Form ââ */}
       {showEditForm && (
         <EditBookingForm
           booking={booking}
@@ -957,7 +1142,7 @@ function BookingDetailView({
         />
       )}
 
-      {/* ── Assign Driver Form ── */}
+      {/* ââ Assign Driver Form ââ */}
       {showAssignForm && (
         <AssignDriverForm
           booking={booking}
@@ -976,55 +1161,97 @@ function BookingDetailView({
         />
       )}
 
-      {/* ── Main Info ── */}
+      {/* ââ Main Info ââ */}
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">Operational Timeline</p>
+            <h3 className="mt-1 font-display text-xl font-bold text-foreground">Arrival / departure breakdown</h3>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Arrival and departure are managed as separate operational services.
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {operationEvents.map((event) => {
+            const badge = getOperationBadge(event);
+            return (
+              <div key={event.key} className="rounded-xl border border-border/70 bg-muted/20 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                    <span className="text-sm font-semibold text-foreground">{event.routeLabel}</span>
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">{fmt(event.serviceDate)}</span>
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <Row label="Service time" value={getOperationTime(event)} bold />
+                  <Row label="Hotel" value={event.hotel} />
+                  <Row label="Flight" value={event.flight} mono />
+                  <Row
+                    label="Pickup"
+                    value={event.operationType === 'departure' ? (booking.pickupTime || 'Auto / pending') : (booking.arrivalTime || booking.bookingTime || 'Pending')}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="grid gap-3 xl:grid-cols-3">
         {/* Customer */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Customer Dossier</p>
-          <p className="font-bold text-base text-foreground leading-tight">{booking.customer?.name}</p>
-          <p className="text-sm text-muted-foreground mt-1">{booking.customer?.email}</p>
-          <p className="text-sm text-muted-foreground">{booking.customer?.phone}</p>
+          <p className="font-bold text-base text-foreground leading-tight">{booking.customer?.name || 'Guest pending'}</p>
+          <p className="text-sm text-muted-foreground mt-1">{booking.customer?.email || 'Email pending'}</p>
+          <p className="text-sm text-muted-foreground">{booking.customer?.phone || 'Phone pending'}</p>
           <p className="text-sm text-muted-foreground">{booking.customer?.country || 'Country pending'}</p>
         </div>
 
-        {/* Booking Details */}
+        {/* Booking details */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Service Details</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Service Dossier</p>
           <Row label="Date" value={fmt(booking.bookingDate)} />
-          <Row label="Time" value={booking.bookingTime || booking.arrivalTime || '—'} />
+          <Row label="Booking time" value={booking.bookingTime || booking.arrivalTime || '--'} />
+          <Row label="Pickup time" value={booking.pickupTime || '--'} />
           <Row label="Passengers" value={String(booking.passengers)} />
-          <Row label="Service" value={[booking.serviceType, booking.tripType?.replace('_', ' ')].filter(Boolean).join(' · ') || '—'} />
-          <Row label="Route" value={booking.route || '—'} />
+          <Row label="Service" value={serviceDescriptor} />
+          <Row label="Route" value={routeDescriptor} />
         </div>
 
         {/* Flights */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Flight Info</p>
-          <Row label="Arrival flight" value={booking.flightNumber || '—'} />
-          <Row label="Arrival time" value={booking.arrivalTime || '—'} />
-          <Row label="Departure flight" value={booking.departureFlightNumber || '—'} />
-          <Row label="Departure time" value={booking.departureTime || '—'} />
-          <Row label="Pickup time" value={booking.pickupTime || '—'} />
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Flight Dossier</p>
+          <Row label="Arrival flight" value={booking.flightNumber || '--'} mono />
+          <Row label="Arrival time" value={booking.arrivalTime || '--'} />
+          <Row label="Departure flight" value={booking.departureFlightNumber || '--'} mono />
+          <Row label="Departure time" value={booking.departureTime || '--'} />
+          <Row label="Booking source" value={booking.source || '--'} />
         </div>
 
         {/* Location + Payment */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Location & Payment</p>
-          <Row label="Pickup" value={booking.pickupLocation || '—'} />
-          <Row label="Dropoff" value={booking.dropoffLocation || '—'} />
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Locations & Payment</p>
+          <Row label="Pickup" value={booking.pickupLocation || '--'} />
+          <Row label="Dropoff" value={booking.dropoffLocation || '--'} />
           <div className="border-t border-border/60 pt-3 mt-3">
             <Row label="Total" value={fmtCents(booking.totalAmount)} bold />
+            <Row label="Collection" value={paymentState} />
             {lastPayment && (
               <>
-                <Row label="Payment" value={`${lastPayment.provider} · ${lastPayment.status}`} />
+                <Row label="Payment" value={lastPayment.provider + ' · ' + lastPayment.status} />
                 {lastPayment.orderId && <Row label="Order ID" value={lastPayment.orderId} mono />}
+                {lastPayment.completedAt && <Row label="Completed at" value={fmtDateTime(lastPayment.completedAt)} />}
               </>
             )}
           </div>
         </div>
       </div>
 
-      {/* ── Items ── */}
+      {/* Items */}
       {booking.items && booking.items.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Items</p>
@@ -1033,7 +1260,7 @@ function BookingDetailView({
               <div key={item.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border/50 last:border-0">
                 <div>
                   <span className="font-medium">{item.name}</span>
-                  <span className="text-muted-foreground ml-2">× {item.quantity}</span>
+                  <span className="text-muted-foreground ml-2">x {item.quantity}</span>
                   <span className="ml-2 text-xs bg-muted px-1.5 py-0.5 rounded">{item.type}</span>
                 </div>
                 <span className="font-medium">{fmtCents(item.totalPrice)}</span>
@@ -1043,7 +1270,7 @@ function BookingDetailView({
         </div>
       )}
 
-      {/* ── Assignment ── */}
+      {/* ââ Assignment ââ */}
       {(currentDriver || currentVehicle) && (
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3 flex items-center gap-1.5">
@@ -1067,7 +1294,7 @@ function BookingDetailView({
         </div>
       )}
 
-      {/* ── Notes ── */}
+      {/* ââ Notes ââ */}
       {(booking.notes || booking.internalNotes) && (
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Notes</p>
@@ -1086,7 +1313,7 @@ function BookingDetailView({
         </div>
       )}
 
-      {/* ── Email Log ── */}
+      {/* ââ Email Log ââ */}
       {booking.emailLogs && booking.emailLogs.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3 flex items-center gap-1.5">
@@ -1096,7 +1323,7 @@ function BookingDetailView({
             {booking.emailLogs.map((log) => (
               <div key={log.id} className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-muted/30 text-xs">
                 <span className="font-medium">{log.type.replace(/_/g, ' ')}</span>
-                <span className="text-muted-foreground">→ {log.to}</span>
+                <span className="text-muted-foreground">to {log.to}</span>
                 <span className={`px-2 py-0.5 rounded font-medium ${log.status === 'SENT' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
                   {log.status}
                 </span>
@@ -1111,7 +1338,7 @@ function BookingDetailView({
   );
 }
 
-// ─── Edit Form ────────────────────────────────────────────────────────────────
+// âââ Edit Form ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 function EditBookingForm({
   booking, onSave, onCancel, saving,
@@ -1128,6 +1355,7 @@ function EditBookingForm({
     customerCountry: booking.customer?.country || '',
     bookingDate: booking.bookingDate.slice(0, 10),
     bookingTime: booking.bookingTime || '',
+    pickupTime: booking.pickupTime || '',
     passengers: String(booking.passengers),
     flightNumber: booking.flightNumber || '',
     arrivalTime: booking.arrivalTime || '',
@@ -1139,21 +1367,39 @@ function EditBookingForm({
     internalNotes: booking.internalNotes || '',
   });
 
+  const setField = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
+    setForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const isRoundTrip = booking.tripType === 'roundtrip';
+  const isArrivalBooking = booking.route === 'airport-hotel' || isRoundTrip;
+  const isDepartureBooking = booking.route === 'hotel-airport' || isRoundTrip;
+  const autoPickupTime = getOperationalPickupTime(form.departureTime);
+  const activePickupTime = form.pickupTime || autoPickupTime;
+  const serviceDateLabel = form.bookingDate ? fmt(form.bookingDate) : '--';
+  const bookingSummaryItems = [
+    { label: 'Servicio', value: [booking.serviceType, booking.tripType].filter(Boolean).join(' | ') || 'Pendiente' },
+    { label: 'Ruta', value: booking.route === 'airport-hotel' ? 'Airport -> Hotel' : booking.route === 'hotel-airport' ? 'Hotel -> Airport' : isRoundTrip ? 'Round trip' : 'Servicio' },
+    { label: 'Fecha', value: serviceDateLabel },
+    { label: 'Pickup operativo', value: activePickupTime || '--' },
+  ];
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
       booking: {
         bookingDate: form.bookingDate,
         passengers: parseInt(form.passengers) || 1,
-        bookingTime: form.bookingTime || null,
-        flightNumber: form.flightNumber || null,
-        arrivalTime: form.arrivalTime || null,
-        departureFlightNumber: form.departureFlightNumber || null,
-        departureTime: form.departureTime || null,
-        pickupLocation: form.pickupLocation || null,
-        dropoffLocation: form.dropoffLocation || null,
-        notes: form.notes || null,
-        internalNotes: form.internalNotes || null,
+        bookingTime: emptyToNull(form.bookingTime),
+        pickupTime: emptyToNull(form.pickupTime || autoPickupTime),
+        flightNumber: emptyToNull(form.flightNumber),
+        arrivalTime: emptyToNull(form.arrivalTime),
+        departureFlightNumber: emptyToNull(form.departureFlightNumber),
+        departureTime: emptyToNull(form.departureTime),
+        pickupLocation: emptyToNull(form.pickupLocation),
+        dropoffLocation: emptyToNull(form.dropoffLocation),
+        notes: emptyToNull(form.notes),
+        internalNotes: emptyToNull(form.internalNotes),
       },
       customer: {
         name: form.customerName.trim(),
@@ -1166,51 +1412,119 @@ function EditBookingForm({
 
   return (
     <div className="rounded-2xl border border-gold/30 bg-card p-5 shadow-sm">
-      <h3 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2"><Edit2 size={15} className="text-gold" /> Edit Booking</h3>
-      <form onSubmit={handleSubmit} className="grid sm:grid-cols-2 gap-3 text-sm">
-        <div className="sm:col-span-2 rounded-xl border border-border/70 bg-muted/20 p-4">
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h3 className="flex items-center gap-2 text-sm font-bold text-foreground"><Edit2 size={15} className="text-gold" /> Edit Booking</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Ajusta datos clave sin perder tiempo. El formulario prioriza la operacion diaria.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm sm:grid-cols-4">
+          {bookingSummaryItems.map((item) => (
+            <div key={item.label}>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{item.label}</p>
+              <p className="mt-1 font-semibold text-foreground">{item.value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="grid gap-3 text-sm">
+        <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
           <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Customer profile</p>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Full name" value={form.customerName} onChange={(v) => setForm({ ...form, customerName: v })} />
-            <Field label="Email" type="email" value={form.customerEmail} onChange={(v) => setForm({ ...form, customerEmail: v })} />
-            <Field label="Phone" value={form.customerPhone} onChange={(v) => setForm({ ...form, customerPhone: v })} />
-            <Field label="Country" value={form.customerCountry} onChange={(v) => setForm({ ...form, customerCountry: v })} />
+            <Field label="Full name" value={form.customerName} onChange={(v) => setField('customerName', v)} />
+            <Field label="Email" type="email" value={form.customerEmail} onChange={(v) => setField('customerEmail', v)} />
+            <Field label="Phone" value={form.customerPhone} onChange={(v) => setField('customerPhone', v)} />
+            <Field label="Country" value={form.customerCountry} onChange={(v) => setField('customerCountry', v)} />
           </div>
         </div>
 
-        <div className="sm:col-span-2 rounded-xl border border-border/70 bg-muted/20 p-4">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Service details</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Date" type="date" value={form.bookingDate} onChange={(v) => setForm({ ...form, bookingDate: v })} />
-        <Field label="Time" type="time" value={form.bookingTime} onChange={(v) => setForm({ ...form, bookingTime: v })} />
-        <Field label="Passengers" type="number" value={form.passengers} onChange={(v) => setForm({ ...form, passengers: v })} />
-        <Field label="Arrival flight" value={form.flightNumber} onChange={(v) => setForm({ ...form, flightNumber: v })} />
-        <Field label="Arrival time" value={form.arrivalTime} onChange={(v) => setForm({ ...form, arrivalTime: v })} placeholder="HH:MM" />
-        <Field label="Departure flight" value={form.departureFlightNumber} onChange={(v) => setForm({ ...form, departureFlightNumber: v })} />
-        <Field label="Departure time" value={form.departureTime} onChange={(v) => setForm({ ...form, departureTime: v })} placeholder="HH:MM" />
-        <Field label="Pickup location" value={form.pickupLocation} onChange={(v) => setForm({ ...form, pickupLocation: v })} />
-        <Field label="Dropoff location" value={form.dropoffLocation} onChange={(v) => setForm({ ...form, dropoffLocation: v })} />
+        <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Service details</p>
+              <p className="mt-1 text-xs text-muted-foreground">Fecha, pasajeros y horas operativas principales.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {isDepartureBooking && (
+                <button
+                  type="button"
+                  onClick={() => setField('pickupTime', autoPickupTime)}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-bold text-foreground hover:border-gold/40 hover:bg-gold/10"
+                >
+                  Pickup -3h
+                </button>
+              )}
+              {isArrivalBooking && form.arrivalTime && !form.bookingTime && (
+                <button
+                  type="button"
+                  onClick={() => setField('bookingTime', form.arrivalTime)}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-bold text-foreground hover:border-gold/40 hover:bg-gold/10"
+                >
+                  Usar hora llegada
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Date" type="date" value={form.bookingDate} onChange={(v) => setField('bookingDate', v)} />
+            <Field label="Booking time" type="time" value={form.bookingTime} onChange={(v) => setField('bookingTime', v)} />
+            <Field label="Pickup time" type="time" value={form.pickupTime} onChange={(v) => setField('pickupTime', v)} hint={isDepartureBooking && autoPickupTime ? `Sugerido: ${autoPickupTime}` : undefined} />
+            <Field label="Passengers" type="number" value={form.passengers} onChange={(v) => setField('passengers', v)} />
           </div>
         </div>
-        <div className="sm:col-span-2">
+
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className="rounded-xl border border-blue-200/70 bg-blue-50/40 p-4">
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-blue-700">Arrival leg</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Arrival flight" value={form.flightNumber} onChange={(v) => setField('flightNumber', v)} />
+              <Field label="Arrival time" value={form.arrivalTime} onChange={(v) => setField('arrivalTime', v)} placeholder="HH:MM" />
+              <Field label="Pickup location" value={form.pickupLocation} onChange={(v) => setField('pickupLocation', v)} />
+              <Field label="Dropoff location" value={form.dropoffLocation} onChange={(v) => setField('dropoffLocation', v)} />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-orange-200/70 bg-orange-50/40 p-4">
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-orange-700">Departure leg</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Departure flight" value={form.departureFlightNumber} onChange={(v) => setField('departureFlightNumber', v)} />
+              <Field label="Departure time" value={form.departureTime} onChange={(v) => setField('departureTime', v)} placeholder="HH:MM" />
+              <Field label="Pickup location" value={form.pickupLocation} onChange={(v) => setField('pickupLocation', v)} />
+              <Field label="Dropoff location" value={form.dropoffLocation} onChange={(v) => setField('dropoffLocation', v)} />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">Customer notes</label>
           <textarea
             value={form.notes}
-            onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            rows={2}
+            onChange={(e) => setField('notes', e.target.value)}
+            rows={4}
             className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm resize-none"
           />
-        </div>
-        <div className="sm:col-span-2">
+          </div>
+          <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">Internal notes (admin only)</label>
           <textarea
             value={form.internalNotes}
-            onChange={(e) => setForm({ ...form, internalNotes: e.target.value })}
-            rows={2}
+            onChange={(e) => setField('internalNotes', e.target.value)}
+            rows={4}
             className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm resize-none"
           />
+          </div>
         </div>
-        <div className="sm:col-span-2 flex gap-2 pt-1">
+
+        <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs text-muted-foreground">
+            {isRoundTrip
+              ? 'Round trip: revisa llegada y salida antes de guardar.'
+              : isDepartureBooking
+                ? 'Salida: confirma pickup y vuelo antes de guardar.'
+                : 'Llegada: confirma hora y destino antes de guardar.'}
+          </div>
+          <div className="flex gap-2">
           <button
             type="submit"
             disabled={saving}
@@ -1221,13 +1535,14 @@ function EditBookingForm({
           <button type="button" onClick={onCancel} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border hover:bg-muted">
             <X size={14} /> Cancel
           </button>
+          </div>
         </div>
       </form>
     </div>
   );
 }
 
-// ─── Assign Driver Form ───────────────────────────────────────────────────────
+// âââ Assign Driver Form âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 function AssignDriverForm({
   booking, drivers, vehicles, onSave, onCancel, saving,
@@ -1258,9 +1573,9 @@ function AssignDriverForm({
             onChange={(e) => setDriverId(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border border-border bg-background"
           >
-            <option value="">— Unassigned —</option>
+            <option value="">â Unassigned â</option>
             {drivers.map((d) => (
-              <option key={d.id} value={d.id}>{d.name} · {d.phone}</option>
+              <option key={d.id} value={d.id}>{d.name} Â· {d.phone}</option>
             ))}
           </select>
         </div>
@@ -1271,9 +1586,9 @@ function AssignDriverForm({
             onChange={(e) => setVehicleId(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border border-border bg-background"
           >
-            <option value="">— Unassigned —</option>
+            <option value="">â Unassigned â</option>
             {vehicles.map((v) => (
-              <option key={v.id} value={v.id}>{v.make} {v.model} · {v.licensePlate} ({v.capacity} pax)</option>
+              <option key={v.id} value={v.id}>{v.make} {v.model} Â· {v.licensePlate} ({v.capacity} pax)</option>
             ))}
           </select>
         </div>
@@ -1316,7 +1631,7 @@ function AssignDriverForm({
   );
 }
 
-// ─── Small helpers ────────────────────────────────────────────────────────────
+// âââ Small helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 function Row({ label, value, bold, mono }: { label: string; value: string; bold?: boolean; mono?: boolean }) {
   return (
@@ -1328,13 +1643,21 @@ function Row({ label, value, bold, mono }: { label: string; value: string; bold?
 }
 
 function Field({
-  label, value, onChange, type = 'text', placeholder,
+  label, value, onChange, type = 'text', placeholder, hint,
 }: {
-  label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  placeholder?: string;
+  hint?: string;
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-muted-foreground mb-1">{label}</label>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <label className="block text-xs font-medium text-muted-foreground">{label}</label>
+        {hint && <span className="text-[11px] font-medium text-gold">{hint}</span>}
+      </div>
       <input
         type={type} value={value} onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
@@ -1343,3 +1666,19 @@ function Field({
     </div>
   );
 }
+
+function emptyToNull(value: string | null | undefined) {
+  const trimmed = (value || '').trim();
+  return trimmed ? trimmed : null;
+}
+
+function getOperationalPickupTime(departureTime: string | null | undefined) {
+  if (!departureTime || !/^\d{1,2}:\d{2}$/.test(departureTime)) return '';
+  const [hours, minutes] = departureTime.split(':').map(Number);
+  const totalMinutes = (hours * 60) + minutes - 180;
+  const normalized = totalMinutes < 0 ? totalMinutes + 1440 : totalMinutes;
+  const pickupHours = Math.floor(normalized / 60) % 24;
+  const pickupMinutes = normalized % 60;
+  return `${String(pickupHours).padStart(2, '0')}:${String(pickupMinutes).padStart(2, '0')}`;
+}
+

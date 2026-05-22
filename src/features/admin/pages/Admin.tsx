@@ -27,8 +27,8 @@ type Tab = 'dashboard' | 'bookings' | 'pricing' | 'new-booking' | 'finanzas' | '
 
 // ─── Dashboard Stats ──────────────────────────────────────────────────────────
 
-function DashboardTab() {
-  return <DashboardOverviewTab />;
+function DashboardTab({ refreshToken }: { refreshToken: number }) {
+  return <DashboardOverviewTab refreshToken={refreshToken} />;
 }
 // ─── Quick Booking Form ───────────────────────────────────────────────────────
 
@@ -86,7 +86,7 @@ function calcPickupTime(depTime: string): string {
   return `${h12}:${String(m).padStart(2, '0')} ${suffix}`;
 }
 
-function QuickBookingTab() {
+function QuickBookingTab({ onBookingCreated }: { onBookingCreated?: () => void }) {
   const { getAuthHeaders } = useAdminAuth();
   const [form, setForm] = useState({
     customerName: '',
@@ -253,6 +253,7 @@ function QuickBookingTab() {
         setShowDepartureInfo(false);
         setAttachedFile(null);
         setPaymentMethod('stripe');
+        onBookingCreated?.();
       } else {
         setResult({ success: false, message: json.error || 'Failed to create booking.' });
       }
@@ -646,6 +647,11 @@ const Admin = () => {
   const { email, logout } = useAdminAuth();
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [refreshToken, setRefreshToken] = useState(0);
+
+  const notifyAdminDataChanged = () => {
+    setRefreshToken((current) => current + 1);
+  };
 
   const sidebarItems: Array<{ id: Tab; label: string; icon: React.ReactNode; mobileLabel?: string; group?: string }> = [
     { id: 'dashboard',   label: 'Dashboard',         icon: <LayoutDashboard size={17} />, mobileLabel: 'Home',    group: 'OPERACIONES' },
@@ -880,7 +886,7 @@ const Admin = () => {
           transition={{ duration: 0.25 }}
           className="p-5 md:p-8"
         >
-          {activeTab === 'dashboard' && <DashboardTab />}
+          {activeTab === 'dashboard' && <DashboardTab refreshToken={refreshToken} />}
 
           {activeTab === 'bookings' && (
             <div>
@@ -889,11 +895,11 @@ const Admin = () => {
                 <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">Bookings</h1>
                 <p className="text-sm text-muted-foreground mt-1">View, search and manage all reservations</p>
               </div>
-              <AdminBookings />
+              <AdminBookings onDataChanged={notifyAdminDataChanged} />
             </div>
           )}
 
-          {activeTab === 'new-booking' && <QuickBookingTab />}
+          {activeTab === 'new-booking' && <QuickBookingTab onBookingCreated={notifyAdminDataChanged} />}
 
           {activeTab === 'pricing' && (
             <div>
@@ -906,7 +912,7 @@ const Admin = () => {
             </div>
           )}
 
-          {activeTab === 'finanzas' && <FinanzasTab />}
+          {activeTab === 'finanzas' && <FinanzasTab refreshToken={refreshToken} />}
 
           {activeTab === 'tareas' && <TareasTab />}
 

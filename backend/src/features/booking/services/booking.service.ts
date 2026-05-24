@@ -715,32 +715,30 @@ export class BookingService {
       ];
     }
 
-    const [bookings, total] = await Promise.all([
-      prisma.booking.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: [
-          { bookingDate: 'asc' },
-          { bookingTime: 'asc' },
-        ],
-        include: {
-          customer: true,
-          items: true,
-          payments: {
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-          },
-          assignments: {
-            include: {
-              driver: true,
-              vehicle: true,
-            },
+    const bookings = await prisma.booking.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: [
+        { bookingDate: 'asc' },
+        { bookingTime: 'asc' },
+      ],
+      include: {
+        customer: true,
+        items: true,
+        payments: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+        assignments: {
+          include: {
+            driver: true,
+            vehicle: true,
           },
         },
-      }),
-      prisma.booking.count({ where }),
-    ]);
+      },
+    });
+    const total = await prisma.booking.count({ where });
 
     let groupedByTime: Record<string, typeof bookings> | null = null;
     if (filters.groupedByTime) {

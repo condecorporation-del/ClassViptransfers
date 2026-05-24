@@ -1,5 +1,6 @@
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { SEO } from '@/features/marketing/components/SEO';
 import { useLanguage } from '@/shared/providers/LanguageContext';
 import { activityData } from '@/features/marketing/data/activityData';
 import {
@@ -46,6 +47,32 @@ const ActivityDetail = () => {
 
   return (
     <div>
+      <SEO
+        title={t(activity.title)}
+        description={t(activity.hook)}
+        image={activity.heroImage}
+        canonical={`https://classviptransfers.com/activities/${activity.slug}`}
+        url={`https://classviptransfers.com/activities/${activity.slug}`}
+        keywords={`Los Cabos activities, ${activity.title.en}, ${activity.title.es}, luxury tours Cabo`}
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'TouristTrip',
+          name: t(activity.title),
+          description: t(activity.hook),
+          image: activity.heroImage,
+          url: `https://classviptransfers.com/activities/${activity.slug}`,
+          touristType: activity.experienceType[lang],
+          offers: activity.price
+            ? {
+                '@type': 'Offer',
+                priceCurrency: 'USD',
+                price: activity.price.replace(/[^0-9.]/g, ''),
+                availability: 'https://schema.org/InStock',
+              }
+            : undefined,
+        }}
+      />
+
       {/* Hero */}
       <section className="relative h-[70vh] min-h-[480px] flex items-end">
         <img src={activity.heroImage} alt={t(activity.title)} className="absolute inset-0 w-full h-full object-cover" />

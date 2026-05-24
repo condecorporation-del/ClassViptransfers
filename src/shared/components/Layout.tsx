@@ -1,11 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/shared/providers/LanguageContext';
 import Navbar from '@/features/marketing/components/Navbar';
 import Footer from '@/features/marketing/components/Footer';
-import { ChatWidget } from '@/features/marketing/components/ChatWidget';
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
+
+const ChatWidget = lazy(async () => {
+  const module = await import('@/features/marketing/components/ChatWidget');
+  return { default: module.ChatWidget };
+});
 
 const Layout = () => {
   const { lang } = useLanguage();
@@ -35,7 +39,9 @@ const Layout = () => {
       </main>
       <Footer />
       <ErrorBoundary fallback={null}>
-        <ChatWidget />
+        <Suspense fallback={null}>
+          <ChatWidget />
+        </Suspense>
       </ErrorBoundary>
     </div>
   );

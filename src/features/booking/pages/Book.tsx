@@ -1,13 +1,12 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/shared/providers/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, Car, Minus, Plus, Plane, MessageCircle, CalendarDays, Clock, MapPin, Sparkles, Shield, ChevronUp, AlertCircle, User, Mail, Phone as PhoneIcon, Lock, CreditCard } from 'lucide-react';
-import { format, startOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import { cn } from '@/shared/lib/utils';
 import { Calendar } from '@/shared/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
-import { usePricing, type PricingExtraPublic, type AreaPublic } from '@/features/booking/hooks/usePricing';
 import { LuxurySpinner } from '@/shared/ui/luxury-spinner';
 import { TrustBadges } from '@/features/marketing/components/trust/TrustBadges';
 import { getApiBaseUrl } from '@/shared/lib/api';
@@ -15,9 +14,8 @@ import { SEO } from '@/features/marketing/components/SEO';
 import { cloudinaryAssets } from '@/shared/lib/cloudinary-assets';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { includesNormalized } from '@/shared/lib/text';
-import { getPublicHotelsFromSupabase } from '@/shared/lib/public-data';
-
-const steps = ['info', 'details', 'extras', 'review'] as const;
+import { useBookingCatalog } from '@/features/booking/hooks/useBookingCatalog';
+import { BOOKING_STEPS, SJD_AIRPORT, useBookingForm, type HotelOption } from '@/features/booking/hooks/useBookingForm';
 
 // Mapeo área → zona de hoteles (areas y hotels usan nombres distintos en algunos casos)
 // Puerto Los Cabos / Port Los Cabos: mismo lugar, NO traducir. Ambas normalizan a misma zona.
@@ -44,32 +42,12 @@ const upsellActivities = [
   { id: 'rzr',        key: 'activity.rzr',        emoji: '🏎️', duration: '2h', price: 205, photo: cloudinaryAssets.activities.utv },
 ];
 
-const FLIGHT_REGEX = /^[A-Za-z]{2,3}\s?\d{1,4}$/;
-
 // 4-photo collage used in activity CTA and combo cards
 const ACTIVITY_COLLAGE = [
   cloudinaryAssets.activities.atv,
   cloudinaryAssets.activities.utv,
   cloudinaryAssets.activities.camel,
   cloudinaryAssets.activities.skybikes,
-];
-
-const FALLBACK_HOTELS: Array<{ id: string; name: string; zone: string }> = [
-  { id: 'f-1', name: 'Hyatt Ziva Los Cabos', zone: 'San Jose del Cabo' },
-  { id: 'f-2', name: 'JW Marriott Los Cabos', zone: 'San Jose del Cabo' },
-  { id: 'f-3', name: 'Hilton Los Cabos', zone: 'San Jose del Cabo' },
-  { id: 'f-4', name: 'Grand Velas Los Cabos', zone: 'Puerto Los Cabos' },
-  { id: 'f-5', name: 'Secrets Puerto Los Cabos', zone: 'Puerto Los Cabos' },
-  { id: 'f-6', name: 'Le Blanc Spa Resort', zone: 'Tourist Corridor' },
-  { id: 'f-7', name: 'Chileno Bay Resort', zone: 'Tourist Corridor' },
-  { id: 'f-8', name: 'Grand Fiesta Americana', zone: 'Tourist Corridor' },
-  { id: 'f-9', name: 'Montage Los Cabos', zone: 'Tourist Corridor' },
-  { id: 'f-10', name: 'Riu Palace Cabo San Lucas', zone: 'Cabo San Lucas' },
-  { id: 'f-11', name: 'Hard Rock Hotel Los Cabos', zone: 'Cabo San Lucas' },
-  { id: 'f-12', name: 'Pueblo Bonito Sunset Beach', zone: 'Cabo San Lucas' },
-  { id: 'f-13', name: 'Grand Solmar Land\'s End', zone: 'Cabo San Lucas' },
-  { id: 'f-14', name: 'Paradisus Los Cabos', zone: 'Cabo Pacific Area' },
-  { id: 'f-15', name: 'Rancho San Lucas', zone: 'Cabo Pacific Area' },
 ];
 
 type BookingLineItem = {
@@ -128,139 +106,25 @@ const ADDON_META: Record<string, { emoji: string; en: string; es: string; detail
 const Book = () => {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
-  const [current, setCurrent] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [step0Attempted, setStep0Attempted] = useState(false);
   const [creatingBooking, setCreatingBooking] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
-  const [data, setData] = useState({
-    customerName: '',
-    customerEmail: '',
-    customerPhone: '',
-    specialNote: '',
-    serviceType: 'private' as const,
-    tripType: '' as '' | 'oneway' | 'roundtrip',
-    areaId: '' as string,
-    route: '' as '' | 'airport-hotel' | 'hotel-airport',
-    zoneFrom: '',
-    zoneTo: '',
-    selectedHotel: null as { id: string; name: string; zone: string } | null,
-    vehicleClass: 'SPRINTER' as 'SUV' | 'SPRINTER',
-    arrivalDate: null as Date | null,
-    departureDate: null as Date | null,
-    flightNumber: '',
-    arrivalTime: '',
-    departureFlightNumber: '',
-    departureTime: '',
-    pickupTime: '', // roundtrip: time we pick up at hotel (min 3h before departureTime)
-    passengers: 1,
-    pickup: '',
-    dropoff: '',
-    extras: [] as string[],
-    activities: [] as string[],
-    comboMode: '' as '' | 'combo' | 'crazy',
-  });
-
-  const { getExtras, getAreas, loading: quoteLoading } = usePricing();
-  const [pricingExtras, setPricingExtras] = useState<PricingExtraPublic[]>([]);
-  const [areas, setAreas] = useState<AreaPublic[]>([]);
-  const [hotels, setHotels] = useState<Array<{ id: string; name: string; zone: string }>>([]);
+  const {
+    current,
+    setCurrent,
+    step0Attempted,
+    data,
+    setData,
+    dateStepErrors,
+    next,
+    prev,
+    handleNext,
+  } = useBookingForm(t);
+  const { pricingExtras, areas, hotels, hotelsError, hotelsLoading, quoteLoading } = useBookingCatalog();
   const [hotelSearch, setHotelSearch] = useState('');
   const [selectedZoneForHotel, setSelectedZoneForHotel] = useState<string | null>(null);
   const [showActivityOptions, setShowActivityOptions] = useState(false);
   const [celebrationType, setCelebrationType] = useState<'' | 'birthday' | 'anniversary' | 'other'>('');
-
-  const timeToMinutes = (hhmm: string): number | null => {
-    if (!hhmm || !/^\d{1,2}:\d{2}$/.test(hhmm)) return null;
-    const [h, m] = hhmm.split(':').map(Number);
-    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
-    return h * 60 + m;
-  };
-  const minutesToTime = (mins: number): string => {
-    const h = Math.floor(mins / 60) % 24;
-    const m = mins % 60;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-  };
-  type DateStepErrors = { arrivalDate?: string; departureDate?: string; flightNumber?: string; departureFlightNumber?: string; pickupTime?: string };
-  const validateDateStep = useCallback((): DateStepErrors => {
-    const err: DateStepErrors = {};
-    const today = startOfDay(new Date());
-    if (data.arrivalDate && startOfDay(data.arrivalDate) < today) err.arrivalDate = t('book.date.errorPast');
-    if (data.tripType === 'roundtrip' && data.arrivalDate && data.departureDate) {
-      if (startOfDay(data.departureDate) < startOfDay(data.arrivalDate)) err.departureDate = t('book.date.errorDepartureBefore');
-    }
-    if (data.flightNumber.trim() && !FLIGHT_REGEX.test(data.flightNumber.trim())) err.flightNumber = t('book.date.errorFlightFormat');
-    if (data.tripType === 'roundtrip' && data.departureFlightNumber.trim() && !FLIGHT_REGEX.test(data.departureFlightNumber.trim())) err.departureFlightNumber = t('book.date.errorFlightFormat');
-    if (data.tripType === 'roundtrip' && data.departureTime && data.pickupTime) {
-      const depM = timeToMinutes(data.departureTime);
-      const pickM = timeToMinutes(data.pickupTime);
-      if (depM !== null && pickM !== null) {
-        const diffMinutes = depM - pickM;
-        if (diffMinutes < 180) err.pickupTime = t('book.date.errorPickupTooLate');
-      }
-    }
-    return err;
-  }, [data.arrivalDate, data.departureDate, data.flightNumber, data.departureFlightNumber, data.tripType, data.departureTime, data.pickupTime, t]);
-  const [dateStepErrors, setDateStepErrors] = useState<DateStepErrors>({});
-  useEffect(() => {
-    setDateStepErrors(validateDateStep());
-  }, [validateDateStep]);
-
-  // Auto-suggest pickup 3h before departure (roundtrip + hotel-airport oneway)
-  useEffect(() => {
-    const isDep = data.route === 'hotel-airport' && data.tripType !== 'roundtrip';
-    const isRoundtrip = data.tripType === 'roundtrip';
-    if (!isDep && !isRoundtrip) return;
-    if (!data.departureTime) return;
-    const depM = timeToMinutes(data.departureTime);
-    if (depM === null) return;
-    const suggested = minutesToTime(Math.max(0, depM - 180));
-    if (isRoundtrip) {
-      setData((d) => ({ ...d, pickupTime: suggested }));
-    } else {
-      // hotel-airport oneway: arrivalTime = pickup time (3h before flight)
-      setData((d) => ({ ...d, arrivalTime: suggested }));
-    }
-  }, [data.route, data.tripType, data.departureTime]);
-
-  useEffect(() => {
-    getExtras().then(setPricingExtras);
-  }, [getExtras]);
-  useEffect(() => {
-    getAreas().then(setAreas);
-  }, [getAreas]);
-
-  const [hotelsLoading, setHotelsLoading] = useState(true);
-  const [hotelsError, setHotelsError] = useState(false);
-  useEffect(() => {
-    setHotelsLoading(true);
-    setHotelsError(false);
-    fetch(getApiBaseUrl() + '/api/pricing/hotels')
-      .then((r) => {
-        if (!r.ok) throw new Error('Failed to load hotels');
-        return r.json();
-      })
-      .then((j) => {
-        const data = j.data || [];
-        setHotels(data.length > 0 ? data : FALLBACK_HOTELS);
-        setHotelsError(false);
-      })
-      .catch(async () => {
-        try {
-          const fallbackHotels = await getPublicHotelsFromSupabase();
-          if (fallbackHotels.length > 0) {
-            setHotels(fallbackHotels);
-            setHotelsError(false);
-            return;
-          }
-        } catch {
-          // Ignore and fall back to static list below.
-        }
-        setHotels(FALLBACK_HOTELS);
-        setHotelsError(true);
-      })
-      .finally(() => setHotelsLoading(false));
-  }, []);
 
   // Set airport zone when route changes (SJD = airport)
   useEffect(() => {
@@ -269,12 +133,10 @@ const Book = () => {
     } else if (data.route === 'hotel-airport') {
       setData((d) => ({ ...d, zoneTo: 'SJD', zoneFrom: d.selectedHotel?.zone || '' }));
     }
-  }, [data.route]);
-
-  const SJD_AIRPORT = 'SJD International Airport';
+  }, [data.route, setData]);
 
   // When hotel selected: set zone, pickup/dropoff, and areaId for pricing (area name matches zone)
-  const selectHotel = (hotel: { id: string; name: string; zone: string }) => {
+  const selectHotel = (hotel: HotelOption) => {
     setData((d) => {
       const next = { ...d, selectedHotel: hotel };
       if (d.route === 'airport-hotel') {
@@ -318,7 +180,7 @@ const Book = () => {
       if (area) next.areaId = area.id;
       return next;
     });
-  }, [data.route, data.selectedHotel, data.zoneFrom, data.zoneTo, hotels, areas]);
+  }, [data.route, data.selectedHotel, data.zoneFrom, data.zoneTo, hotels, areas, setData]);
 
   // When areas load and we already have a selected hotel/zone, set areaId if missing
   useEffect(() => {
@@ -327,25 +189,9 @@ const Book = () => {
     if (!zone) return;
     const area = areas.find((a) => a.name === zone || a.name.toLowerCase() === zone.toLowerCase());
     if (area) setData((d) => ({ ...d, areaId: area.id }));
-  }, [areas, data.route, data.zoneFrom, data.zoneTo, data.areaId]);
+  }, [areas, data.route, data.zoneFrom, data.zoneTo, data.areaId, setData]);
 
   const selectedArea = areas.find((a) => a.id === data.areaId);
-  const next = () => setCurrent(c => Math.min(c + 1, steps.length - 1));
-  const prev = () => setCurrent(c => Math.max(c - 1, 0));
-
-  const handleNext = () => {
-    if (current === 0) {
-      setStep0Attempted(true);
-      if (
-        !data.customerName.trim() ||
-        !data.customerEmail.trim() ||
-        !data.customerPhone.trim() ||
-        !data.tripType ||
-        !data.route
-      ) return;
-    }
-    next();
-  };
 
   const toggleExtra = (code: string) => {
     setData(d => ({ ...d, extras: d.extras.includes(code) ? d.extras.filter((v) => v !== code) : [...d.extras, code] }));
@@ -395,7 +241,7 @@ const Book = () => {
   // Create booking and continue to Stripe checkout
   const handleStripeCheckout = async () => {
     if (!reviewValidation.valid && reviewValidation.firstInvalidStepIndex !== null) {
-      const sectionKey = `book.step.${steps[reviewValidation.firstInvalidStepIndex]}`;
+      const sectionKey = `book.step.${BOOKING_STEPS[reviewValidation.firstInvalidStepIndex]}`;
       setBookingError(`${t('book.validation.incomplete')} ${t(sectionKey)}`);
       setCurrent(reviewValidation.firstInvalidStepIndex);
       return;
@@ -606,7 +452,7 @@ const Book = () => {
   ]);
 
   const renderStep = () => {
-    switch (steps[current]) {
+    switch (BOOKING_STEPS[current]) {
       case 'info': {
         const zonesOrdered = areas.length > 0 ? areas.map((a) => a.name) : [...new Set(hotels.map((h) => h.zone))].sort();
         const zoneSelected = selectedZoneForHotel ?? data.selectedHotel?.zone ?? null;
@@ -1614,7 +1460,7 @@ const Book = () => {
                   <AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={16} />
                   <p className="text-sm text-amber-800 dark:text-amber-200">
                     {t('book.validation.incomplete')}{' '}
-                    <span className="font-bold">{stepLabels[steps[reviewValidation.firstInvalidStepIndex]]}</span>
+                    <span className="font-bold">{stepLabels[BOOKING_STEPS[reviewValidation.firstInvalidStepIndex]]}</span>
                   </p>
                 </div>
                 <button type="button" onClick={() => setCurrent(reviewValidation.firstInvalidStepIndex!)}
@@ -1909,7 +1755,7 @@ const Book = () => {
           className="mb-10"
         >
           <div className="hidden md:flex items-center justify-between gap-1">
-            {steps.map((step, i) => {
+            {BOOKING_STEPS.map((step, i) => {
               const isActive = i === current;
               const isComplete = i < current;
               const isClickable = i <= current;
@@ -1943,7 +1789,7 @@ const Book = () => {
                       {(typeof stepLabels[step] === 'string' ? stepLabels[step] : step).split(' ')[0]}
                     </span>
                   </button>
-                  {i < steps.length - 1 && (
+                  {i < BOOKING_STEPS.length - 1 && (
                     <div className="flex-1 min-w-[12px] h-0.5 mx-0.5 rounded-full bg-muted overflow-hidden">
                       <motion.div
                         className="h-full bg-gold/60 rounded-full"
@@ -1961,22 +1807,22 @@ const Book = () => {
           <div className="md:hidden space-y-1.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-foreground">{stepLabels[steps[current]] || steps[current]}</span>
-                {current < steps.length - 1 && (
+                <span className="text-xs font-bold text-foreground">{stepLabels[BOOKING_STEPS[current]] || BOOKING_STEPS[current]}</span>
+                {current < BOOKING_STEPS.length - 1 && (
                   <span className="text-[10px] text-muted-foreground">
-                    → {stepLabels[steps[current + 1]]}
+                    → {stepLabels[BOOKING_STEPS[current + 1]]}
                   </span>
                 )}
               </div>
-              <span className="text-xs font-semibold text-gold tabular-nums">{current + 1} / {steps.length}</span>
+              <span className="text-xs font-semibold text-gold tabular-nums">{current + 1} / {BOOKING_STEPS.length}</span>
             </div>
             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
               <motion.div
                 className="h-full gold-gradient rounded-full"
                 initial={false}
-                animate={{ width: `${((current + 1) / steps.length) * 100}%` }}
+                animate={{ width: `${((current + 1) / BOOKING_STEPS.length) * 100}%` }}
                 transition={{ type: 'spring', stiffness: 100, damping: 20 }}
-                style={{ width: `${((current + 1) / steps.length) * 100}%` }}
+                style={{ width: `${((current + 1) / BOOKING_STEPS.length) * 100}%` }}
               />
             </div>
           </div>
@@ -2017,7 +1863,7 @@ const Book = () => {
               >
                 <ArrowLeft size={18} /> {t('book.back')}
               </motion.button>
-              {current < steps.length - 1 && (
+              {current < BOOKING_STEPS.length - 1 && (
                 <motion.button
                   onClick={handleNext}
                   disabled={current === 1 && Object.values(dateStepErrors).some(Boolean)}
@@ -2114,7 +1960,7 @@ const Book = () => {
       </div>
 
       {/* Mobile: sticky CTA bar (Prev/Next) when not on review */}
-      {current < steps.length - 1 && (
+      {current < BOOKING_STEPS.length - 1 && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/98 backdrop-blur-xl border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] safe-area-pb">
           <div className="flex items-center justify-between gap-4 px-4 py-3 min-h-[56px]">
             <motion.button
@@ -2146,7 +1992,7 @@ const Book = () => {
       {/* Mobile bottom summary bar - visible on review or as expandable */}
       <div className={cn(
         'lg:hidden fixed left-0 right-0 z-40 bg-card/98 backdrop-blur-xl border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] safe-area-pb',
-        current < steps.length - 1 ? 'bottom-14' : 'bottom-0'
+        current < BOOKING_STEPS.length - 1 ? 'bottom-14' : 'bottom-0'
       )}>
         <button onClick={() => setMobileOpen(!mobileOpen)} className="w-full px-4 py-3 flex items-center justify-between min-h-[48px] touch-manipulation">
           <div className="flex items-center gap-3">

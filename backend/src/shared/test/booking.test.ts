@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { CreateBookingInput } from '../lib/validation';
 
 const describeIfDatabase = process.env.DATABASE_URL ? describe : describe.skip;
+const DB_TEST_TIMEOUT_MS = 20000;
 
 describeIfDatabase('BookingService', () => {
   const bookingService = new BookingService();
@@ -81,7 +82,7 @@ describeIfDatabase('BookingService', () => {
     expect(booking.customer.email).toBe('test@example.com');
     expect(booking.items).toHaveLength(1);
     expect(booking.items[0].unitPrice).toBe(8500); // $85 in cents
-  });
+  }, DB_TEST_TIMEOUT_MS);
 
   it('should create a draft activity booking with combo', async () => {
     const input: CreateBookingInput = {
@@ -125,7 +126,7 @@ describeIfDatabase('BookingService', () => {
     // Clean up
     await prisma.booking.delete({ where: { id: booking.id } });
     await prisma.customer.delete({ where: { id: booking.customerId } });
-  });
+  }, DB_TEST_TIMEOUT_MS);
 
   it('should get booking by ID', async () => {
     if (!createdBookingId) {
@@ -138,7 +139,7 @@ describeIfDatabase('BookingService', () => {
     expect(booking.id).toBe(createdBookingId);
     expect(booking.customer).toBeDefined();
     expect(booking.items).toBeDefined();
-  });
+  }, DB_TEST_TIMEOUT_MS);
 
   it('should confirm a booking', async () => {
     if (!createdBookingId) {
@@ -154,7 +155,7 @@ describeIfDatabase('BookingService', () => {
 
     expect(booking.status).toBe('CONFIRMED');
     expect(booking.confirmedAt).toBeDefined();
-  });
+  }, DB_TEST_TIMEOUT_MS);
 
   it('should list bookings by date', async () => {
     const result = await bookingService.listBookings({
@@ -167,7 +168,7 @@ describeIfDatabase('BookingService', () => {
     expect(Array.isArray(result.bookings)).toBe(true);
     expect(result.pagination).toBeDefined();
     expect(result.pagination.total).toBeGreaterThanOrEqual(0);
-  });
+  }, DB_TEST_TIMEOUT_MS);
 
   it('should export bookings to CSV', async () => {
     const csv = await bookingService.exportBookingsToCSV('2024-12-25');
@@ -197,7 +198,7 @@ describeIfDatabase('BookingService', () => {
 
     expect(booking.status).toBe('CANCELLED');
     expect(booking.cancelledAt).toBeDefined();
-  });
+  }, DB_TEST_TIMEOUT_MS);
 
   it('should create a completed MANUAL payment for confirmed manual bookings', async () => {
     const booking = await bookingService.createManualBooking(

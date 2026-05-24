@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/shared/providers/LanguageContext';
 import { useNavigate } from 'react-router-dom';
+import { SEO } from '@/features/marketing/components/SEO';
 import { Check, ArrowRight, ArrowLeft, Clock, Minus, Plus, Info, ToggleLeft, ToggleRight, MessageCircle, CalendarDays, User, Mail, Phone, Sparkles, Shield, Star, Car, ChevronUp, Zap } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/shared/lib/utils';
@@ -311,6 +312,30 @@ const BookActivities = () => {
 
   return (
     <div className="pt-32 pb-28 lg:pb-20 px-4">
+      <SEO
+        title={lang === 'es' ? 'Reservar Actividades en Los Cabos' : 'Book Los Cabos Activities'}
+        description={
+          lang === 'es'
+            ? 'Reserva combos y aventuras en Los Cabos con una experiencia premium y asistencia personalizada.'
+            : 'Reserve Los Cabos activity combos and adventures with a premium booking experience and personalized support.'
+        }
+        canonical="https://classviptransfers.com/book-activities"
+        url="https://classviptransfers.com/book-activities"
+        keywords="Los Cabos activities booking, camel ride Cabo, ATV Cabo, UTV Cabo, Class VIP Transfers"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'Service',
+          name: lang === 'es' ? 'Reserva de Actividades en Los Cabos' : 'Los Cabos Activities Booking',
+          serviceType: lang === 'es' ? 'Reserva de tours y aventuras' : 'Adventure and tour booking',
+          provider: {
+            '@type': 'Organization',
+            name: 'Class VIP Transfers',
+            url: 'https://classviptransfers.com',
+          },
+          areaServed: 'Los Cabos, Baja California Sur, Mexico',
+        }}
+      />
+
       <div className="container mx-auto max-w-5xl">
         <div className="flex items-center justify-between mb-3">
           <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">{t('bookAct.title')}</h1>

@@ -15,6 +15,14 @@ import {
   createAccountPaymentSchema,
   manualBookingSchema,
   updateAccountChargeSchema,
+  createPricingRuleSchema,
+  updatePricingRuleSchema,
+  createPricingExtraSchema,
+  updatePricingExtraSchema,
+  createAreaSchema,
+  updateAreaSchema,
+  createHotelSchema,
+  updateHotelSchema,
 } from '../../../shared/lib/validation';
 
 const router = Router();
@@ -199,11 +207,13 @@ router.get(
 
 router.post(
   '/pricing/rules',
+  validate(createPricingRuleSchema, 'body'),
   asyncHandler((req, res) => pricingController.createRule(req, res))
 );
 
 router.put(
   '/pricing/rules/:id',
+  validate(updatePricingRuleSchema, 'body'),
   asyncHandler((req, res) => pricingController.updateRule(req, res))
 );
 
@@ -220,11 +230,13 @@ router.get(
 
 router.post(
   '/pricing/extras',
+  validate(createPricingExtraSchema, 'body'),
   asyncHandler((req, res) => pricingController.createExtra(req, res))
 );
 
 router.put(
   '/pricing/extras/:id',
+  validate(updatePricingExtraSchema, 'body'),
   asyncHandler((req, res) => pricingController.updateExtra(req, res))
 );
 
@@ -240,10 +252,12 @@ router.get(
 );
 router.post(
   '/pricing/areas',
+  validate(createAreaSchema, 'body'),
   asyncHandler((req, res) => pricingController.createArea(req, res))
 );
 router.put(
   '/pricing/areas/:id',
+  validate(updateAreaSchema, 'body'),
   asyncHandler((req, res) => pricingController.updateArea(req, res))
 );
 router.delete(
@@ -258,10 +272,12 @@ router.get(
 );
 router.post(
   '/pricing/hotels',
+  validate(createHotelSchema, 'body'),
   asyncHandler((req, res) => pricingController.createHotel(req, res))
 );
 router.put(
   '/pricing/hotels/:id',
+  validate(updateHotelSchema, 'body'),
   asyncHandler((req, res) => pricingController.updateHotel(req, res))
 );
 router.delete(

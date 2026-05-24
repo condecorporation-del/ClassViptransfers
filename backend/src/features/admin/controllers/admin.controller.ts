@@ -79,29 +79,27 @@ export class AdminController {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const [bookingsToday, emailsSentToday, pendingCount, accountsSummary] = await Promise.all([
-      prisma.booking.count({
-        where: {
-          bookingDate: { gte: today, lt: tomorrow },
-          status: { not: 'CANCELLED' },
-        },
-      }),
-      prisma.emailLog.count({
-        where: {
-          createdAt: { gte: today, lt: tomorrow },
-          status: 'SENT',
-        },
-      }),
-      prisma.booking.count({
-        where: { status: { in: ['DRAFT', 'PENDING_PAYMENT'] } },
-      }),
-      clientAccountsService.getAccountsSummary().catch(() => ({
-        totalAccounts: 0,
-        openAccounts: 0,
-        outstandingBalanceCents: 0,
-        settledAccounts: 0,
-      })),
-    ]);
+    const bookingsToday = await prisma.booking.count({
+      where: {
+        bookingDate: { gte: today, lt: tomorrow },
+        status: { not: 'CANCELLED' },
+      },
+    });
+    const emailsSentToday = await prisma.emailLog.count({
+      where: {
+        createdAt: { gte: today, lt: tomorrow },
+        status: 'SENT',
+      },
+    });
+    const pendingCount = await prisma.booking.count({
+      where: { status: { in: ['DRAFT', 'PENDING_PAYMENT'] } },
+    });
+    const accountsSummary = await clientAccountsService.getAccountsSummary().catch(() => ({
+      totalAccounts: 0,
+      openAccounts: 0,
+      outstandingBalanceCents: 0,
+      settledAccounts: 0,
+    }));
 
     const revenueResult = await prisma.payment.aggregate({
       where: {
@@ -139,88 +137,76 @@ export class AdminController {
     const last7Start = new Date(todayStart);
     last7Start.setDate(last7Start.getDate() - 6);
 
-    const [
-      totalToday,
-      totalMonth,
-      revenueTodayResult,
-      revenueMonthResult,
-      bookingsTodayList,
-      bookingsRecentList,
-      bookingsLast7,
-      completedPaymentsLast7,
-      accountsSummary,
-    ] = await Promise.all([
-      prisma.booking.count({
-        where: {
-          bookingDate: { gte: todayStart, lt: todayEnd },
-          status: { not: 'CANCELLED' },
-        },
-      }),
-      prisma.booking.count({
-        where: {
-          bookingDate: { gte: monthStart, lt: monthEnd },
-          status: { not: 'CANCELLED' },
-        },
-      }),
-      prisma.payment.aggregate({
-        where: {
-          completedAt: { gte: todayStart, lt: todayEnd },
-          status: 'COMPLETED',
-        },
-        _sum: { amount: true },
-      }),
-      prisma.payment.aggregate({
-        where: {
-          completedAt: { gte: monthStart, lt: monthEnd },
-          status: 'COMPLETED',
-        },
-        _sum: { amount: true },
-      }),
-      prisma.booking.findMany({
-        where: {
-          bookingDate: { gte: todayStart, lt: todayEnd },
-          status: { not: 'CANCELLED' },
-        },
-        include: { customer: true, items: true },
-        orderBy: [{ bookingTime: 'asc' }, { createdAt: 'asc' }],
-        take: 50,
-      }),
-      prisma.booking.findMany({
-        orderBy: { createdAt: 'desc' },
-        include: { customer: true, items: true },
-        take: 20,
-      }),
-      prisma.booking.findMany({
-        where: {
-          bookingDate: { gte: last7Start, lt: todayEnd },
-        },
-        select: {
-          id: true,
-          bookingDate: true,
-          totalAmount: true,
-          status: true,
-          dropoffLocation: true,
-          pickupLocation: true,
-          tripType: true,
-        },
-      }),
-      prisma.payment.findMany({
-        where: {
-          completedAt: { gte: last7Start, lt: todayEnd },
-          status: 'COMPLETED',
-        },
-        select: {
-          amount: true,
-          completedAt: true,
-        },
-      }),
-      clientAccountsService.getAccountsSummary().catch(() => ({
-        totalAccounts: 0,
-        openAccounts: 0,
-        outstandingBalanceCents: 0,
-        settledAccounts: 0,
-      })),
-    ]);
+    const totalToday = await prisma.booking.count({
+      where: {
+        bookingDate: { gte: todayStart, lt: todayEnd },
+        status: { not: 'CANCELLED' },
+      },
+    });
+    const totalMonth = await prisma.booking.count({
+      where: {
+        bookingDate: { gte: monthStart, lt: monthEnd },
+        status: { not: 'CANCELLED' },
+      },
+    });
+    const revenueTodayResult = await prisma.payment.aggregate({
+      where: {
+        completedAt: { gte: todayStart, lt: todayEnd },
+        status: 'COMPLETED',
+      },
+      _sum: { amount: true },
+    });
+    const revenueMonthResult = await prisma.payment.aggregate({
+      where: {
+        completedAt: { gte: monthStart, lt: monthEnd },
+        status: 'COMPLETED',
+      },
+      _sum: { amount: true },
+    });
+    const bookingsTodayList = await prisma.booking.findMany({
+      where: {
+        bookingDate: { gte: todayStart, lt: todayEnd },
+        status: { not: 'CANCELLED' },
+      },
+      include: { customer: true, items: true },
+      orderBy: [{ bookingTime: 'asc' }, { createdAt: 'asc' }],
+      take: 50,
+    });
+    const bookingsRecentList = await prisma.booking.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { customer: true, items: true },
+      take: 20,
+    });
+    const bookingsLast7 = await prisma.booking.findMany({
+      where: {
+        bookingDate: { gte: last7Start, lt: todayEnd },
+      },
+      select: {
+        id: true,
+        bookingDate: true,
+        totalAmount: true,
+        status: true,
+        dropoffLocation: true,
+        pickupLocation: true,
+        tripType: true,
+      },
+    });
+    const completedPaymentsLast7 = await prisma.payment.findMany({
+      where: {
+        completedAt: { gte: last7Start, lt: todayEnd },
+        status: 'COMPLETED',
+      },
+      select: {
+        amount: true,
+        completedAt: true,
+      },
+    });
+    const accountsSummary = await clientAccountsService.getAccountsSummary().catch(() => ({
+      totalAccounts: 0,
+      openAccounts: 0,
+      outstandingBalanceCents: 0,
+      settledAccounts: 0,
+    }));
 
     const bookingsByDayMap = new Map<string, { date: string; bookings: number; revenueCents: number }>();
     for (let i = 0; i < 7; i += 1) {

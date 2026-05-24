@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import { SEO } from '@/features/marketing/components/SEO';
 import { getApiBaseUrl } from '@/shared/lib/api';
 import { ArrowRight, MapPin, Clock, Car, ChevronRight, Loader2, Star } from 'lucide-react';
@@ -20,7 +21,7 @@ const ZONE_DESCRIPTION: Record<string, string> = {
   'San Jose del Cabo': 'San José del Cabo blends colonial charm with modern luxury, just 20 minutes from SJD Airport. Home to a thriving art district, world-class golf courses, and pristine beaches along the Sea of Cortez.',
   'Port Los Cabos': 'Puerto Los Cabos is a premier marina development north of San José del Cabo, featuring ultra-luxury resorts, championship golf, and a protected harbor frequented by super yachts.',
   'Tourist Corridor': 'The Tourist Corridor stretches 33 km between San José del Cabo and Cabo San Lucas along the Pacific coast, home to the most exclusive resorts in Los Cabos with dramatic cliffside views.',
-  'Cabo San Lucas': 'Cabo San Lucas is the vibrant heart of the region — famous for El Arco rock formation, a bustling marina, world-class sportfishing, and an energetic nightlife scene.',
+  'Cabo San Lucas': 'Cabo San Lucas is the vibrant heart of the region - famous for El Arco rock formation, a bustling marina, world-class sportfishing, and an energetic nightlife scene.',
   'Cabo Pacific Area': 'The Pacific side of Cabo offers secluded beachfront resorts, championship golf along dramatic Pacific coastline, and an exclusive residential atmosphere away from the crowds.',
   'Pacific & East Cape': 'East Cape is a natural paradise stretching from Los Barriles to Cabo Pulmo, offering unspoiled beaches, world-class fishing, and access to Todos Santos and La Paz.',
 };
@@ -29,41 +30,35 @@ const fadeUp = { hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } };
 
 export default function HotelPage() {
   const { slug } = useParams<{ slug: string }>();
-  const [hotel, setHotel] = useState<HotelData | null>(null);
-  const [status, setStatus] = useState<'loading' | 'found' | 'notfound' | 'error'>('loading');
+  const hotelQuery = useQuery({
+    queryKey: ['hotel-detail', slug],
+    enabled: Boolean(slug),
+    staleTime: 5 * 60 * 1000,
+    queryFn: async (): Promise<HotelData | null> => {
+      const base = getApiBaseUrl();
 
-  useEffect(() => {
-    if (!slug) return;
-    const base = getApiBaseUrl();
-    fetch(`${base}/api/hotels/${slug}`)
-      .then((r) => {
-        if (r.status === 404) { setStatus('notfound'); return null; }
-        if (!r.ok) throw new Error('Server error');
-        return r.json();
-      })
-      .then((j) => {
-        if (!j) return;
-        if (!j.success || !j.data) {
-          setStatus('notfound');
-          return;
-        }
-        setHotel(j.data);
-        setStatus('found');
-      })
-      .catch(async () => {
-        try {
-          const fallbackHotel = await getPublicHotelDetailFromSupabase(slug);
-          if (!fallbackHotel) {
-            setStatus('notfound');
-            return;
-          }
-          setHotel(fallbackHotel);
-          setStatus('found');
-        } catch {
-          setStatus('error');
-        }
-      });
-  }, [slug]);
+      try {
+        const response = await fetch(`${base}/api/hotels/${slug}`);
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error('Server error');
+
+        const json = await response.json();
+        if (!json.success || !json.data) return null;
+        return json.data as HotelData;
+      } catch {
+        return getPublicHotelDetailFromSupabase(slug!);
+      }
+    },
+  });
+
+  const status = useMemo<'loading' | 'found' | 'notfound' | 'error'>(() => {
+    if (hotelQuery.isLoading) return 'loading';
+    if (hotelQuery.isError) return 'error';
+    if (!hotelQuery.data) return 'notfound';
+    return 'found';
+  }, [hotelQuery.data, hotelQuery.isError, hotelQuery.isLoading]);
+
+  const hotel = hotelQuery.data ?? null;
 
   if (status === 'notfound') return <Navigate to="/transfers" replace />;
 
@@ -118,7 +113,7 @@ export default function HotelPage() {
     },
     {
       q: `What vehicles are available for transfers to ${hotel.name}?`,
-      a: `We operate luxury Mercedes Sprinter Vans, comfortable for groups of 1–14 passengers. All vehicles include AC, leather seats, WiFi, and cold beverages.`,
+      a: `We operate luxury Mercedes Sprinter Vans, comfortable for groups of 1-14 passengers. All vehicles include AC, leather seats, WiFi, and cold beverages.`,
     },
     {
       q: `Is the transfer price to ${hotel.name} per person or per vehicle?`,
@@ -146,10 +141,9 @@ export default function HotelPage() {
         jsonLd={[serviceLd, breadcrumbLd, faqLd]}
       />
 
-      {/* ── Hero ── */}
+      {/* Hero */}
       <section className="navy-gradient pt-36 pb-20 px-4">
         <div className="container mx-auto max-w-4xl">
-          {/* Breadcrumb */}
           <nav className="flex items-center gap-1.5 text-off-white/40 text-xs mb-8" aria-label="Breadcrumb">
             <Link to="/" className="hover:text-off-white/70 transition-colors">Home</Link>
             <ChevronRight size={12} />
@@ -180,7 +174,7 @@ export default function HotelPage() {
         </div>
       </section>
 
-      {/* ── Pricing + CTA ── */}
+      {/* Pricing + CTA */}
       <section className="py-12 px-4 -mt-6 relative z-10">
         <div className="container mx-auto max-w-4xl">
           <motion.div
@@ -231,7 +225,7 @@ export default function HotelPage() {
         </div>
       </section>
 
-      {/* ── About the transfer ── */}
+      {/* About the transfer */}
       <section className="py-12 px-4">
         <div className="container mx-auto max-w-4xl grid md:grid-cols-2 gap-10">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
@@ -246,7 +240,7 @@ export default function HotelPage() {
             <p className="text-muted-foreground leading-relaxed">
               Your professional bilingual driver will meet you at arrivals holding a sign with your name,
               assist with all luggage, and take you directly to {hotel.name} in a late-model luxury
-              Mercedes Sprinter van — fully air-conditioned with cold beverages waiting.
+              Mercedes Sprinter van - fully air-conditioned with cold beverages waiting.
             </p>
           </motion.div>
 
@@ -257,7 +251,7 @@ export default function HotelPage() {
             <p className="text-muted-foreground leading-relaxed mb-6">{zoneDesc}</p>
             <div className="flex flex-col gap-3">
               {[
-                { icon: <Car size={16} />, label: 'Mercedes Sprinter Van', detail: '1–14 passengers' },
+                { icon: <Car size={16} />, label: 'Mercedes Sprinter Van', detail: '1-14 passengers' },
               ].map((v) => (
                 <div key={v.label} className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 border border-border">
                   <span className="text-gold">{v.icon}</span>
@@ -274,7 +268,7 @@ export default function HotelPage() {
 
       <div className="section-divider mx-auto max-w-3xl" />
 
-      {/* ── FAQ ── */}
+      {/* FAQ */}
       <section className="py-16 px-4 section-light">
         <div className="container mx-auto max-w-3xl">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="mb-10 text-center">
@@ -293,7 +287,7 @@ export default function HotelPage() {
         </div>
       </section>
 
-      {/* ── TripAdvisor trust ── */}
+      {/* TripAdvisor trust */}
       <section className="py-12 px-4">
         <div className="container mx-auto max-w-4xl">
           <motion.div
@@ -310,7 +304,7 @@ export default function HotelPage() {
               ))}
             </div>
             <p className="text-off-white/80 text-sm mb-4 max-w-md mx-auto">
-              "Rated #1 Transfer Service in Los Cabos on TripAdvisor — Certificate of Excellence"
+              "Rated #1 Transfer Service in Los Cabos on TripAdvisor - Certificate of Excellence"
             </p>
             <a
               href="https://www.tripadvisor.com.mx/Attraction_Review-g152515-d10486878-Reviews-Class_VIP_Transfers-Cabo_San_Lucas_Los_Cabos_Baja_California.html"

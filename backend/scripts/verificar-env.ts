@@ -15,6 +15,10 @@ if (!existsSync(envPath)) {
 
 const envContent = readFileSync(envPath, 'utf-8');
 const dbUrlMatch = envContent.match(/DATABASE_URL="([^"]+)"/);
+const adminAuthDisabledMatch = envContent.match(/^ADMIN_AUTH_DISABLED=(.+)$/m);
+const frontendUrlMatch = envContent.match(/^FRONTEND_URL=(.+)$/m);
+const allowedOriginsMatch = envContent.match(/^ALLOWED_ORIGINS=(.+)$/m);
+const nodeEnvMatch = envContent.match(/^NODE_ENV=(.+)$/m);
 
 if (!dbUrlMatch) {
   console.error('DATABASE_URL no encontrado en .env');
@@ -22,6 +26,7 @@ if (!dbUrlMatch) {
 }
 
 const dbUrl = dbUrlMatch[1];
+const nodeEnv = nodeEnvMatch?.[1]?.trim() || 'development';
 console.log('Verificando configuracion de DATABASE_URL...\n');
 
 const hasPlaceholders =
@@ -75,4 +80,20 @@ if (hasPostgres && hasDb && hasSupabase && hasPort) {
   if (!hasDb) console.log('   - Falta: @db.');
   if (!hasSupabase) console.log('   - Falta: .supabase.co');
   if (!hasPort) console.log('   - Falta: :5432');
+}
+
+const adminAuthDisabled = adminAuthDisabledMatch?.[1]?.trim().toLowerCase() === 'true';
+const frontendUrl = frontendUrlMatch?.[1]?.trim() || '';
+const allowedOrigins = allowedOriginsMatch?.[1]?.trim() || '';
+
+if (nodeEnv === 'production' && adminAuthDisabled) {
+  console.log('\nPeligro: ADMIN_AUTH_DISABLED=true no se permite en produccion.');
+}
+
+if (nodeEnv === 'production' && /localhost|127\.0\.0\.1/i.test(frontendUrl)) {
+  console.log(`\nPeligro: FRONTEND_URL apunta a local en produccion: ${frontendUrl}`);
+}
+
+if (nodeEnv === 'production' && /localhost|127\.0\.0\.1/i.test(allowedOrigins)) {
+  console.log(`\nPeligro: ALLOWED_ORIGINS contiene entradas locales en produccion: ${allowedOrigins}`);
 }

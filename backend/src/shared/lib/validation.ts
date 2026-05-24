@@ -1,3 +1,4 @@
+import { ExtraCode, PricingMode, ServiceType, TripType, VehicleClass } from '@prisma/client';
 import { z } from 'zod';
 
 // Money validation - convert dollars to cents
@@ -111,7 +112,7 @@ export const listBookingsSchema = z.object({
   type: z.enum(['TRANSPORTATION', 'ACTIVITY', 'COMBO', 'CRAZY_COMBO']).optional(),
   q: z.string().optional(), // Search query
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
+  limit: z.coerce.number().int().min(1).max(1000).default(50),
   groupedByTime: z.coerce.boolean().optional(),
 });
 
@@ -191,6 +192,121 @@ export const createAccountPaymentSchema = z.object({
 export const updateAccountChargeSchema = z.object({
   status: z.enum(['PENDING', 'INVOICED', 'PAID', 'VOID']),
   notes: z.string().optional().nullable(),
+});
+
+const pricingTextField = z.string().trim().min(1);
+const optionalPositiveInt = z.coerce.number().int().min(1).optional();
+
+const pricingRuleShape = {
+  active: z.boolean().optional(),
+  serviceType: z.nativeEnum(ServiceType),
+  tripType: z.nativeEnum(TripType),
+  zoneFrom: pricingTextField.max(120),
+  zoneTo: pricingTextField.max(120),
+  vehicleClass: z.nativeEnum(VehicleClass),
+  basePriceCents: z.coerce.number().int().min(0),
+  currency: z.string().trim().min(3).max(8).optional(),
+  passengersMin: optionalPositiveInt,
+  passengersMax: optionalPositiveInt,
+  notes: z.string().trim().max(1000).optional(),
+};
+
+export const createPricingRuleSchema = z.object(pricingRuleShape).superRefine((data, ctx) => {
+  if (
+    data.passengersMin !== undefined &&
+    data.passengersMax !== undefined &&
+    data.passengersMax < data.passengersMin
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'passengersMax must be greater than or equal to passengersMin',
+      path: ['passengersMax'],
+    });
+  }
+});
+
+export const updatePricingRuleSchema = z.object(pricingRuleShape).partial().superRefine((data, ctx) => {
+  if (Object.keys(data).length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'At least one field is required',
+      path: [],
+    });
+  }
+  if (
+    data.passengersMin !== undefined &&
+    data.passengersMax !== undefined &&
+    data.passengersMax < data.passengersMin
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'passengersMax must be greater than or equal to passengersMin',
+      path: ['passengersMax'],
+    });
+  }
+});
+
+const pricingExtraShape = {
+  active: z.boolean().optional(),
+  included: z.boolean().optional(),
+  code: z.nativeEnum(ExtraCode),
+  label: pricingTextField.max(120),
+  labelEs: z.string().trim().max(120).optional(),
+  priceCents: z.coerce.number().int().min(0),
+  pricingMode: z.nativeEnum(PricingMode),
+  maxQty: optionalPositiveInt,
+  description: z.string().trim().max(1000).optional(),
+};
+
+export const createPricingExtraSchema = z.object(pricingExtraShape);
+
+export const updatePricingExtraSchema = z.object(pricingExtraShape).partial().superRefine((data, ctx) => {
+  if (Object.keys(data).length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'At least one field is required',
+      path: [],
+    });
+  }
+});
+
+const areaShape = {
+  name: pricingTextField.max(120),
+  oneWayPriceCents: z.coerce.number().int().min(0),
+  roundTripPriceCents: z.coerce.number().int().min(0),
+  sprinterOneWayPriceCents: z.coerce.number().int().min(0).optional(),
+  sprinterRoundTripPriceCents: z.coerce.number().int().min(0).optional(),
+  isActive: z.boolean().optional(),
+};
+
+export const createAreaSchema = z.object(areaShape);
+
+export const updateAreaSchema = z.object(areaShape).partial().superRefine((data, ctx) => {
+  if (Object.keys(data).length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'At least one field is required',
+      path: [],
+    });
+  }
+});
+
+const hotelShape = {
+  name: pricingTextField.max(160),
+  zone: pricingTextField.max(120),
+  isActive: z.boolean().optional(),
+};
+
+export const createHotelSchema = z.object(hotelShape);
+
+export const updateHotelSchema = z.object(hotelShape).partial().superRefine((data, ctx) => {
+  if (Object.keys(data).length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'At least one field is required',
+      path: [],
+    });
+  }
 });
 
 export const manualBookingSchema = z
@@ -291,6 +407,14 @@ export type CreateAccountPaymentInput = z.infer<typeof createAccountPaymentSchem
 export type UpdateAccountChargeInput = z.infer<typeof updateAccountChargeSchema>;
 export type ManualBookingInput = z.infer<typeof manualBookingSchema>;
 export type UpdateBookingInput = z.infer<typeof updateBookingSchema>;
+export type CreatePricingRuleInput = z.infer<typeof createPricingRuleSchema>;
+export type UpdatePricingRuleInput = z.infer<typeof updatePricingRuleSchema>;
+export type CreatePricingExtraInput = z.infer<typeof createPricingExtraSchema>;
+export type UpdatePricingExtraInput = z.infer<typeof updatePricingExtraSchema>;
+export type CreateAreaInput = z.infer<typeof createAreaSchema>;
+export type UpdateAreaInput = z.infer<typeof updateAreaSchema>;
+export type CreateHotelInput = z.infer<typeof createHotelSchema>;
+export type UpdateHotelInput = z.infer<typeof updateHotelSchema>;
 
 export const aiChatSchema = z.object({
   message: z.string().transform((s) => (s && typeof s === 'string' ? s.trim() : '')).pipe(z.string().min(1, 'Message is required')),

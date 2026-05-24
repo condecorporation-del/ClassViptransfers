@@ -1,9 +1,9 @@
-declare global {
-  namespace Express {
-    interface Request {
-      adminEmail?: string;
-      adminRole?: string;
-    }
+import 'express-serve-static-core';
+
+declare module 'express-serve-static-core' {
+  interface Request {
+    adminEmail?: string;
+    adminRole?: string;
   }
 }
 

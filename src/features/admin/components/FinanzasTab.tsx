@@ -13,13 +13,6 @@ const apiUrl = (path: string) => {
 
 type FinanceTab = 'summary' | 'receivables' | 'accounts';
 
-type DashboardData = {
-  totalToday: number;
-  totalMonth: number;
-  revenueToday: number;
-  revenueMonth: number;
-};
-
 type Booking = {
   id: string;
   confirmationCode?: string | null;
@@ -55,11 +48,10 @@ type AccountCharge = {
   booking?: { confirmationCode?: string | null } | null;
 };
 
-type AccountDetail = {
+type AccountSummary = {
   id: string;
   name: string;
-  company?: string | null;
-  charges: AccountCharge[];
+  charges?: AccountCharge[];
 };
 
 const tabs: Array<{ id: FinanceTab; label: string }> = [
@@ -138,7 +130,6 @@ function sameDay(dateString: string) {
 export function FinanzasTab({ refreshToken = 0 }: { refreshToken?: number }) {
   const { getAuthHeaders } = useAdminAuth();
   const [activeTab, setActiveTab] = useState<FinanceTab>('summary');
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [accountReceivables, setAccountReceivables] = useState<Array<{
     id: string;
@@ -154,42 +145,42 @@ export function FinanzasTab({ refreshToken = 0 }: { refreshToken?: number }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = async (targetTab: FinanceTab = activeTab) => {
     setLoading(true);
     setError(null);
     try {
-      const [dashboardResponse, bookingsResponse, accountsResponse] = await Promise.all([
-        fetch(apiUrl('/api/admin/dashboard'), { credentials: 'include', headers: getAuthHeaders() }),
-        fetch(apiUrl(`/api/admin/bookings?limit=300&dateFrom=${dateNDaysAgo(90)}`), {
-          credentials: 'include',
-          headers: getAuthHeaders(),
-        }),
-        fetch(apiUrl('/api/admin/accounts'), { credentials: 'include', headers: getAuthHeaders() }),
-      ]);
+      const bookingsResponse = await fetch(apiUrl(`/api/admin/bookings?limit=200&dateFrom=${dateNDaysAgo(90)}`), {
+        credentials: 'include',
+        headers: getAuthHeaders(),
+      });
 
-      const dashboardJson = await dashboardResponse.json();
       const bookingsJson = await bookingsResponse.json();
-      const accountsJson = await accountsResponse.json();
 
-      setDashboard(dashboardJson.success ? dashboardJson.data : null);
+      if (!bookingsResponse.ok) {
+        throw new Error(bookingsJson?.error || 'No se pudieron cargar las reservaciones financieras.');
+      }
+
       setBookings(bookingsJson.success ? bookingsJson.data : []);
 
-      if (accountsJson.success) {
-        const accountDetails = await Promise.all(
-          (accountsJson.data as Array<{ id: string }>).map(async (account) => {
-            const response = await fetch(apiUrl(`/api/admin/accounts/${account.id}`), {
-              credentials: 'include',
-              headers: getAuthHeaders(),
-            });
-            const json = await response.json();
-            return json.success ? (json.data as AccountDetail) : null;
-          })
-        );
+      if (targetTab === 'summary') {
+        setAccountReceivables([]);
+        return;
+      }
 
-        const charges = accountDetails
-          .filter((account): account is AccountDetail => Boolean(account))
+      const accountsResponse = await fetch(apiUrl('/api/admin/accounts'), {
+        credentials: 'include',
+        headers: getAuthHeaders(),
+      });
+      const accountsJson = await accountsResponse.json();
+
+      if (!accountsResponse.ok) {
+        throw new Error(accountsJson?.error || 'No se pudieron cargar las cuentas abiertas.');
+      }
+
+      if (accountsJson.success) {
+        const charges = (accountsJson.data as AccountSummary[])
           .flatMap((account) =>
-            account.charges
+            (account.charges || [])
               .filter((charge) => charge.status === 'PENDING' || charge.status === 'INVOICED')
               .map((charge) => ({
                 id: charge.id,
@@ -207,8 +198,8 @@ export function FinanzasTab({ refreshToken = 0 }: { refreshToken?: number }) {
       } else {
         setAccountReceivables([]);
       }
-    } catch {
-      setError('No se pudo cargar la informacion financiera.');
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : 'No se pudo cargar la informacion financiera.');
     } finally {
       setLoading(false);
     }
@@ -328,8 +319,8 @@ export function FinanzasTab({ refreshToken = 0 }: { refreshToken?: number }) {
   const collectedToday = collectedReservations.filter((payment) => sameDay(payment.completedAt));
   const collectedMonthTotal = collectedThisMonth.reduce((sum, payment) => sum + payment.amountCents, 0);
   const collectedTodayTotal = collectedToday.reduce((sum, payment) => sum + payment.amountCents, 0);
-  const displayedRevenueMonth = collectedThisMonth.length > 0 ? collectedMonthTotal : (dashboard?.revenueMonth ?? 0);
-  const displayedRevenueToday = collectedToday.length > 0 ? collectedTodayTotal : (dashboard?.revenueToday ?? 0);
+  const displayedRevenueMonth = collectedMonthTotal;
+  const displayedRevenueToday = collectedTodayTotal;
   const averageTicket = collectedThisMonth.length
     ? collectedMonthTotal / collectedThisMonth.length
     : 0;

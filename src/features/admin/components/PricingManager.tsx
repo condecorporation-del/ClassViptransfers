@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, Edit, Trash2, Loader2, Save, X, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, Save, X, Search, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAdminAuth } from '@/features/admin/hooks/useAdminAuth';
 import { getApiBaseUrl } from '@/shared/lib/api';
 import { includesNormalized } from '@/shared/lib/text';
@@ -59,6 +59,7 @@ export function PricingManager() {
   const [areas, setAreas] = useState<Area[]>([]);
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'rules' | 'extras' | 'areas' | 'hotels'>('areas');
   const [editingRule, setEditingRule] = useState<PricingRule | null>(null);
   const [editingExtra, setEditingExtra] = useState<PricingExtra | null>(null);
@@ -70,8 +71,17 @@ export function PricingManager() {
   const [showHotelForm, setShowHotelForm] = useState(false);
   const [addToZone, setAddToZone] = useState<string | null>(null);
 
+  const parseJsonResponse = useCallback(async (response: Response, fallbackMessage: string) => {
+    const json = await response.json().catch(() => null);
+    if (!response.ok || !json?.success) {
+      throw new Error(json?.error || fallbackMessage);
+    }
+    return json.data;
+  }, []);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const [rulesRes, extrasRes, areasRes, hotelsRes] = await Promise.all([
         fetch(getAdminUrl('/api/admin/pricing/rules'), { credentials: 'include', headers: getAuthHeaders() }),
@@ -80,21 +90,24 @@ export function PricingManager() {
         fetch(getAdminUrl('/api/admin/pricing/hotels'), { credentials: 'include', headers: getAuthHeaders() }),
       ]);
 
-      const rulesData = await rulesRes.json();
-      const extrasData = await extrasRes.json();
-      const areasData = await areasRes.json();
-      const hotelsData = await hotelsRes.json();
+      const [rulesData, extrasData, areasData, hotelsData] = await Promise.all([
+        parseJsonResponse(rulesRes, 'No se pudieron cargar las reglas de pricing.'),
+        parseJsonResponse(extrasRes, 'No se pudieron cargar los extras.'),
+        parseJsonResponse(areasRes, 'No se pudieron cargar las areas.'),
+        parseJsonResponse(hotelsRes, 'No se pudieron cargar los hoteles.'),
+      ]);
 
-      if (rulesData.success) setRules(rulesData.data);
-      if (extrasData.success) setExtras(extrasData.data);
-      if (areasData.success) setAreas(areasData.data);
-      if (hotelsData.success) setHotels(hotelsData.data);
-    } catch (error) {
-      console.error('Failed to fetch pricing data:', error);
+      setRules(rulesData);
+      setExtras(extrasData);
+      setAreas(areasData);
+      setHotels(hotelsData);
+    } catch (caughtError) {
+      console.error('Failed to fetch pricing data:', caughtError);
+      setError(caughtError instanceof Error ? caughtError.message : 'No se pudo cargar la configuracion de pricing.');
     } finally {
       setLoading(false);
     }
-  }, [getAuthHeaders]);
+  }, [getAuthHeaders, parseJsonResponse]);
 
   useEffect(() => {
     fetchData();
@@ -104,17 +117,18 @@ export function PricingManager() {
     if (!confirm('Are you sure you want to delete this rule?')) return;
 
     try {
+      setError(null);
       const res = await fetch(getAdminUrl(`/api/admin/pricing/rules/${id}`), {
         credentials: 'include',
         method: 'DELETE',
         headers: getAuthHeaders(),
       });
 
-      if (res.ok) {
-        fetchData();
-      }
-    } catch (error) {
-      console.error('Failed to delete rule:', error);
+      await parseJsonResponse(res, 'No se pudo desactivar la regla.');
+      await fetchData();
+    } catch (caughtError) {
+      console.error('Failed to delete rule:', caughtError);
+      setError(caughtError instanceof Error ? caughtError.message : 'No se pudo desactivar la regla.');
     }
   };
 
@@ -122,22 +136,24 @@ export function PricingManager() {
     if (!confirm('Are you sure you want to delete this extra?')) return;
 
     try {
+      setError(null);
       const res = await fetch(getAdminUrl(`/api/admin/pricing/extras/${id}`), {
         credentials: 'include',
         method: 'DELETE',
         headers: getAuthHeaders(),
       });
 
-      if (res.ok) {
-        fetchData();
-      }
-    } catch (error) {
-      console.error('Failed to delete extra:', error);
+      await parseJsonResponse(res, 'No se pudo desactivar el extra.');
+      await fetchData();
+    } catch (caughtError) {
+      console.error('Failed to delete extra:', caughtError);
+      setError(caughtError instanceof Error ? caughtError.message : 'No se pudo desactivar el extra.');
     }
   };
 
   const handleSaveRule = async (rule: Partial<PricingRule>) => {
     try {
+      setError(null);
       const url = editingRule
         ? getAdminUrl(`/api/admin/pricing/rules/${editingRule.id}`)
         : getAdminUrl('/api/admin/pricing/rules');
@@ -150,18 +166,19 @@ export function PricingManager() {
         body: JSON.stringify(rule),
       });
 
-      if (res.ok) {
-        setShowRuleForm(false);
-        setEditingRule(null);
-        fetchData();
-      }
-    } catch (error) {
-      console.error('Failed to save rule:', error);
+      await parseJsonResponse(res, 'No se pudo guardar la regla.');
+      setShowRuleForm(false);
+      setEditingRule(null);
+      await fetchData();
+    } catch (caughtError) {
+      console.error('Failed to save rule:', caughtError);
+      setError(caughtError instanceof Error ? caughtError.message : 'No se pudo guardar la regla.');
     }
   };
 
   const handleSaveExtra = async (extra: Partial<PricingExtra>) => {
     try {
+      setError(null);
       const url = editingExtra
         ? getAdminUrl(`/api/admin/pricing/extras/${editingExtra.id}`)
         : getAdminUrl('/api/admin/pricing/extras');
@@ -174,18 +191,19 @@ export function PricingManager() {
         body: JSON.stringify(extra),
       });
 
-      if (res.ok) {
-        setShowExtraForm(false);
-        setEditingExtra(null);
-        fetchData();
-      }
-    } catch (error) {
-      console.error('Failed to save extra:', error);
+      await parseJsonResponse(res, 'No se pudo guardar el extra.');
+      setShowExtraForm(false);
+      setEditingExtra(null);
+      await fetchData();
+    } catch (caughtError) {
+      console.error('Failed to save extra:', caughtError);
+      setError(caughtError instanceof Error ? caughtError.message : 'No se pudo guardar el extra.');
     }
   };
 
   const handleSaveArea = async (area: { name?: string; oneWayPriceCents?: number; roundTripPriceCents?: number; sprinterOneWayPriceCents?: number; sprinterRoundTripPriceCents?: number }) => {
     try {
+      setError(null);
       const url = editingArea
         ? getAdminUrl(`/api/admin/pricing/areas/${editingArea.id}`)
         : getAdminUrl('/api/admin/pricing/areas');
@@ -198,32 +216,36 @@ export function PricingManager() {
         body: JSON.stringify(area),
       });
 
-      if (res.ok) {
-        setShowAreaForm(false);
-        setEditingArea(null);
-        fetchData();
-      }
-    } catch (error) {
-      console.error('Failed to save area:', error);
+      await parseJsonResponse(res, 'No se pudo guardar el area.');
+      setShowAreaForm(false);
+      setEditingArea(null);
+      await fetchData();
+    } catch (caughtError) {
+      console.error('Failed to save area:', caughtError);
+      setError(caughtError instanceof Error ? caughtError.message : 'No se pudo guardar el area.');
     }
   };
 
   const handleDeactivateArea = async (id: string) => {
     if (!confirm('Deactivate this area? It will no longer appear in the booking form.')) return;
     try {
+      setError(null);
       const res = await fetch(getAdminUrl(`/api/admin/pricing/areas/${id}`), {
         credentials: 'include',
         method: 'DELETE',
         headers: getAuthHeaders(),
       });
-      if (res.ok) fetchData();
-    } catch (error) {
-      console.error('Failed to deactivate area:', error);
+      await parseJsonResponse(res, 'No se pudo desactivar el area.');
+      await fetchData();
+    } catch (caughtError) {
+      console.error('Failed to deactivate area:', caughtError);
+      setError(caughtError instanceof Error ? caughtError.message : 'No se pudo desactivar el area.');
     }
   };
 
   const handleSaveHotel = async (hotel: { name?: string; zone?: string; isActive?: boolean }) => {
     try {
+      setError(null);
       const url = editingHotel
         ? getAdminUrl(`/api/admin/pricing/hotels/${editingHotel.id}`)
         : getAdminUrl('/api/admin/pricing/hotels');
@@ -234,27 +256,30 @@ export function PricingManager() {
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify(hotel),
       });
-      if (res.ok) {
-        setShowHotelForm(false);
-        setEditingHotel(null);
-        fetchData();
-      }
-    } catch (error) {
-      console.error('Failed to save hotel:', error);
+      await parseJsonResponse(res, 'No se pudo guardar el hotel.');
+      setShowHotelForm(false);
+      setEditingHotel(null);
+      await fetchData();
+    } catch (caughtError) {
+      console.error('Failed to save hotel:', caughtError);
+      setError(caughtError instanceof Error ? caughtError.message : 'No se pudo guardar el hotel.');
     }
   };
 
   const handleDeactivateHotel = async (id: string) => {
     if (!confirm('Deactivate this hotel?')) return;
     try {
+      setError(null);
       const res = await fetch(getAdminUrl(`/api/admin/pricing/hotels/${id}`), {
         credentials: 'include',
         method: 'DELETE',
         headers: getAuthHeaders(),
       });
-      if (res.ok) fetchData();
-    } catch (error) {
-      console.error('Failed to deactivate hotel:', error);
+      await parseJsonResponse(res, 'No se pudo desactivar el hotel.');
+      await fetchData();
+    } catch (caughtError) {
+      console.error('Failed to deactivate hotel:', caughtError);
+      setError(caughtError instanceof Error ? caughtError.message : 'No se pudo desactivar el hotel.');
     }
   };
 
@@ -269,6 +294,23 @@ export function PricingManager() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertCircle size={16} />
+            {error}
+          </div>
+          <button
+            type="button"
+            onClick={() => void fetchData()}
+            className="mt-3 inline-flex items-center gap-2 text-sm font-bold"
+          >
+            <RefreshCw size={14} />
+            Reintentar
+          </button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex items-center gap-1 bg-muted/40 rounded-xl p-1 w-fit overflow-x-auto">
         {(['areas', 'rules', 'extras', 'hotels'] as const).map((tab) => {

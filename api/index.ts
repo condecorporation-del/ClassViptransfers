@@ -1,3 +1,5 @@
-import app from '../backend/src/app.js';
+import app, { ensureAdminExists } from '../backend/src/app.js';
+
+void ensureAdminExists();
 
 export default app;

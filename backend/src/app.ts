@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { prisma } from './shared/lib/prisma';
 import { errorHandler } from './shared/middleware/errorHandler';
@@ -14,8 +15,10 @@ import pricingRoutes from './features/pricing/routes/pricing.routes';
 import hotelsRoutes from './features/pricing/routes/hotels.routes';
 import previewRoutes from './features/booking/routes/preview.routes';
 import { getErrorMessage } from './shared/lib/errors';
+import { assertSafeRuntimeConfig } from './shared/lib/env-safety';
 
 dotenv.config();
+assertSafeRuntimeConfig();
 
 function parseOrigins(value?: string): string[] {
   return value
@@ -59,15 +62,6 @@ const bookingLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 10 : 9999,
-  message: { error: 'Too many login attempts, please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: () => process.env.NODE_ENV !== 'production',
-});
-
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 20,
@@ -78,6 +72,11 @@ const aiLimiter = rateLimit({
 
 export const app = express();
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -100,8 +99,8 @@ app.use(cors({
 
 app.use(cookieParser());
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 const healthHandler = (_req: express.Request, res: express.Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -111,7 +110,7 @@ app.get('/health', healthHandler);
 app.get('/api/health', healthHandler);
 
 app.use('/api/bookings', bookingLimiter, bookingsRoutes);
-app.use('/api/admin/auth', authLimiter, authRoutes);
+app.use('/api/admin/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/ai', aiLimiter, aiRoutes);

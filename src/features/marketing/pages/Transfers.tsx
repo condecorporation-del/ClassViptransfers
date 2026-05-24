@@ -1,9 +1,9 @@
+import { Suspense, lazy } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/shared/providers/LanguageContext';
 import { ArrowRight, Check, Shield, Car, MessageCircle } from 'lucide-react';
 import { SEO } from '@/features/marketing/components/SEO';
-import { PriceTable } from '@/features/booking/components/pricing/PriceTable';
 import { TrustBadges } from '@/features/marketing/components/trust/TrustBadges';
 import { WhyChooseUs } from '@/features/marketing/components/trust/WhyChooseUs';
 import { ContactInfo } from '@/features/marketing/components/trust/ContactInfo';
@@ -11,6 +11,11 @@ import { TestimonialsCarousel } from '@/features/marketing/components/trust/Test
 import { FAQ } from '@/features/marketing/components/trust/FAQ';
 
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
+
+const PriceTable = lazy(async () => {
+  const module = await import('@/features/booking/components/pricing/PriceTable');
+  return { default: module.PriceTable };
+});
 
 const Transfers = () => {
   const { t, lang } = useLanguage();
@@ -42,7 +47,7 @@ const Transfers = () => {
         canonical="https://classviptransfers.com/transfers"
         jsonLd={serviceLd}
       />
-      {/* Hero - dark */}
+
       <section className="navy-gradient pt-36 pb-20 px-4">
         <div className="container mx-auto max-w-4xl text-center">
           <motion.h1 initial="hidden" animate="visible" variants={fadeUp} className="font-display text-4xl md:text-6xl font-bold mb-4 text-off-white">
@@ -57,7 +62,6 @@ const Transfers = () => {
         </div>
       </section>
 
-      {/* Why Choose Us */}
       <section className="py-16 px-4 section-light">
         <div className="container mx-auto max-w-6xl">
           <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl font-bold text-center mb-4 text-foreground">
@@ -72,7 +76,6 @@ const Transfers = () => {
         </div>
       </section>
 
-      {/* Private transfer - single option */}
       <section id="compare" className="py-20 px-4 -mt-8 scroll-mt-24">
         <div className="container mx-auto max-w-xl">
           <motion.div
@@ -105,7 +108,6 @@ const Transfers = () => {
         </div>
       </section>
 
-      {/* Price Table - Dynamic from BD */}
       <section id="pricing" className="py-16 px-4 section-light scroll-mt-24">
         <div className="container mx-auto max-w-6xl">
           <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl font-bold text-center mb-4 text-foreground">
@@ -115,12 +117,13 @@ const Transfers = () => {
             {t('transfers.pricing.subtitle', { defaultValue: 'Selecciona tu vehículo y consulta los precios. Todos los precios en USD, trayecto sencillo.' })}
           </motion.p>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.1 }}>
-            <PriceTable />
+            <Suspense fallback={<div className="text-center text-sm text-muted-foreground">Loading pricing...</div>}>
+              <PriceTable />
+            </Suspense>
           </motion.div>
         </div>
       </section>
 
-      {/* What's Included */}
       <section id="included" className="py-16 px-4 section-light scroll-mt-24">
         <div className="container mx-auto max-w-4xl">
           <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl font-bold text-center mb-10 text-foreground">
@@ -128,8 +131,15 @@ const Transfers = () => {
           </motion.h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {included.map((item, i) => (
-              <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: i * 0.05 }}
-                className="glass-card rounded-xl p-5 premium-card border border-border flex items-center gap-3">
+              <motion.div
+                key={i}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeUp}
+                transition={{ delay: i * 0.05 }}
+                className="glass-card rounded-xl p-5 premium-card border border-border flex items-center gap-3"
+              >
                 <Check size={18} className="text-gold flex-shrink-0" />
                 <p className="text-sm font-medium text-foreground">{t(item.key)}</p>
               </motion.div>
@@ -138,11 +148,9 @@ const Transfers = () => {
         </div>
       </section>
 
-      {/* Cancellation Policy - 24h free badge visible */}
       <section className="py-16 px-4">
         <div className="container mx-auto max-w-2xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-            className="glass-card rounded-2xl p-8 text-center border border-border relative">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="glass-card rounded-2xl p-8 text-center border border-border relative">
             <span className="absolute -top-3 left-1/2 -translate-x-1/2 gold-gradient text-secondary-foreground text-xs font-bold px-4 py-1.5 rounded-full">
               {t('transfers.cancellation.badge')}
             </span>
@@ -153,7 +161,6 @@ const Transfers = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
       <section className="py-16 px-4 section-light">
         <div className="container mx-auto max-w-3xl">
           <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl font-bold text-center mb-4 text-foreground">
@@ -168,7 +175,6 @@ const Transfers = () => {
         </div>
       </section>
 
-      {/* FAQ */}
       <section className="py-16 px-4">
         <div className="container mx-auto max-w-2xl">
           <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl font-bold text-center mb-10 text-foreground">
@@ -180,14 +186,13 @@ const Transfers = () => {
         </div>
       </section>
 
-      {/* Contact Info */}
       <section className="py-16 px-4 section-light">
         <div className="container mx-auto max-w-4xl">
           <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl font-bold text-center mb-4 text-foreground">
             {t('contact.info.title')}
           </motion.h2>
           <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.05 }} className="text-muted-foreground text-center text-sm mb-10 max-w-xl mx-auto">
-            {lang === 'es' ? 'Estamos aquí para ayudarte. Contáctanos por teléfono, WhatsApp o email.' : 'We\'re here to help. Reach us by phone, WhatsApp, or email.'}
+            {lang === 'es' ? 'Estamos aquí para ayudarte. Contáctanos por teléfono, WhatsApp o email.' : "We're here to help. Reach us by phone, WhatsApp, or email."}
           </motion.p>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.1 }}>
             <ContactInfo />
@@ -195,7 +200,6 @@ const Transfers = () => {
         </div>
       </section>
 
-      {/* CTA - dark */}
       <section className="navy-gradient py-20 px-4">
         <div className="container mx-auto max-w-2xl text-center">
           <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl md:text-4xl font-bold mb-4 text-off-white">
@@ -208,8 +212,12 @@ const Transfers = () => {
             <Link to="/book" className="gold-gradient text-secondary-foreground px-8 py-3.5 rounded-full font-bold text-sm inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
               {t('nav.bookNow')} <ArrowRight size={16} />
             </Link>
-            <a href="https://wa.me/5216241222174?text=Hello%2C%20I%27d%20like%20to%20book%20a%20transfer" target="_blank" rel="noopener noreferrer"
-              className="border border-off-white/25 text-off-white px-8 py-3.5 rounded-full font-bold text-sm inline-flex items-center gap-2 hover:bg-white/5 transition-all">
+            <a
+              href="https://wa.me/5216241222174?text=Hello%2C%20I%27d%20like%20to%20book%20a%20transfer"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="border border-off-white/25 text-off-white px-8 py-3.5 rounded-full font-bold text-sm inline-flex items-center gap-2 hover:bg-white/5 transition-all"
+            >
               <MessageCircle size={16} /> {t('transfers.cta.chat')}
             </a>
           </motion.div>

@@ -6,17 +6,39 @@ import {
   Paperclip, Truck, ChevronRight, Pencil, Check,
   BarChart2, Megaphone, Users, Settings,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Suspense, lazy, useState, useEffect } from 'react';
 import { useAdminAuth } from '@/features/admin/hooks/useAdminAuth';
-import { PricingManager } from '@/features/admin/components/PricingManager';
-import { AdminBookings } from '@/features/admin/components/AdminBookings';
-import { FinanzasTab } from '@/features/admin/components/FinanzasTab';
-import { DashboardOverviewTab } from '@/features/admin/components/DashboardOverviewTab';
-import { MarketingTab } from '@/features/admin/components/MarketingTab';
-import { RRHHTab } from '@/features/admin/components/RRHHTab';
-import { TareasTab } from '@/features/admin/components/TareasTab';
 import { getApiBaseUrl } from '@/shared/lib/api';
 import { cloudinaryAssets } from '@/shared/lib/cloudinary-assets';
+
+const PricingManager = lazy(async () => {
+  const module = await import('@/features/admin/components/PricingManager');
+  return { default: module.PricingManager };
+});
+const AdminBookings = lazy(async () => {
+  const module = await import('@/features/admin/components/AdminBookings');
+  return { default: module.AdminBookings };
+});
+const FinanzasTab = lazy(async () => {
+  const module = await import('@/features/admin/components/FinanzasTab');
+  return { default: module.FinanzasTab };
+});
+const DashboardOverviewTab = lazy(async () => {
+  const module = await import('@/features/admin/components/DashboardOverviewTab');
+  return { default: module.DashboardOverviewTab };
+});
+const MarketingTab = lazy(async () => {
+  const module = await import('@/features/admin/components/MarketingTab');
+  return { default: module.MarketingTab };
+});
+const RRHHTab = lazy(async () => {
+  const module = await import('@/features/admin/components/RRHHTab');
+  return { default: module.RRHHTab };
+});
+const TareasTab = lazy(async () => {
+  const module = await import('@/features/admin/components/TareasTab');
+  return { default: module.TareasTab };
+});
 
 const apiUrl = (path: string) => {
   const base = getApiBaseUrl();
@@ -40,6 +62,14 @@ type QuickAccountSummary = {
   company?: string | null;
   balanceCents: number;
 };
+
+function AdminTabFallback() {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-card p-6 text-sm text-muted-foreground shadow-sm">
+      Loading section...
+    </div>
+  );
+}
 
 const PAYMENT_OPTIONS: Array<{
   id: PaymentMethod;
@@ -886,39 +916,41 @@ const Admin = () => {
           transition={{ duration: 0.25 }}
           className="p-5 md:p-8"
         >
-          {activeTab === 'dashboard' && <DashboardTab refreshToken={refreshToken} />}
+          <Suspense fallback={<AdminTabFallback />}>
+            {activeTab === 'dashboard' && <DashboardTab refreshToken={refreshToken} />}
 
-          {activeTab === 'bookings' && (
-            <div>
-              <div className="mb-8">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gold mb-1">Management</p>
-                <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">Bookings</h1>
-                <p className="text-sm text-muted-foreground mt-1">View, search and manage all reservations</p>
+            {activeTab === 'bookings' && (
+              <div>
+                <div className="mb-8">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gold mb-1">Management</p>
+                  <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">Bookings</h1>
+                  <p className="text-sm text-muted-foreground mt-1">View, search and manage all reservations</p>
+                </div>
+                <AdminBookings onDataChanged={notifyAdminDataChanged} />
               </div>
-              <AdminBookings onDataChanged={notifyAdminDataChanged} />
-            </div>
-          )}
+            )}
 
-          {activeTab === 'new-booking' && <QuickBookingTab onBookingCreated={notifyAdminDataChanged} />}
+            {activeTab === 'new-booking' && <QuickBookingTab onBookingCreated={notifyAdminDataChanged} />}
 
-          {activeTab === 'pricing' && (
-            <div>
-              <div className="mb-8">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gold mb-1">Configuration</p>
-                <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">Pricing</h1>
-                <p className="text-sm text-muted-foreground mt-1">Manage transfer rates and service pricing</p>
+            {activeTab === 'pricing' && (
+              <div>
+                <div className="mb-8">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gold mb-1">Configuration</p>
+                  <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">Pricing</h1>
+                  <p className="text-sm text-muted-foreground mt-1">Manage transfer rates and service pricing</p>
+                </div>
+                <PricingManager />
               </div>
-              <PricingManager />
-            </div>
-          )}
+            )}
 
-          {activeTab === 'finanzas' && <FinanzasTab refreshToken={refreshToken} />}
+            {activeTab === 'finanzas' && <FinanzasTab refreshToken={refreshToken} />}
 
-          {activeTab === 'tareas' && <TareasTab />}
+            {activeTab === 'tareas' && <TareasTab />}
 
-          {activeTab === 'marketing' && <MarketingTab />}
+            {activeTab === 'marketing' && <MarketingTab />}
 
-          {activeTab === 'rrhh' && <RRHHTab />}
+            {activeTab === 'rrhh' && <RRHHTab />}
+          </Suspense>
         </motion.div>
       </div>
     </div>

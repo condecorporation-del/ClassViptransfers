@@ -7,6 +7,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LanguageProvider } from "@/shared/providers/LanguageContext";
 import Layout from "@/shared/components/Layout";
 import { AdminRoute } from "@/features/admin/components/AdminRoute";
+import { AdminAuthProvider } from "@/features/admin/hooks/useAdminAuth";
 
 const Index = lazy(() => import("@/features/marketing/pages/Index"));
 const Transfers = lazy(() => import("@/features/marketing/pages/Transfers"));
@@ -68,9 +69,11 @@ const App = () => (
               <Route
                 path="/admin"
                 element={
-                  <AdminRoute>
-                    <Admin />
-                  </AdminRoute>
+                  <AdminAuthProvider>
+                    <AdminRoute>
+                      <Admin />
+                    </AdminRoute>
+                  </AdminAuthProvider>
                 }
               />
               <Route path="*" element={<NotFound />} />

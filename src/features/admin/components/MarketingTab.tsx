@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import {
   AlertCircle,
   BarChart2,
@@ -180,36 +181,40 @@ function TooltipStatus({
 
 export function MarketingTab() {
   const { getAuthHeaders } = useAdminAuth();
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const [dashboardRes, bookingsRes] = await Promise.all([
-        fetch(apiUrl('/api/admin/dashboard'), { credentials: 'include', headers: getAuthHeaders() }),
-        fetch(apiUrl('/api/admin/bookings?limit=200'), { credentials: 'include', headers: getAuthHeaders() }),
-      ]);
+  const marketingQuery = useQuery({
+    queryKey: ['admin', 'marketing'],
+    queryFn: async () => {
+      const dashboardRes = await fetch(apiUrl('/api/admin/dashboard'), {
+        credentials: 'include',
+        headers: getAuthHeaders(),
+      });
+      const bookingsRes = await fetch(apiUrl('/api/admin/bookings?limit=200'), {
+        credentials: 'include',
+        headers: getAuthHeaders(),
+      });
 
       const dashboardJson = await dashboardRes.json();
       const bookingsJson = await bookingsRes.json();
 
-      if (dashboardJson.success && dashboardJson.data) setDashboard(dashboardJson.data as DashboardData);
-      if (bookingsJson.success && bookingsJson.data) setBookings(bookingsJson.data as Booking[]);
-    } catch {
-      setError('No se pudo cargar la informacion de marketing.');
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (!dashboardRes.ok) {
+        throw new Error(dashboardJson?.error || 'No se pudo cargar el dashboard de marketing.');
+      }
+      if (!bookingsRes.ok) {
+        throw new Error(bookingsJson?.error || 'No se pudieron cargar las reservaciones de marketing.');
+      }
 
-  useEffect(() => {
-    void fetchData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      return {
+        dashboard: dashboardJson.success && dashboardJson.data ? (dashboardJson.data as DashboardData) : null,
+        bookings: bookingsJson.success && bookingsJson.data ? (bookingsJson.data as Booking[]) : [],
+      };
+    },
+    staleTime: 60 * 1000,
+  });
+
+  const dashboard = marketingQuery.data?.dashboard ?? null;
+  const bookings = useMemo(() => marketingQuery.data?.bookings ?? [], [marketingQuery.data?.bookings]);
+  const loading = marketingQuery.isLoading;
+  const error = marketingQuery.isError ? 'No se pudo cargar la informacion de marketing.' : null;
 
   const relevantBookings = useMemo(
     () => bookings.filter((booking) => ['CONFIRMED', 'PENDING_PAYMENT', 'OFFLINE_HOLD'].includes(booking.status)),
@@ -357,7 +362,7 @@ export function MarketingTab() {
         <div>
           <p className="text-sm font-semibold">{error}</p>
           <button
-            onClick={() => void fetchData()}
+            onClick={() => void marketingQuery.refetch()}
             className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-red-600 transition-colors hover:text-red-800"
           >
             <RefreshCw size={11} />
@@ -398,7 +403,7 @@ export function MarketingTab() {
             </p>
           </div>
           <button
-            onClick={() => void fetchData()}
+            onClick={() => void marketingQuery.refetch()}
             className="self-start rounded-full px-3.5 py-2 text-[10px] font-black uppercase tracking-wider transition-all hover:scale-105 sm:self-auto"
             style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)', color: GOLD }}
           >
@@ -549,7 +554,7 @@ export function MarketingTab() {
           </div>
           <button
             type="button"
-            onClick={() => void fetchData()}
+            onClick={() => void marketingQuery.refetch()}
             className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-[10px] font-black uppercase tracking-wider text-foreground transition-colors hover:border-gold/40 hover:bg-gold/10"
           >
             <RefreshCw size={11} />

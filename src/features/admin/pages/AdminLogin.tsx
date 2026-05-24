@@ -6,6 +6,7 @@ import { getApiBaseUrl } from '@/shared/lib/api';
 import { cloudinaryAssets } from '@/shared/lib/cloudinary-assets';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { clearAdminToken } from '@/features/admin/lib/adminSession';
+import { invalidateAdminAuthCache } from '@/features/admin/hooks/useAdminAuth';
 
 type AdminLoginResponse = {
   success?: boolean;
@@ -45,12 +46,15 @@ export default function AdminLogin() {
       const data = await response.json().catch(() => null);
 
       if (data?.success && data?.data?.authenticated) {
+        invalidateAdminAuthCache();
         navigate(redirectTarget, { replace: true });
         return;
       }
 
+      invalidateAdminAuthCache();
       clearAdminToken();
     } catch {
+      invalidateAdminAuthCache();
       clearAdminToken();
     } finally {
       setCheckingAuth(false);
@@ -87,10 +91,12 @@ export default function AdminLogin() {
       }
 
       if (data.success) {
+        invalidateAdminAuthCache();
         navigate(redirectTarget, { replace: true });
         return;
       }
 
+      invalidateAdminAuthCache();
       clearAdminToken();
       setError(data.error || 'Login failed');
     } catch (caughtError) {

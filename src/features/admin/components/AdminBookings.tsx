@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Mail, ChevronRight, ArrowLeft, RefreshCw, FileDown,
   Search, Edit2, X, Save, UserCheck, CheckCircle, XCircle,
-  Car, Calendar, Filter, Download, Loader2, CalendarX,
+  Car, Calendar, Filter, Download, Loader2, CalendarX, AlertCircle,
   Printer,
 } from 'lucide-react';
 import { useAdminAuth } from '@/features/admin/hooks/useAdminAuth';
@@ -215,7 +215,7 @@ export const AdminBookings = ({ onDataChanged }: { onDataChanged?: () => void })
       const qs = new URLSearchParams({
         dateFrom: sourceFrom,
         dateTo,
-        limit: searchQ.trim() ? '1200' : '800',
+        limit: searchQ.trim() ? '1000' : '800',
       });
       if (searchQ.trim()) qs.set('q', searchQ.trim());
       const res = await fetch(apiUrl(`/api/admin/bookings?${qs}`), {
@@ -320,7 +320,7 @@ export const AdminBookings = ({ onDataChanged }: { onDataChanged?: () => void })
         {detailLoading ? (
           <div className="rounded-2xl border border-border bg-card p-12 flex flex-col items-center justify-center gap-3 text-muted-foreground">
             <Loader2 size={22} className="animate-spin text-gold" />
-            <p className="text-sm font-medium">Loading bookingâ¦</p>
+            <p className="text-sm font-medium">Loading booking...</p>
           </div>
         ) : bookingDetail ? (
           <BookingDetailView
@@ -389,7 +389,7 @@ export const AdminBookings = ({ onDataChanged }: { onDataChanged?: () => void })
               onChange={(e) => setCustomFrom(e.target.value)}
               className="px-2 py-1.5 rounded-lg border border-border bg-background text-sm flex-1 min-w-[130px]"
             />
-            <span className="text-muted-foreground text-sm">â</span>
+            <span className="text-muted-foreground text-sm">→</span>
             <input
               type="date" value={customTo}
               onChange={(e) => setCustomTo(e.target.value)}
@@ -520,13 +520,13 @@ export const AdminBookings = ({ onDataChanged }: { onDataChanged?: () => void })
             ))}
           </tbody>
         </table>
-        <p style={{ marginTop: 20, fontSize: 12 }}>Class VIP Transfers Â· +52 624 122 2174</p>
+        <p style={{ marginTop: 20, fontSize: 12 }}>Class VIP Transfers · +52 624 122 2174</p>
       </div>
 
       {loading ? (
         <div className="rounded-2xl border border-border bg-card p-14 flex flex-col items-center justify-center gap-3 text-muted-foreground">
           <Loader2 size={22} className="animate-spin text-gold" />
-          <p className="text-sm font-medium">Loading bookingsâ¦</p>
+          <p className="text-sm font-medium">Loading bookings...</p>
         </div>
       ) : filteredBookings.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card p-14 flex flex-col items-center justify-center gap-3 text-muted-foreground">
@@ -812,7 +812,7 @@ function BookingDetailView({
         <span class="label">Internal Notes</span>
         <div class="value">${booking.internalNotes || '-'}</div>
       </div>
-      <div class="footer">Class VIP Transfers Â· +52 624 122 2174</div>
+      <div class="footer">Class VIP Transfers · +52 624 122 2174</div>
     </div>
   </body>
 </html>`;
@@ -910,7 +910,7 @@ function BookingDetailView({
           ? 'Confirmada'
           : booking.status.replace(/_/g, ' ');
   const operationEvents = expandBookingOperations(booking);
-  const serviceDescriptor = [booking.serviceType, booking.tripType?.replace('_', ' ')].filter(Boolean).join(' Â· ') || 'Service pending';
+  const serviceDescriptor = [booking.serviceType, booking.tripType?.replace('_', ' ')].filter(Boolean).join(' · ') || 'Service pending';
   const routeDescriptor = booking.route === 'airport-hotel'
     ? 'Airport -> Hotel'
     : booking.route === 'hotel-airport'
@@ -1573,9 +1573,9 @@ function AssignDriverForm({
             onChange={(e) => setDriverId(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border border-border bg-background"
           >
-            <option value="">â Unassigned â</option>
+            <option value="">— Unassigned —</option>
             {drivers.map((d) => (
-              <option key={d.id} value={d.id}>{d.name} Â· {d.phone}</option>
+              <option key={d.id} value={d.id}>{d.name} · {d.phone}</option>
             ))}
           </select>
         </div>
@@ -1586,9 +1586,9 @@ function AssignDriverForm({
             onChange={(e) => setVehicleId(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border border-border bg-background"
           >
-            <option value="">â Unassigned â</option>
+            <option value="">— Unassigned —</option>
             {vehicles.map((v) => (
-              <option key={v.id} value={v.id}>{v.make} {v.model} Â· {v.licensePlate} ({v.capacity} pax)</option>
+              <option key={v.id} value={v.id}>{v.make} {v.model} · {v.licensePlate} ({v.capacity} pax)</option>
             ))}
           </select>
         </div>

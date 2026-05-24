@@ -1,32 +1,85 @@
-import { Suspense, lazy } from 'react';
-import { motion } from 'framer-motion';
+import { useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { useLanguage } from '@/shared/providers/LanguageContext';
-import { ArrowRight, Check, Shield, Car, MessageCircle } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  Clock3,
+  MessageCircle,
+  Plane,
+  Shield,
+  Sparkles,
+  Star,
+  Users,
+  X,
+} from 'lucide-react';
+
 import { SEO } from '@/features/marketing/components/SEO';
-import { TrustBadges } from '@/features/marketing/components/trust/TrustBadges';
-import { WhyChooseUs } from '@/features/marketing/components/trust/WhyChooseUs';
 import { ContactInfo } from '@/features/marketing/components/trust/ContactInfo';
 import { TestimonialsCarousel } from '@/features/marketing/components/trust/TestimonialsCarousel';
-import { FAQ } from '@/features/marketing/components/trust/FAQ';
+import { TrustBadges } from '@/features/marketing/components/trust/TrustBadges';
+import { cloudinaryAssets } from '@/shared/lib/cloudinary-assets';
+import { useLanguage } from '@/shared/providers/LanguageContext';
 
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 
-const PriceTable = lazy(async () => {
-  const module = await import('@/features/booking/components/pricing/PriceTable');
-  return { default: module.PriceTable };
-});
+interface GalleryImage {
+  src: string;
+  alt: string;
+  label: string;
+}
+
+const galleryImages: GalleryImage[] = [
+  { src: cloudinaryAssets.hero[1], alt: 'Los Cabos arrival view', label: 'Los Cabos arrivals' },
+  { src: cloudinaryAssets.activities.horseback, alt: 'Guests enjoying Los Cabos together', label: 'Guest moments' },
+  { src: cloudinaryAssets.activities.camel, alt: 'Premium vacation moment in Los Cabos', label: 'VIP comfort' },
+  { src: cloudinaryAssets.activities.skybikes, alt: 'Vacation memories in Los Cabos', label: 'Vacation memories' },
+  { src: cloudinaryAssets.activities.utv, alt: 'Friends exploring Los Cabos', label: 'Happy groups' },
+  { src: cloudinaryAssets.activities.atv, alt: 'Adventure day in Los Cabos', label: 'Group adventures' },
+];
 
 const Transfers = () => {
-  const { t, lang } = useLanguage();
+  const { lang } = useLanguage();
+  const isEs = lang === 'es';
+  const [selectedImage, setSelectedImage] = useState<number | null>(null);
 
-  const included = [
-    { key: 'transfers.included.flight' },
-    { key: 'transfers.included.water' },
-    { key: 'transfers.included.door' },
-    { key: 'transfers.included.bilingual' },
-    { key: 'transfers.included.wifi' },
-  ];
+  const highlights = useMemo(
+    () => [
+      {
+        icon: Plane,
+        title: isEs ? 'Llegada sin estres' : 'Stress-free arrivals',
+        body: isEs ? 'Seguimos tu vuelo y te recibimos a tiempo.' : 'We track your flight and meet you right on time.',
+      },
+      {
+        icon: Users,
+        title: isEs ? 'Ideal para parejas y grupos' : 'Great for couples and groups',
+        body: isEs ? 'Reserva simple para 1 a 5 pasajeros o grupos de 6 en adelante.' : 'Simple booking for 1 to 5 guests or larger groups of 6 and up.',
+      },
+      {
+        icon: Sparkles,
+        title: isEs ? 'Comodidad VIP Transit' : 'VIP Transit comfort',
+        body: isEs ? 'Espacio, clima y una experiencia privada de principio a fin.' : 'Space, comfort, and a private experience from start to finish.',
+      },
+    ],
+    [isEs],
+  );
+
+  const included = useMemo(
+    () =>
+      isEs
+        ? ['Monitoreo de vuelo', 'Chofer bilingue', 'Agua fria', 'Wi-Fi a bordo', 'Servicio puerta a puerta', 'Atencion por WhatsApp']
+        : ['Flight tracking', 'Bilingual driver', 'Cold water', 'Onboard Wi-Fi', 'Door-to-door service', 'WhatsApp support'],
+    [isEs],
+  );
+
+  const moments = useMemo(
+    () => [
+      isEs ? 'Recepcion puntual en aeropuerto' : 'On-time airport pickup',
+      isEs ? 'Viaje privado y comodo' : 'Private and comfortable ride',
+      isEs ? 'Ideal para familias y grupos' : 'Perfect for families and groups',
+    ],
+    [isEs],
+  );
 
   const serviceLd = {
     '@context': 'https://schema.org',
@@ -34,196 +87,365 @@ const Transfers = () => {
     name: 'Private Airport Transfer Los Cabos',
     provider: { '@type': 'LocalBusiness', name: 'Class VIP Transfers' },
     areaServed: { '@type': 'Place', name: 'Los Cabos, Baja California Sur, Mexico' },
-    description: 'Private luxury SUV and Sprinter transfers from SJD airport to hotels in Cabo San Lucas, San Jose del Cabo, Tourist Corridor, and Pacific area.',
-    offers: { '@type': 'Offer', priceCurrency: 'USD', price: '90', priceValidUntil: '2027-12-31' },
+    description:
+      'Private airport transportation in Los Cabos with premium Transit comfort, flight tracking, bilingual drivers, and door-to-door service.',
   };
 
   return (
-    <div>
+    <>
       <SEO
         title="Private Airport Transfers"
-        description="Private luxury SUV & Sprinter transfers from SJD airport to your hotel. Flight tracking, meet & greet, cold beverages included. Book your Los Cabos airport transfer now."
-        keywords="SJD airport transfer, cabo san lucas private transfer, los cabos luxury van, cabo airport shuttle, tourist corridor transfer, private driver cabo, san jose del cabo transportation"
+        description="Private airport transportation in Los Cabos with premium Transit comfort, flight tracking, bilingual drivers, and door-to-door service."
+        keywords="SJD airport transfer, Los Cabos private transfer, Cabo airport transportation, private airport ride, VIP transit Los Cabos, Los Cabos chauffeur"
         canonical="https://classviptransfers.com/transfers"
         jsonLd={serviceLd}
       />
 
-      <section className="navy-gradient pt-36 pb-20 px-4">
-        <div className="container mx-auto max-w-4xl text-center">
-          <motion.h1 initial="hidden" animate="visible" variants={fadeUp} className="font-display text-4xl md:text-6xl font-bold mb-4 text-off-white">
-            {t('transfers.hero.title')}
-          </motion.h1>
-          <motion.p initial="hidden" animate="visible" variants={fadeUp} transition={{ delay: 0.1 }} className="text-off-white/70 text-lg max-w-2xl mx-auto">
-            {t('transfers.hero.subtitle')}
-          </motion.p>
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} transition={{ delay: 0.2 }} className="mt-8">
-            <TrustBadges compact dark />
-          </motion.div>
-        </div>
-      </section>
+      <div className="bg-background">
+        <section className="navy-gradient relative overflow-hidden px-4 pb-20 pt-32">
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute left-[-10%] top-20 h-64 w-64 rounded-full bg-gold/30 blur-3xl" />
+            <div className="absolute bottom-0 right-[-5%] h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+          </div>
 
-      <section className="py-16 px-4 section-light">
-        <div className="container mx-auto max-w-6xl">
-          <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl font-bold text-center mb-4 text-foreground">
-            {t('whyChoose.title')}
-          </motion.h2>
-          <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.05 }} className="text-muted-foreground text-center text-sm mb-10 max-w-2xl mx-auto">
-            {t('whyChoose.subtitle')}
-          </motion.p>
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.1 }}>
-            <WhyChooseUs />
-          </motion.div>
-        </div>
-      </section>
+          <div className="container relative mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
+            <div>
+              <motion.span
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+                className="mb-5 inline-flex rounded-full border border-gold/25 bg-white/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-gold"
+              >
+                {isEs ? 'Private airport service' : 'Private airport service'}
+              </motion.span>
+              <motion.h1
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+                className="font-display mb-5 max-w-2xl text-4xl font-bold text-off-white md:text-6xl"
+              >
+                {isEs ? 'Transfers privados con estilo, espacio y llegada sin estres.' : 'Private airport rides with style, space, and smooth arrivals.'}
+              </motion.h1>
+              <motion.p
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+                transition={{ delay: 0.08 }}
+                className="max-w-2xl text-lg leading-relaxed text-off-white/80"
+              >
+                {isEs
+                  ? 'Nos movemos con flotilla Transit premium para que tu grupo llegue comodo, puntual y con una experiencia mas elegante desde el aeropuerto.'
+                  : 'Our premium Transit fleet keeps your group comfortable, on time, and taken care of from the moment you land.'}
+              </motion.p>
 
-      <section id="compare" className="py-20 px-4 -mt-8 scroll-mt-24">
-        <div className="container mx-auto max-w-xl">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            whileHover={{ y: -4, transition: { duration: 0.2 } }}
-            className="glass-card rounded-2xl p-8 premium-card border-2 border-gold/20 relative cursor-default"
-          >
-            <span className="absolute -top-3 left-6 gold-gradient text-secondary-foreground text-xs font-bold px-3 py-1 rounded-full">
-              {t('transfers.private.badge')}
-            </span>
-            <div className="flex items-center gap-3 mb-4 mt-2">
-              <div className="w-10 h-10 rounded-full gold-gradient flex items-center justify-center">
-                <Car size={20} className="text-secondary-foreground" />
-              </div>
-              <h2 className="font-display text-2xl font-bold text-foreground">{t('transfers.private.title')}</h2>
-            </div>
-            <p className="text-muted-foreground text-sm mb-6 leading-relaxed">{t('transfers.private.desc')}</p>
-            <p className="text-sm text-muted-foreground mb-6">
-              {t('transfers.private.pricingNote', { defaultValue: 'Precios por zona y vehículo en el tabulador abajo.' })}
-            </p>
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Link to="/book" className="gold-gradient text-secondary-foreground px-6 py-3 rounded-full text-sm font-bold inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow w-full justify-center">
-                {t('transfers.bookThis')} <ArrowRight size={16} />
-              </Link>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      <section id="pricing" className="py-16 px-4 section-light scroll-mt-24">
-        <div className="container mx-auto max-w-6xl">
-          <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl font-bold text-center mb-4 text-foreground">
-            {t('transfers.pricing.title', { defaultValue: 'Precios por zona' })}
-          </motion.h2>
-          <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.05 }} className="text-muted-foreground text-center text-sm mb-10 max-w-2xl mx-auto">
-            {t('transfers.pricing.subtitle', { defaultValue: 'Selecciona tu vehículo y consulta los precios. Todos los precios en USD, trayecto sencillo.' })}
-          </motion.p>
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.1 }}>
-            <Suspense fallback={<div className="text-center text-sm text-muted-foreground">Loading pricing...</div>}>
-              <PriceTable />
-            </Suspense>
-          </motion.div>
-        </div>
-      </section>
-
-      <section id="included" className="py-16 px-4 section-light scroll-mt-24">
-        <div className="container mx-auto max-w-4xl">
-          <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl font-bold text-center mb-10 text-foreground">
-            {t('transfers.included.title')}
-          </motion.h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {included.map((item, i) => (
               <motion.div
-                key={i}
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+                transition={{ delay: 0.14 }}
+                className="mt-8 flex flex-col gap-4 sm:flex-row"
+              >
+                <Link
+                  to="/book"
+                  className="gold-gradient inline-flex items-center justify-center gap-2 rounded-full px-8 py-3.5 text-sm font-bold text-secondary-foreground transition-all hover:brightness-110 gold-glow"
+                >
+                  {isEs ? 'Reservar transfer' : 'Book your transfer'} <ArrowRight size={16} />
+                </Link>
+                <a
+                  href="https://wa.me/5216241222174?text=Hello%2C%20I%27d%20like%20to%20book%20a%20transfer"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-off-white/20 px-8 py-3.5 text-sm font-bold text-off-white transition-all hover:bg-white/5"
+                >
+                  <MessageCircle size={16} /> {isEs ? 'Hablar por WhatsApp' : 'Chat on WhatsApp'}
+                </a>
+              </motion.div>
+
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+                transition={{ delay: 0.2 }}
+                className="mt-10"
+              >
+                <TrustBadges compact dark />
+              </motion.div>
+            </div>
+
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={fadeUp}
+              transition={{ delay: 0.12 }}
+              className="grid gap-4 sm:grid-cols-2"
+            >
+              <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-[0_30px_80px_rgba(0,0,0,0.35)] sm:row-span-2">
+                <img src={galleryImages[0].src} alt={galleryImages[0].alt} className="h-full min-h-[420px] w-full object-cover" />
+              </div>
+              <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
+                <img src={galleryImages[1].src} alt={galleryImages[1].alt} className="h-52 w-full object-cover" />
+              </div>
+              <div className="glass-card rounded-[2rem] border border-gold/20 p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold">{isEs ? 'Experiencia' : 'Experience'}</p>
+                <div className="mt-4 space-y-3">
+                  {moments.map((moment) => (
+                    <div key={moment} className="flex items-center gap-3 text-sm text-off-white">
+                      <Star size={15} className="text-gold" />
+                      <span>{moment}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-5 text-sm leading-relaxed text-off-white/70">
+                  {isEs
+                    ? 'Sin tabuladores complicados en la pagina: tu cotizacion se confirma facil durante la reserva.'
+                    : 'No price table clutter here: your quote is confirmed clearly during booking.'}
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        <section className="section-light px-4 py-16">
+          <div className="container mx-auto max-w-6xl">
+            <div className="grid gap-6 md:grid-cols-3">
+              {highlights.map(({ icon: Icon, title, body }, index) => (
+                <motion.div
+                  key={title}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                  variants={fadeUp}
+                  transition={{ delay: index * 0.08 }}
+                  className="premium-card rounded-3xl border border-border bg-card p-7"
+                >
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/12 text-gold">
+                    <Icon size={22} />
+                  </div>
+                  <h2 className="font-display text-2xl font-bold text-foreground">{title}</h2>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{body}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="px-4 py-16">
+          <div className="container mx-auto max-w-6xl">
+            <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+              <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold">
+                  {isEs ? 'Lo que recibes' : 'What you get'}
+                </p>
+                <h2 className="font-display mt-3 text-3xl font-bold text-foreground md:text-4xl">
+                  {isEs ? 'Todo lo importante, sin texto de mas.' : 'Everything you need, without the extra noise.'}
+                </h2>
+                <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                  {isEs
+                    ? 'La pagina ahora se enfoca en la experiencia: servicio privado, comodidad Transit, soporte rapido y una reserva simple para grupos pequenos o grandes.'
+                    : 'This page now focuses on the experience: private service, Transit comfort, fast support, and a simple reservation flow for small or larger groups.'}
+                </p>
+              </motion.div>
+
+              <motion.div
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
                 variants={fadeUp}
-                transition={{ delay: i * 0.05 }}
-                className="glass-card rounded-xl p-5 premium-card border border-border flex items-center gap-3"
+                transition={{ delay: 0.08 }}
+                className="grid gap-4 sm:grid-cols-2"
               >
-                <Check size={18} className="text-gold flex-shrink-0" />
-                <p className="text-sm font-medium text-foreground">{t(item.key)}</p>
+                {included.map((item) => (
+                  <div key={item} className="glass-card flex items-center gap-3 rounded-2xl border border-border p-4">
+                    <Check size={18} className="text-gold" />
+                    <span className="text-sm font-medium text-foreground">{item}</span>
+                  </div>
+                ))}
               </motion.div>
-            ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="py-16 px-4">
-        <div className="container mx-auto max-w-2xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="glass-card rounded-2xl p-8 text-center border border-border relative">
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 gold-gradient text-secondary-foreground text-xs font-bold px-4 py-1.5 rounded-full">
-              {t('transfers.cancellation.badge')}
-            </span>
-            <Shield size={32} className="text-gold mx-auto mb-4 mt-2" />
-            <h3 className="font-display text-xl font-bold mb-3 text-foreground">{t('transfers.cancellation.title')}</h3>
-            <p className="text-muted-foreground text-sm leading-relaxed">{t('transfers.cancellation.desc')}</p>
-          </motion.div>
-        </div>
-      </section>
+        <section className="section-light px-4 py-16">
+          <div className="container mx-auto max-w-6xl">
+            <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold">
+                  {isEs ? 'Galeria' : 'Gallery'}
+                </p>
+                <h2 className="font-display mt-3 text-3xl font-bold text-foreground md:text-4xl">
+                  {isEs ? 'Momentos reales con nuestros clientes' : 'Real moments with our guests'}
+                </h2>
+              </div>
+              <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+                {isEs
+                  ? 'Una mezcla de llegadas, momentos con clientes y recuerdos de vacaciones para que la pagina se sienta viva, humana y premium.'
+                  : 'A mix of arrivals, guest moments, and vacation memories so the page feels alive, human, and premium.'}
+              </p>
+            </div>
 
-      <section className="py-16 px-4 section-light">
-        <div className="container mx-auto max-w-3xl">
-          <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl font-bold text-center mb-4 text-foreground">
-            {t('testimonials.title')}
-          </motion.h2>
-          <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.05 }} className="text-muted-foreground text-center text-sm mb-10">
-            {t('testimonials.subtitle')}
-          </motion.p>
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.1 }}>
+            <div className="columns-1 gap-4 space-y-4 sm:columns-2 lg:columns-3">
+              {galleryImages.map((image, index) => (
+                <motion.button
+                  key={image.alt}
+                  type="button"
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                  variants={fadeUp}
+                  transition={{ delay: index * 0.05 }}
+                  onClick={() => setSelectedImage(index)}
+                  className="group relative block w-full break-inside-avoid overflow-hidden rounded-[1.75rem] border border-border bg-card text-left"
+                >
+                  <img
+                    src={image.src}
+                    alt={image.alt}
+                    loading="lazy"
+                    className="w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-navy/80 via-navy/30 to-transparent px-5 pb-5 pt-12">
+                    <span className="inline-flex rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-off-white backdrop-blur-sm">
+                      {image.label}
+                    </span>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="px-4 py-16">
+          <div className="container mx-auto max-w-5xl">
+            <div className="mb-10 grid gap-6 rounded-[2rem] border border-border bg-card p-8 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold">
+                  {isEs ? 'Reserva con confianza' : 'Book with confidence'}
+                </p>
+                <h2 className="font-display mt-3 text-3xl font-bold text-foreground">
+                  {isEs ? 'Servicio privado, seguro y facil de coordinar.' : 'Private, secure, and easy to coordinate.'}
+                </h2>
+                <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                  {isEs
+                    ? 'Confirmamos detalles por WhatsApp, cuidamos tus horarios y mantenemos la experiencia clara desde el primer mensaje hasta la llegada.'
+                    : 'We confirm details on WhatsApp, protect your schedule, and keep the experience clear from the first message to arrival.'}
+                </p>
+              </div>
+              <div className="flex items-center gap-3 rounded-2xl bg-gold/10 px-5 py-4 text-sm font-semibold text-foreground">
+                <Shield size={18} className="text-gold" />
+                <Clock3 size={18} className="text-gold" />
+                <span>{isEs ? 'Atencion rapida y seguimiento real' : 'Fast support and real follow-through'}</span>
+              </div>
+            </div>
+
             <TestimonialsCarousel />
-          </motion.div>
-        </div>
-      </section>
+          </div>
+        </section>
 
-      <section className="py-16 px-4">
-        <div className="container mx-auto max-w-2xl">
-          <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl font-bold text-center mb-10 text-foreground">
-            {t('faq.title')}
-          </motion.h2>
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.05 }}>
-            <FAQ />
-          </motion.div>
-        </div>
-      </section>
+        <section className="section-light px-4 py-16">
+          <div className="container mx-auto max-w-4xl">
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
+              <h2 className="font-display text-center text-3xl font-bold text-foreground md:text-4xl">
+                {isEs ? 'Te ayudamos a coordinar tu llegada' : 'We make your arrival easy to coordinate'}
+              </h2>
+              <p className="mx-auto mt-4 max-w-2xl text-center text-sm leading-relaxed text-muted-foreground">
+                {isEs
+                  ? 'Si tu cliente quiere rapidez, estilo y una llegada comoda, aqui esta el contacto directo del equipo.'
+                  : 'If your guest wants speed, style, and a comfortable arrival, here is the direct line to our team.'}
+              </p>
+            </motion.div>
 
-      <section className="py-16 px-4 section-light">
-        <div className="container mx-auto max-w-4xl">
-          <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl font-bold text-center mb-4 text-foreground">
-            {t('contact.info.title')}
-          </motion.h2>
-          <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.05 }} className="text-muted-foreground text-center text-sm mb-10 max-w-xl mx-auto">
-            {lang === 'es' ? 'Estamos aquí para ayudarte. Contáctanos por teléfono, WhatsApp o email.' : "We're here to help. Reach us by phone, WhatsApp, or email."}
-          </motion.p>
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.1 }}>
-            <ContactInfo />
-          </motion.div>
-        </div>
-      </section>
-
-      <section className="navy-gradient py-20 px-4">
-        <div className="container mx-auto max-w-2xl text-center">
-          <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-display text-3xl md:text-4xl font-bold mb-4 text-off-white">
-            {t('transfers.cta.title')}
-          </motion.h2>
-          <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.1 }} className="text-off-white/70 mb-8">
-            {t('transfers.cta.subtitle')}
-          </motion.p>
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} transition={{ delay: 0.2 }} className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/book" className="gold-gradient text-secondary-foreground px-8 py-3.5 rounded-full font-bold text-sm inline-flex items-center gap-2 hover:brightness-110 transition-all gold-glow">
-              {t('nav.bookNow')} <ArrowRight size={16} />
-            </Link>
-            <a
-              href="https://wa.me/5216241222174?text=Hello%2C%20I%27d%20like%20to%20book%20a%20transfer"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="border border-off-white/25 text-off-white px-8 py-3.5 rounded-full font-bold text-sm inline-flex items-center gap-2 hover:bg-white/5 transition-all"
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              transition={{ delay: 0.08 }}
+              className="mt-10"
             >
-              <MessageCircle size={16} /> {t('transfers.cta.chat')}
-            </a>
+              <ContactInfo />
+            </motion.div>
+          </div>
+        </section>
+
+        <section className="navy-gradient px-4 py-20">
+          <div className="container mx-auto max-w-3xl text-center">
+            <motion.h2
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              className="font-display text-3xl font-bold text-off-white md:text-5xl"
+            >
+              {isEs ? 'Listo para reservar tu transfer?' : 'Ready to book your transfer?'}
+            </motion.h2>
+            <motion.p
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              transition={{ delay: 0.08 }}
+              className="mx-auto mt-4 max-w-2xl text-off-white/80"
+            >
+              {isEs
+                ? 'Cotiza facil segun tu zona y tamano de grupo. Nosotros nos encargamos del resto.'
+                : 'Get a clear quote based on your zone and group size. We handle the rest.'}
+            </motion.p>
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              transition={{ delay: 0.14 }}
+              className="mt-8 flex flex-col justify-center gap-4 sm:flex-row"
+            >
+              <Link
+                to="/book"
+                className="gold-gradient inline-flex items-center justify-center gap-2 rounded-full px-8 py-3.5 text-sm font-bold text-secondary-foreground transition-all hover:brightness-110 gold-glow"
+              >
+                {isEs ? 'Ir a reservar' : 'Go to booking'} <ArrowRight size={16} />
+              </Link>
+              <a
+                href="https://wa.me/5216241222174?text=Hello%2C%20I%27d%20like%20to%20book%20a%20transfer"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-off-white/20 px-8 py-3.5 text-sm font-bold text-off-white transition-all hover:bg-white/5"
+              >
+                <MessageCircle size={16} /> {isEs ? 'Escribir por WhatsApp' : 'Message us on WhatsApp'}
+              </a>
+            </motion.div>
+          </div>
+        </section>
+      </div>
+
+      <AnimatePresence>
+        {selectedImage !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+            onClick={() => setSelectedImage(null)}
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedImage(null)}
+              className="absolute right-5 top-5 rounded-full bg-white/12 p-2 text-white transition-colors hover:bg-white/20"
+            >
+              <X size={20} />
+            </button>
+            <motion.img
+              key={selectedImage}
+              initial={{ scale: 0.94, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.94, opacity: 0 }}
+              src={galleryImages[selectedImage].src}
+              alt={galleryImages[selectedImage].alt}
+              className="max-h-[88vh] max-w-full rounded-[1.75rem] object-contain shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            />
           </motion.div>
-        </div>
-      </section>
-    </div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 

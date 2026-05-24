@@ -1,21 +1,25 @@
-import { useState } from 'react';
-import { SEO } from '@/features/marketing/components/SEO';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useLanguage } from '@/shared/providers/LanguageContext';
+import { useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import {
-  X, Car, Users, Home, TrendingUp, ImageOff,
-  Bed, Bath, Maximize2, MapPin, ArrowRight, ExternalLink,
+  ArrowRight,
+  Bath,
+  Bed,
+  Check,
+  Home,
+  ImageOff,
+  MapPin,
+  Maximize2,
+  MessageCircle,
+  Sparkles,
+  TrendingUp,
+  Users,
 } from 'lucide-react';
 
+import { SEO } from '@/features/marketing/components/SEO';
 import { cloudinaryAssets } from '@/shared/lib/cloudinary-assets';
+import { useLanguage } from '@/shared/providers/LanguageContext';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface GalleryImage {
-  src: string;
-  alt: string;
-  label?: string;
-}
+const fadeUp = { hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0 } };
 
 interface Property {
   title: string;
@@ -34,32 +38,15 @@ interface Property {
   badgeEs?: string;
 }
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
-
-const fleetImages: GalleryImage[] = [
-  { src: cloudinaryAssets.hero[0], alt: 'Class VIP SUV Premium', label: 'SUV Premium' },
-  { src: cloudinaryAssets.hero[1], alt: 'Class VIP Luxury Transfer', label: 'Luxury Sedan' },
-  { src: cloudinaryAssets.hero[2], alt: 'Class VIP VIP Experience', label: 'Sprinter Van' },
-];
-
-const clientImages: GalleryImage[] = [
-  { src: cloudinaryAssets.activities.camel, alt: 'Camel Ride Los Cabos' },
-  { src: cloudinaryAssets.activities.horseback, alt: 'Horseback Riding Los Cabos' },
-  { src: cloudinaryAssets.activities.atv, alt: 'ATV Adventure Los Cabos' },
-  { src: cloudinaryAssets.activities.moto, alt: 'Moto Experience Los Cabos' },
-  { src: cloudinaryAssets.activities.skybikes, alt: 'Sky Bikes Los Cabos' },
-  { src: cloudinaryAssets.activities.utv, alt: 'UTV Adventure Los Cabos' },
-];
-
 const rentalProperties: Property[] = [
   {
-    title: 'Villa Serena — Luxury Retreat',
-    titleEs: 'Villa Serena — Retiro de Lujo',
+    title: 'Villa Serena Luxury Retreat',
+    titleEs: 'Villa Serena Retiro de Lujo',
     location: 'Cabo San Lucas, BCS',
     description:
-      'Exclusive private villa with ocean views, private pool, fully equipped kitchen, and VIP concierge service. Perfect for families, romantic getaways, or corporate retreats.',
+      'Exclusive private villa with ocean views, private pool, fully equipped kitchen, and VIP concierge service. Perfect for families, romantic escapes, or corporate retreats.',
     descriptionEs:
-      'Villa privada exclusiva con vistas al mar, alberca privada, cocina completamente equipada y servicio de concierge VIP. Ideal para familias, escapadas románticas o retiros corporativos.',
+      'Villa privada con vista al mar, alberca privada, cocina equipada y servicio concierge VIP. Ideal para familias, escapadas romanticas o retiros corporativos.',
     beds: 4,
     baths: 4,
     sqft: 4500,
@@ -68,17 +55,15 @@ const rentalProperties: Property[] = [
     photos: [],
     badge: 'Featured',
     badgeEs: 'Destacada',
-    // Add Cloudinary photos array:
-    // photos: ['https://res.cloudinary.com/...', ...],
   },
   {
     title: 'Ocean View Suite',
     titleEs: 'Suite con Vista al Mar',
     location: 'Corridor, Los Cabos',
     description:
-      'Modern luxury suite inside a boutique resort. Access to beach club, restaurant, and spa. Ideal for couples and small groups.',
+      'Modern luxury suite inside a boutique resort with beach club, restaurant, and spa access. Designed for couples and small groups.',
     descriptionEs:
-      'Suite de lujo moderna dentro de un resort boutique. Acceso a club de playa, restaurante y spa. Ideal para parejas y grupos pequeños.',
+      'Suite de lujo dentro de un resort boutique con acceso a beach club, restaurante y spa. Pensada para parejas y grupos pequenos.',
     beds: 2,
     baths: 2,
     sqft: 1800,
@@ -88,30 +73,30 @@ const rentalProperties: Property[] = [
   },
 ];
 
-const investmentProperties: Property[] = [
+const saleProperties: Property[] = [
   {
     title: 'Beachfront Development Lot',
-    titleEs: 'Lote Frente al Mar — Desarrollo',
+    titleEs: 'Lote Frente al Mar para Desarrollo',
     location: 'Pacific Side, Los Cabos',
     description:
-      'Prime beachfront lot with permits for boutique hotel or luxury residences. Ideal for investors seeking high-yield returns in one of Mexico\'s top luxury destinations.',
+      'Prime beachfront lot with permits for boutique hospitality or luxury residences. Ideal for investors seeking a strong long-term position in Los Cabos.',
     descriptionEs:
-      'Lote frente al mar con permisos para hotel boutique o residencias de lujo. Ideal para inversionistas que buscan alto rendimiento en uno de los destinos de lujo más importantes de México.',
+      'Lote frente al mar con permisos para hoteleria boutique o residencias de lujo. Ideal para inversionistas que buscan una posicion fuerte en Los Cabos.',
     sqft: 8000,
     priceLabel: '$2,200,000 USD',
     priceLabelEs: '$2,200,000 USD',
     photos: [],
     badge: 'High ROI',
-    badgeEs: 'Alto Rendimiento',
+    badgeEs: 'Alta Plusvalia',
   },
   {
-    title: 'Corridor Condo — Rental Investment',
-    titleEs: 'Condo Corredor — Inversión en Renta',
+    title: 'Corridor Luxury Condo',
+    titleEs: 'Condo de Lujo en el Corredor',
     location: 'Tourist Corridor, Los Cabos',
     description:
-      'Pre-construction luxury condo in the Tourist Corridor. Proven rental yields of 8–12% annually. Managed by the developer.',
+      'Pre-construction condo positioned for lifestyle use or rental yield in one of the most requested areas of Los Cabos.',
     descriptionEs:
-      'Condo de lujo en preventa en el Corredor Turístico. Rendimientos de renta comprobados del 8–12% anual. Administrado por la desarrolladora.',
+      'Condo en preventa ideal para uso personal o rendimiento de renta en una de las zonas mas buscadas de Los Cabos.',
     beds: 2,
     baths: 2,
     sqft: 1400,
@@ -121,373 +106,449 @@ const investmentProperties: Property[] = [
   },
 ];
 
-// ─── Tabs ─────────────────────────────────────────────────────────────────────
-
-type Tab = 'fleet' | 'client' | 'rental' | 'investment';
-
-const TABS: { id: Tab; icon: React.ElementType; labelEn: string; labelEs: string }[] = [
-  { id: 'fleet', icon: Car, labelEn: 'Fleet', labelEs: 'Flota' },
-  { id: 'client', icon: Users, labelEn: 'Experiences', labelEs: 'Experiencias' },
-  { id: 'rental', icon: Home, labelEn: 'Rental Properties', labelEs: 'Propiedades en Renta' },
-  { id: 'investment', icon: TrendingUp, labelEn: 'Investment', labelEs: 'Inversión' },
-];
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-const PhotoPlaceholder = ({ label }: { label: string }) => (
-  <div className="flex flex-col items-center justify-center h-48 bg-muted/50 rounded-xl border border-dashed border-border/60 text-muted-foreground gap-2">
-    <ImageOff size={24} className="opacity-40" />
-    <span className="text-xs opacity-50">{label}</span>
-  </div>
-);
-
-const ImageGrid = ({
-  images,
-  onSelect,
-}: {
-  images: GalleryImage[];
-  onSelect: (i: number) => void;
-}) => (
-  <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
-    {images.map((img, i) => (
-      <motion.div
-        key={i}
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: i * 0.06 }}
-        className="break-inside-avoid cursor-pointer group relative"
-        onClick={() => onSelect(i)}
-      >
-        <div className="overflow-hidden rounded-2xl border border-border bg-muted">
-          <img
-            src={img.src}
-            alt={img.alt}
-            loading="lazy"
-            className="w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-          {img.label && (
-            <div className="absolute bottom-3 left-3 bg-navy/80 text-gold text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm">
-              {img.label}
-            </div>
-          )}
-        </div>
-      </motion.div>
-    ))}
-  </div>
-);
-
-const PropertyCard = ({ p, lang }: { p: Property; lang: string }) => {
+const PropertyCard = ({ property, lang, kind }: { property: Property; lang: string; kind: 'rent' | 'sale' }) => {
   const isEs = lang === 'es';
-  const title = isEs ? p.titleEs : p.title;
-  const description = isEs ? p.descriptionEs : p.description;
-  const priceLabel = isEs ? p.priceLabelEs : p.priceLabel;
-  const badge = isEs ? p.badgeEs : p.badge;
-  const hasPhotos = p.photos.length > 0;
+  const title = isEs ? property.titleEs : property.title;
+  const description = isEs ? property.descriptionEs : property.description;
+  const priceLabel = isEs ? property.priceLabelEs : property.priceLabel;
+  const badge = isEs ? property.badgeEs : property.badge;
+  const hasPhotos = property.photos.length > 0;
   const [photoIdx, setPhotoIdx] = useState(0);
 
   return (
-    <motion.div
+    <motion.article
       initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-border overflow-hidden bg-card hover:shadow-lg transition-shadow"
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="overflow-hidden rounded-[1.8rem] border border-border bg-card shadow-[0_20px_60px_rgba(15,23,42,0.08)]"
     >
-      {/* Photo area */}
-      <div className="relative aspect-video bg-muted overflow-hidden">
+      <div className="relative aspect-[16/10] overflow-hidden bg-muted">
         {hasPhotos ? (
-          <img
-            src={p.photos[photoIdx]}
-            alt={title}
-            className="w-full h-full object-cover"
-          />
+          <img src={property.photos[photoIdx]} alt={title} className="h-full w-full object-cover" />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground">
-            <ImageOff size={28} className="opacity-30" />
-            <span className="text-xs opacity-40">{isEs ? 'Fotos próximamente' : 'Photos coming soon'}</span>
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+            <ImageOff size={28} className="opacity-35" />
+            <span className="text-xs opacity-55">{isEs ? 'Fotos disponibles pronto' : 'Photos coming soon'}</span>
           </div>
         )}
+
         {badge && (
-          <span className="absolute top-3 left-3 bg-gold text-navy text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full">
+          <span className="absolute left-4 top-4 rounded-full bg-gold px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-navy">
             {badge}
           </span>
         )}
-        {hasPhotos && p.photos.length > 1 && (
-          <div className="absolute bottom-3 right-3 flex gap-1">
-            {p.photos.map((_, i) => (
+
+        {hasPhotos && property.photos.length > 1 && (
+          <div className="absolute bottom-4 right-4 flex gap-1.5">
+            {property.photos.map((_, index) => (
               <button
-                key={i}
-                onClick={() => setPhotoIdx(i)}
-                className={`w-2 h-2 rounded-full transition-all ${i === photoIdx ? 'bg-gold' : 'bg-white/50'}`}
+                key={index}
+                type="button"
+                onClick={() => setPhotoIdx(index)}
+                className={`h-2.5 w-2.5 rounded-full transition-all ${index === photoIdx ? 'bg-gold' : 'bg-white/45'}`}
               />
             ))}
           </div>
         )}
       </div>
 
-      {/* Content */}
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-3 mb-1.5">
-          <h3 className="font-bold text-foreground text-base leading-tight">{title}</h3>
+      <div className="p-6">
+        <div className="flex items-start justify-between gap-4">
+          <h3 className="font-display text-2xl font-bold text-foreground">{title}</h3>
+          {priceLabel && <span className="text-sm font-bold text-gold">{priceLabel}</span>}
         </div>
-        <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-3">
-          <MapPin size={11} className="text-gold flex-shrink-0" />
-          {p.location}
-        </div>
-        <p className="text-sm text-muted-foreground leading-relaxed mb-4">{description}</p>
 
-        {/* Specs */}
-        {(p.beds || p.baths || p.sqft) && (
-          <div className="flex flex-wrap gap-3 mb-4 text-xs text-muted-foreground">
-            {p.beds && (
-              <span className="flex items-center gap-1">
-                <Bed size={12} className="text-gold" /> {p.beds} {isEs ? 'Recámaras' : 'Beds'}
+        <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+          <MapPin size={12} className="text-gold" />
+          <span>{property.location}</span>
+        </div>
+
+        <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{description}</p>
+
+        {(property.beds || property.baths || property.sqft) && (
+          <div className="mt-5 flex flex-wrap gap-4 text-xs text-muted-foreground">
+            {property.beds && (
+              <span className="flex items-center gap-1.5">
+                <Bed size={12} className="text-gold" />
+                {property.beds} {isEs ? 'Recamaras' : 'Beds'}
               </span>
             )}
-            {p.baths && (
-              <span className="flex items-center gap-1">
-                <Bath size={12} className="text-gold" /> {p.baths} {isEs ? 'Baños' : 'Baths'}
+            {property.baths && (
+              <span className="flex items-center gap-1.5">
+                <Bath size={12} className="text-gold" />
+                {property.baths} {isEs ? 'Banos' : 'Baths'}
               </span>
             )}
-            {p.sqft && (
-              <span className="flex items-center gap-1">
-                <Maximize2 size={12} className="text-gold" /> {p.sqft.toLocaleString()} ft²
+            {property.sqft && (
+              <span className="flex items-center gap-1.5">
+                <Maximize2 size={12} className="text-gold" />
+                {property.sqft.toLocaleString()} ft2
               </span>
             )}
           </div>
         )}
 
-        <div className="flex items-center justify-between">
-          {priceLabel && (
-            <span className="text-gold font-bold text-base">{priceLabel}</span>
-          )}
-          {p.link ? (
-            <a
-              href={p.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold hover:underline"
-            >
-              {isEs ? 'Ver más' : 'Learn more'} <ExternalLink size={12} />
-            </a>
-          ) : (
-            <a
-              href="https://wa.me/5216241222174"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gold/10 text-gold border border-gold/30 hover:bg-gold/20 transition-colors"
-            >
-              {isEs ? 'Consultar' : 'Inquire'} <ArrowRight size={12} />
-            </a>
-          )}
-        </div>
+        <a
+          href={`https://wa.me/5216241222174?text=${encodeURIComponent(
+            isEs
+              ? `Hola, quiero informacion sobre ${title}`
+              : `Hello, I want information about ${title}`,
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-4 py-2 text-sm font-semibold text-gold transition-colors hover:bg-gold/20"
+        >
+          {kind === 'rent' ? (isEs ? 'Preguntar por renta' : 'Ask about rental') : isEs ? 'Pedir detalles' : 'Request details'}
+          <ArrowRight size={14} />
+        </a>
       </div>
-    </motion.div>
+    </motion.article>
   );
 };
-
-// ─── Lightbox ─────────────────────────────────────────────────────────────────
-
-const Lightbox = ({
-  images,
-  selected,
-  onClose,
-}: {
-  images: GalleryImage[];
-  selected: number | null;
-  onClose: () => void;
-}) => (
-  <AnimatePresence>
-    {selected !== null && (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/92 flex items-center justify-center p-4"
-        onClick={onClose}
-      >
-        <button
-          className="absolute top-5 right-5 p-2 rounded-full bg-white/10 text-white/80 hover:text-white hover:bg-white/20 transition-colors"
-          onClick={onClose}
-        >
-          <X size={22} />
-        </button>
-        <motion.img
-          key={selected}
-          initial={{ scale: 0.92, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.92, opacity: 0 }}
-          src={images[selected].src}
-          alt={images[selected].alt}
-          className="max-w-full max-h-[88vh] object-contain rounded-xl shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        />
-      </motion.div>
-    )}
-  </AnimatePresence>
-);
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
 
 const Portfolio = () => {
   const { lang } = useLanguage();
   const isEs = lang === 'es';
-  const [activeTab, setActiveTab] = useState<Tab>('fleet');
-  const [lightboxImages, setLightboxImages] = useState<GalleryImage[]>([]);
-  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
-  const openLightbox = (images: GalleryImage[], idx: number) => {
-    setLightboxImages(images);
-    setLightboxIdx(idx);
-  };
+  const packageFeatures = useMemo(
+    () =>
+      isEs
+        ? [
+            'Villa o alojamiento segun tu estilo',
+            'Transportacion privada coordinada para tu grupo',
+            'Actividades incluidas y adaptadas a tu plan',
+            'Precios con descuento por grupo',
+            'Atencion personalizada por WhatsApp',
+          ]
+        : [
+            'Villa or stay matched to your style',
+            'Private transportation coordinated for your group',
+            'Activities included around your plan',
+            'Group discount pricing',
+            'Personalized WhatsApp support',
+          ],
+    [isEs],
+  );
+
+  const packageCards = useMemo(
+    () => [
+      {
+        icon: Home,
+        title: isEs ? 'Villa ideal' : 'Ideal villa',
+        body: isEs ? 'Buscamos la villa correcta para tu grupo, fechas y estilo de viaje.' : 'We match the right villa to your group, dates, and travel style.',
+      },
+      {
+        icon: Users,
+        title: isEs ? 'Todo coordinado' : 'Everything coordinated',
+        body: isEs ? 'Incluimos transportacion privada y actividades dentro del mismo paquete.' : 'We include private transportation and activities inside the same package.',
+      },
+      {
+        icon: Sparkles,
+        title: isEs ? 'Hecho a tu medida' : 'Built around you',
+        body: isEs ? 'No vendemos paquetes rigidos. Te lo personalizamos y mejoramos el precio por grupo.' : 'We do not sell rigid packages. We personalize everything and improve pricing for groups.',
+      },
+    ],
+    [isEs],
+  );
 
   return (
     <>
       <SEO
-        title={isEs ? 'Portafolio — Flota, Propiedades y Experiencias' : 'Portfolio — Fleet, Properties & Experiences'}
+        title={isEs ? 'Portafolio - Paquetes, Rentas y Propiedades en Venta' : 'Portfolio - Packages, Rentals, and Properties for Sale'}
         description={
           isEs
-            ? 'Conoce nuestra flota de lujo, propiedades en renta e inversión, y galería de experiencias en Los Cabos.'
-            : 'Explore our luxury fleet, rental & investment properties, and experience gallery in Los Cabos.'
+            ? 'Paquetes personalizados con villa, transportacion y actividades incluidas, propiedades en renta y propiedades en venta en Los Cabos.'
+            : 'Custom all-inclusive packages with villa, transportation, and activities, plus rental properties and homes for sale in Los Cabos.'
         }
         canonical="https://classviptransfers.com/portfolio"
         jsonLd={{
           '@context': 'https://schema.org',
-          '@type': 'ItemList',
-          name: 'Class VIP Transfers — Fleet & Properties Portfolio',
-          description: 'Luxury vehicle fleet, rental properties, and investment properties in Los Cabos by Class VIP Transfers.',
+          '@type': 'CollectionPage',
+          name: 'Class VIP Portfolio',
+          description: 'Custom villa packages, rental properties, and properties for sale in Los Cabos.',
           url: 'https://classviptransfers.com/portfolio',
         }}
       />
 
-      <div className="pt-28 pb-20 min-h-screen bg-background">
-        <div className="container mx-auto px-4">
-
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-10"
-          >
-            <h1 className="font-display text-4xl md:text-5xl font-bold">
-              {isEs ? 'Portafolio' : 'Portfolio'}
-            </h1>
-            <p className="text-muted-foreground mt-3 max-w-lg mx-auto text-sm leading-relaxed">
-              {isEs
-                ? 'Nuestra flota, propiedades y experiencias en Los Cabos.'
-                : 'Our fleet, properties, and experiences across Los Cabos.'}
-            </p>
-          </motion.div>
-
-          {/* Tabs */}
-          <div className="flex overflow-x-auto gap-2 pb-1 mb-10 scrollbar-hide justify-center flex-wrap">
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
-                    isActive
-                      ? 'bg-gold text-navy shadow-[0_4px_16px_rgba(212,175,55,0.35)]'
-                      : 'bg-muted text-foreground/60 hover:text-foreground hover:bg-muted/80'
-                  }`}
-                >
-                  <Icon size={15} />
-                  {isEs ? tab.labelEs : tab.labelEn}
-                </button>
-              );
-            })}
+      <div className="bg-background">
+        <section className="navy-gradient relative overflow-hidden px-4 pb-20 pt-32">
+          <div className="absolute inset-0 opacity-25">
+            <div className="absolute left-[-8%] top-12 h-64 w-64 rounded-full bg-gold/25 blur-3xl" />
+            <div className="absolute bottom-[-8%] right-[-6%] h-80 w-80 rounded-full bg-white/10 blur-3xl" />
           </div>
 
-          {/* Tab Content */}
-          <AnimatePresence mode="wait">
+          <div className="container relative mx-auto grid max-w-6xl gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+            <div>
+              <motion.span
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+                className="inline-flex rounded-full border border-gold/25 bg-white/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-gold"
+              >
+                {isEs ? 'Luxury lifestyle planning' : 'Luxury lifestyle planning'}
+              </motion.span>
+
+              <motion.h1
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+                className="font-display mt-6 max-w-3xl text-4xl font-bold text-off-white md:text-6xl"
+              >
+                {isEs ? 'Paquetes completos, villas y propiedades en un solo lugar.' : 'Custom packages, villas, and real estate in one place.'}
+              </motion.h1>
+
+              <motion.p
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+                transition={{ delay: 0.08 }}
+                className="mt-5 max-w-2xl text-lg leading-relaxed text-off-white/80"
+              >
+                {isEs
+                  ? 'Creamos paquetes todo incluido con villa, transportacion y actividades para grupos, y tambien te ayudamos con propiedades en renta o en venta en Los Cabos.'
+                  : 'We build all-inclusive group packages with villa, transportation, and activities, and we also help with rentals and homes for sale across Los Cabos.'}
+              </motion.p>
+
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+                transition={{ delay: 0.14 }}
+                className="mt-8 flex flex-col gap-4 sm:flex-row"
+              >
+                <a
+                  href={`https://wa.me/5216241222174?text=${encodeURIComponent(
+                    isEs
+                      ? 'Hola, quiero armar un paquete personalizado con villa, transportacion y actividades.'
+                      : 'Hello, I want a custom package with villa, transportation, and activities.',
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="gold-gradient inline-flex items-center justify-center gap-2 rounded-full px-8 py-3.5 text-sm font-bold text-secondary-foreground transition-all hover:brightness-110 gold-glow"
+                >
+                  <MessageCircle size={16} /> {isEs ? 'Armar mi paquete por WhatsApp' : 'Build my package on WhatsApp'}
+                </a>
+                <a
+                  href="#rentals"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-off-white/20 px-8 py-3.5 text-sm font-bold text-off-white transition-all hover:bg-white/5"
+                >
+                  {isEs ? 'Ver propiedades' : 'View properties'} <ArrowRight size={16} />
+                </a>
+              </motion.div>
+            </div>
+
             <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.22 }}
+              initial="hidden"
+              animate="visible"
+              variants={fadeUp}
+              transition={{ delay: 0.12 }}
+              className="grid gap-4 sm:grid-cols-2"
             >
-
-              {/* ── Fleet ── */}
-              {activeTab === 'fleet' && (
-                <div>
-                  <div className="mb-6 text-center">
-                    <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                      {isEs
-                        ? 'SUVs de lujo, Suburbans, Sprinters y más. Todos nuestros vehículos cuentan con WiFi, bebidas y choferes bilingües.'
-                        : 'Luxury SUVs, Suburbans, Sprinters and more. All vehicles include WiFi, drinks, and bilingual drivers.'}
-                    </p>
-                  </div>
-                  {fleetImages.length > 0 ? (
-                    <ImageGrid images={fleetImages} onSelect={(i) => openLightbox(fleetImages, i)} />
-                  ) : (
-                    <PhotoPlaceholder label={isEs ? 'Fotos de flota próximamente' : 'Fleet photos coming soon'} />
-                  )}
+              <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-[0_30px_80px_rgba(0,0,0,0.35)] sm:row-span-2">
+                <img src={cloudinaryAssets.activities.camel} alt="Los Cabos package experience" className="h-full min-h-[420px] w-full object-cover" />
+              </div>
+              <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
+                <img src={cloudinaryAssets.activities.horseback} alt="Luxury vacation in Los Cabos" className="h-52 w-full object-cover" />
+              </div>
+              <div className="glass-card rounded-[2rem] border border-gold/20 p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold">
+                  {isEs ? 'Todo incluido' : 'All-inclusive'}
+                </p>
+                <div className="mt-4 space-y-3">
+                  {packageFeatures.slice(0, 3).map((item) => (
+                    <div key={item} className="flex items-start gap-3 text-sm text-off-white">
+                      <Check size={15} className="mt-0.5 text-gold" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
                 </div>
-              )}
-
-              {/* ── Client / Experiences ── */}
-              {activeTab === 'client' && (
-                <div>
-                  <div className="mb-6 text-center">
-                    <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                      {isEs
-                        ? 'Momentos reales con nuestros clientes. Actividades, aventuras y transfers en Los Cabos.'
-                        : 'Real moments with our clients. Activities, adventures, and transfers in Los Cabos.'}
-                    </p>
-                  </div>
-                  <ImageGrid images={clientImages} onSelect={(i) => openLightbox(clientImages, i)} />
-                </div>
-              )}
-
-              {/* ── Rental Properties ── */}
-              {activeTab === 'rental' && (
-                <div>
-                  <div className="mb-6 text-center">
-                    <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                      {isEs
-                        ? 'Propiedades exclusivas disponibles para renta vacacional en Los Cabos. Reserva con tu traslado VIP incluido.'
-                        : 'Exclusive vacation rental properties in Los Cabos. Book with your VIP transfer included.'}
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {rentalProperties.map((p, i) => (
-                      <PropertyCard key={i} p={p} lang={lang} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ── Investment Properties ── */}
-              {activeTab === 'investment' && (
-                <div>
-                  <div className="mb-6 text-center">
-                    <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                      {isEs
-                        ? 'Oportunidades de inversión en bienes raíces en Los Cabos. Contacta para más información.'
-                        : 'Real estate investment opportunities in Los Cabos. Contact us for more details.'}
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {investmentProperties.map((p, i) => (
-                      <PropertyCard key={i} p={p} lang={lang} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
+                <p className="mt-5 text-sm leading-relaxed text-off-white/70">
+                  {isEs ? 'Nos escribes por WhatsApp, te lo personalizamos y te presentamos la mejor opcion para tu grupo.' : 'Message us on WhatsApp and we will personalize the best option for your group.'}
+                </p>
+              </div>
             </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
+          </div>
+        </section>
 
-      {/* Lightbox */}
-      <Lightbox
-        images={lightboxImages}
-        selected={lightboxIdx}
-        onClose={() => setLightboxIdx(null)}
-      />
+        <section className="section-light px-4 py-16">
+          <div className="container mx-auto max-w-6xl">
+            <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold">
+                  {isEs ? 'Paquetes personalizados' : 'Custom packages'}
+                </p>
+                <h2 className="font-display mt-3 text-3xl font-bold text-foreground md:text-4xl">
+                  {isEs ? 'Solo manejamos paquetes todo incluido y hechos a tu necesidad.' : 'We only offer all-inclusive packages built around your needs.'}
+                </h2>
+              </div>
+              <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+                {isEs
+                  ? 'No es un paquete generico. Ajustamos villa, transportacion, actividades y precio para que tu grupo tenga una propuesta real y bonita.'
+                  : 'This is not a generic package. We tailor the villa, transportation, activities, and pricing so your group gets a polished real proposal.'}
+              </p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-3">
+              {packageCards.map(({ icon: Icon, title, body }, index) => (
+                <motion.article
+                  key={title}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                  variants={fadeUp}
+                  transition={{ delay: index * 0.08 }}
+                  className="rounded-[1.8rem] border border-border bg-card p-7 shadow-[0_20px_60px_rgba(15,23,42,0.06)]"
+                >
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/12 text-gold">
+                    <Icon size={22} />
+                  </div>
+                  <h3 className="font-display text-2xl font-bold text-foreground">{title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{body}</p>
+                </motion.article>
+              ))}
+            </div>
+
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              className="mt-10 rounded-[2rem] border border-gold/20 bg-navy px-8 py-8 text-off-white shadow-[0_24px_60px_rgba(15,23,42,0.22)]"
+            >
+              <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold">
+                    {isEs ? 'Descuento por grupo' : 'Group discount pricing'}
+                  </p>
+                  <h3 className="font-display mt-3 text-3xl font-bold">
+                    {isEs ? 'Tu paquete se cotiza bonito y personalizado por WhatsApp.' : 'Your package is quoted beautifully and personally on WhatsApp.'}
+                  </h3>
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    {packageFeatures.map((item) => (
+                      <div key={item} className="flex items-center gap-3 text-sm text-off-white/80">
+                        <Check size={15} className="text-gold" />
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <a
+                  href={`https://wa.me/5216241222174?text=${encodeURIComponent(
+                    isEs
+                      ? 'Hola, quiero mi paquete todo incluido personalizado.'
+                      : 'Hello, I want my personalized all-inclusive package.',
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="gold-gradient inline-flex items-center justify-center gap-2 rounded-full px-8 py-3.5 text-sm font-bold text-secondary-foreground transition-all hover:brightness-110 gold-glow"
+                >
+                  <MessageCircle size={16} /> {isEs ? 'Contactar por WhatsApp' : 'Contact on WhatsApp'}
+                </a>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        <section id="rentals" className="px-4 py-16">
+          <div className="container mx-auto max-w-6xl">
+            <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold">
+                  {isEs ? 'Rental properties' : 'Rental properties'}
+                </p>
+                <h2 className="font-display mt-3 text-3xl font-bold text-foreground md:text-4xl">
+                  {isEs ? 'Propiedades en renta' : 'Properties for rent'}
+                </h2>
+              </div>
+              <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+                {isEs
+                  ? 'Aqui vamos a mostrar tus propiedades en renta para clientes que buscan estancia con nivel premium.'
+                  : 'This section is ready for the rental properties you want to showcase to premium travelers.'}
+              </p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              {rentalProperties.map((property) => (
+                <PropertyCard key={property.title} property={property} lang={lang} kind="rent" />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="section-light px-4 py-16">
+          <div className="container mx-auto max-w-6xl">
+            <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold">
+                  {isEs ? 'Investment properties' : 'Investment properties'}
+                </p>
+                <h2 className="font-display mt-3 text-3xl font-bold text-foreground md:text-4xl">
+                  {isEs ? 'Propiedades en venta' : 'Properties for sale'}
+                </h2>
+              </div>
+              <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+                {isEs
+                  ? 'Esta seccion queda lista para mostrar propiedades en venta con enfoque en inversion o estilo de vida en Los Cabos.'
+                  : 'This section is ready for properties for sale, whether the buyer is focused on investment or lifestyle in Los Cabos.'}
+              </p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              {saleProperties.map((property) => (
+                <PropertyCard key={property.title} property={property} lang={lang} kind="sale" />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="navy-gradient px-4 py-20">
+          <div className="container mx-auto max-w-3xl text-center">
+            <motion.h2
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              className="font-display text-3xl font-bold text-off-white md:text-5xl"
+            >
+              {isEs ? 'Te armamos el paquete completo segun tu grupo.' : 'We build the full package around your group.'}
+            </motion.h2>
+            <motion.p
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              transition={{ delay: 0.08 }}
+              className="mx-auto mt-4 max-w-2xl text-off-white/80"
+            >
+              {isEs
+                ? 'Escribenos por WhatsApp y te preparamos una propuesta con villa, transportacion y actividades incluidas.'
+                : 'Message us on WhatsApp and we will prepare a proposal with villa, transportation, and included activities.'}
+            </motion.p>
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              transition={{ delay: 0.14 }}
+              className="mt-8"
+            >
+              <a
+                href={`https://wa.me/5216241222174?text=${encodeURIComponent(
+                  isEs
+                    ? 'Hola, quiero una propuesta completa para mi grupo.'
+                    : 'Hello, I want a full proposal for my group.',
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="gold-gradient inline-flex items-center justify-center gap-2 rounded-full px-8 py-3.5 text-sm font-bold text-secondary-foreground transition-all hover:brightness-110 gold-glow"
+              >
+                <MessageCircle size={16} /> {isEs ? 'Hablar por WhatsApp' : 'Talk on WhatsApp'}
+              </a>
+            </motion.div>
+          </div>
+        </section>
+      </div>
     </>
   );
 };

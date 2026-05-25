@@ -15,17 +15,8 @@ import pricingRoutes from './features/pricing/routes/pricing.routes';
 import hotelsRoutes from './features/pricing/routes/hotels.routes';
 import previewRoutes from './features/booking/routes/preview.routes';
 import { getErrorMessage } from './shared/lib/errors';
-import { assertSafeRuntimeConfig } from './shared/lib/env-safety';
 
 dotenv.config();
-try {
-  assertSafeRuntimeConfig();
-} catch (error) {
-  console.error(
-    '[EnvSafety] Startup validation warning. Continuing boot so the API stays available:',
-    getErrorMessage(error),
-  );
-}
 
 function parseOrigins(value?: string): string[] {
   return value

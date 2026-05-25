@@ -1,12 +1,32 @@
 import 'dotenv/config';
 import { PrismaClient, ServiceType, TripType, VehicleClass, ExtraCode, PricingMode } from '@prisma/client';
-import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-const ADMIN_EMAIL = 'condecorporation@gmail.com';
-const ADMIN_PASSWORD = '1234';
 const ADMIN_ROLE = 'admin';
+const adminEmail = process.env.ADMIN_EMAIL?.trim();
+const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH?.trim();
+
+async function seedAdminUser() {
+  if (!adminEmail || !adminPasswordHash) {
+    console.log('Admin user seed skipped: set ADMIN_EMAIL and ADMIN_PASSWORD_HASH to seed an admin user.');
+    return;
+  }
+
+  console.log('Seeding AdminUser...');
+
+  const admin = await prisma.adminUser.upsert({
+    where: { email: adminEmail },
+    update: { passwordHash: adminPasswordHash, role: ADMIN_ROLE },
+    create: {
+      email: adminEmail,
+      passwordHash: adminPasswordHash,
+      role: ADMIN_ROLE,
+    },
+  });
+
+  console.log(`Admin user: ${admin.email} (role: ${admin.role})`);
+}
 
 // Zones / areas aligned with classviptransfers.com (Rates by zone)
 const ZONES = ['SJD', 'Port Los Cabos', 'San Jose del Cabo', 'Tourist Corridor', 'Cabo San Lucas', 'Cabo Pacific Area', 'Pacific & East Cape'] as const;
@@ -126,20 +146,9 @@ const PRICES_ONE_WAY: Record<Exclude<Zone, 'SJD'>, { SUV: number; SPRINTER: numb
 };
 
 async function main() {
-  console.log('🌱 Seeding AdminUser...');
-  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
-  const admin = await prisma.adminUser.upsert({
-    where: { email: ADMIN_EMAIL },
-    update: { passwordHash, role: ADMIN_ROLE },
-    create: {
-      email: ADMIN_EMAIL,
-      passwordHash,
-      role: ADMIN_ROLE,
-    },
-  });
-  console.log(`✅ Admin user: ${admin.email} (role: ${admin.role})`);
+  await seedAdminUser();
 
-  console.log('🌱 Seeding Areas (must match hotel zones exactly for pricing)...');
+  console.log('Seeding Areas (must match hotel zones exactly for pricing)...');
   const hotelZonesForAreas = ZONES.filter((z) => z !== 'SJD');
   // DEFAULT_AREAS: prices derived from PRICES_ONE_WAY — verify/update from classviptransfers.com (Rates by zone)
   const DEFAULT_AREAS = hotelZonesForAreas.map((zone) => {

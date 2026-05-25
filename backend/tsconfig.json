@@ -14,7 +14,7 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "types": ["node", "express", "jsonwebtoken", "bcrypt", "cors", "cookie-parser", "nodemailer", "multer"]
+    "types": ["node", "express", "jsonwebtoken", "cors", "cookie-parser", "nodemailer", "multer"]
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "src/test", "src/shared/test"]

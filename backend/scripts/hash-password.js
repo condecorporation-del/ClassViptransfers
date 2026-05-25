@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * Generate bcrypt hash for an admin password.
+ * Generate a bcryptjs hash for an admin password.
  * Usage: node scripts/hash-password.js <password>
  */
 
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 const password = process.argv[2];
 

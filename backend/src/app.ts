@@ -1,3 +1,4 @@
+import type {} from './shared/types/express';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';

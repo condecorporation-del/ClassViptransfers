@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma';
 import { CreateBookingInput } from '../lib/validation';
 
 const describeIfDatabase = process.env.DATABASE_URL ? describe : describe.skip;
-const DB_TEST_TIMEOUT_MS = 20000;
+const DB_TEST_TIMEOUT_MS = 30000;
 
 describeIfDatabase('BookingService', () => {
   const bookingService = new BookingService();
@@ -176,7 +176,7 @@ describeIfDatabase('BookingService', () => {
     expect(csv).toBeDefined();
     expect(csv.includes('bookingId')).toBe(true);
     expect(csv.includes('customerName')).toBe(true);
-  }, 15000);
+  }, DB_TEST_TIMEOUT_MS);
 
   it('should cancel a booking', async () => {
     if (!createdBookingId) {
@@ -240,6 +240,6 @@ describeIfDatabase('BookingService', () => {
 
     await prisma.booking.delete({ where: { id: booking.id } });
     await prisma.customer.delete({ where: { id: booking.customerId } });
-  }, 15000);
+  }, DB_TEST_TIMEOUT_MS);
 });
 

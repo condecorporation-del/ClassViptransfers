@@ -32,10 +32,9 @@ function url(loc: string, opts: { lastmod?: string; changefreq: string; priority
 
 async function main() {
   console.log('='.repeat(60));
-  console.log(' Sitemap Generator — Class VIP Transfers');
+  console.log(' Sitemap Generator - Class VIP Transfers');
   console.log('='.repeat(60));
 
-  // Static pages
   const staticUrls = [
     url(`${BASE_URL}/`, { lastmod: TODAY, changefreq: 'weekly', priority: '1.0' }),
     url(`${BASE_URL}/transfers`, { lastmod: TODAY, changefreq: 'weekly', priority: '0.9' }),
@@ -48,22 +47,22 @@ async function main() {
     url(`${BASE_URL}/privacy`, { changefreq: 'yearly', priority: '0.3' }),
   ];
 
-  // Hotel pages from DB
   const hotels = await prisma.hotel.findMany({
     where: { isActive: true },
     orderBy: [{ zone: 'asc' }, { name: 'asc' }],
     select: { name: true },
   });
 
-  const hotelUrls = hotels.map((h) =>
-    url(`${BASE_URL}/hotels/${slugify(h.name)}`, {
+  const uniqueHotelSlugs = [...new Set(hotels.map((hotel) => slugify(hotel.name)).filter(Boolean))];
+
+  const hotelUrls = uniqueHotelSlugs.map((slug) =>
+    url(`${BASE_URL}/hotels/${slug}`, {
       lastmod: TODAY,
       changefreq: 'monthly',
       priority: '0.7',
     })
   );
 
-  // Build XML
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"',
@@ -78,9 +77,8 @@ async function main() {
     '</urlset>',
   ].join('\n');
 
-  // Validate basic structure
   if (!xml.includes('<urlset') || !xml.includes('</urlset>')) {
-    throw new Error('Generated XML is malformed — aborting write');
+    throw new Error('Generated XML is malformed - aborting write');
   }
 
   fs.mkdirSync(path.dirname(OUTPUT), { recursive: true });
@@ -90,14 +88,15 @@ async function main() {
   console.log(`\nTotal URLs generated: ${totalUrls}`);
   console.log(`  Static pages: ${staticUrls.length}`);
   console.log(`  Hotel pages:  ${hotelUrls.length}`);
+  console.log(`  Duplicates removed: ${hotels.length - uniqueHotelSlugs.length}`);
 
   console.log('\nFirst 10 hotel URLs:');
-  hotelUrls.slice(0, 10).forEach((u) => {
-    const loc = u.match(/<loc>(.*?)<\/loc>/)?.[1] ?? '';
+  hotelUrls.slice(0, 10).forEach((entry) => {
+    const loc = entry.match(/<loc>(.*?)<\/loc>/)?.[1] ?? '';
     console.log(' ', loc);
   });
 
-  console.log(`\n✅ Saved to: ${OUTPUT}`);
+  console.log(`\nSaved to: ${OUTPUT}`);
   console.log('='.repeat(60));
 }
 

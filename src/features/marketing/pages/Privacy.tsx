@@ -30,7 +30,7 @@ const content = {
       },
       {
         heading: '6. Your Rights',
-        body: `You have the right to:\n• Access the personal data we hold about you.\n• Request correction of inaccurate data.\n• Request deletion of your data (subject to legal retention requirements).\n• Withdraw consent for communications at any time.\n\nTo exercise these rights, contact us at Armando@classviptransfers.com or via WhatsApp at +52 624 122 2174.`,
+        body: `You have the right to:\n• Access the personal data we hold about you.\n• Request correction of inaccurate data.\n• Request deletion of your data (subject to legal retention requirements).\n• Withdraw consent for communications at any time.\n\nTo exercise these rights, contact us at armando@classviptransfers.com or via WhatsApp at +52 624 122 2174.`,
       },
       {
         heading: '7. Data Retention',
@@ -46,94 +46,105 @@ const content = {
       },
       {
         heading: '10. Contact',
-        body: `For questions or concerns about this privacy policy:\n• Email: Armando@classviptransfers.com\n• WhatsApp: +52 624 122 2174\n• Address: Los Cabos, Baja California Sur, Mexico`,
+        body: `For questions or concerns about this privacy policy:\n• Email: armando@classviptransfers.com\n• WhatsApp: +52 624 122 2174\n• Address: Los Cabos, Baja California Sur, Mexico`,
       },
     ],
   },
   es: {
-    title: 'Política de Privacidad',
-    lastUpdated: 'Última actualización',
+    title: 'Politica de Privacidad',
+    lastUpdated: 'Ultima actualizacion',
     sections: [
       {
-        heading: '1. Información que Recopilamos',
-        body: `Cuando usas nuestros servicios o sitio web, podemos recopilar la siguiente información:\n• Información personal: nombre, correo electrónico, número de teléfono (proporcionados al reservar o contactarnos).\n• Detalles de reservación: fechas de viaje, puntos de recogida/destino, número de pasajeros, información de vuelo.\n• Información de pago: procesada de forma segura a través de nuestros proveedores de pago; no almacenamos números de tarjeta de crédito.\n• Datos de uso: páginas visitadas, tipo de navegador, información del dispositivo (recopilados mediante cookies y analíticas).`,
+        heading: '1. Informacion que Recopilamos',
+        body: `Cuando usas nuestros servicios o sitio web, podemos recopilar la siguiente informacion:\n• Informacion personal: nombre, correo electronico, numero de telefono (proporcionados al reservar o contactarnos).\n• Detalles de reservacion: fechas de viaje, puntos de recogida/destino, numero de pasajeros, informacion de vuelo.\n• Informacion de pago: procesada de forma segura a traves de nuestros proveedores de pago; no almacenamos numeros de tarjeta de credito.\n• Datos de uso: paginas visitadas, tipo de navegador, informacion del dispositivo (recopilados mediante cookies y analiticas).`,
       },
       {
-        heading: '2. Cómo Usamos tu Información',
-        body: `Utilizamos la información recopilada para:\n• Procesar y confirmar tus reservaciones.\n• Comunicar detalles del servicio, actualizaciones y confirmaciones por email o WhatsApp.\n• Brindar soporte al cliente.\n• Mejorar nuestro sitio web y servicios.\n• Cumplir con obligaciones legales.\n\nNO vendemos, rentamos ni compartimos tu información personal con terceros para fines de marketing.`,
+        heading: '2. Como Usamos tu Informacion',
+        body: `Utilizamos la informacion recopilada para:\n• Procesar y confirmar tus reservaciones.\n• Comunicar detalles del servicio, actualizaciones y confirmaciones por email o WhatsApp.\n• Brindar soporte al cliente.\n• Mejorar nuestro sitio web y servicios.\n• Cumplir con obligaciones legales.\n\nNO vendemos, rentamos ni compartimos tu informacion personal con terceros para fines de marketing.`,
       },
       {
-        heading: '3. Compartir Información',
-        body: `Compartimos tu información únicamente con:\n• Nuestros choferes y equipo de operaciones (nombre, detalles de recogida e info de vuelo para realizar el servicio).\n• Procesadores de pago (como Stripe) para procesar transacciones.\n• Operadores de actividades (cuando reservas una actividad, compartimos tu nombre y detalles con el operador).\n• Autoridades legales o regulatorias cuando la ley lo requiera.`,
+        heading: '3. Compartir Informacion',
+        body: `Compartimos tu informacion unicamente con:\n• Nuestros choferes y equipo de operaciones (nombre, detalles de recogida e info de vuelo para realizar el servicio).\n• Procesadores de pago (como Stripe) para procesar transacciones.\n• Operadores de actividades (cuando reservas una actividad, compartimos tu nombre y detalles con el operador).\n• Autoridades legales o regulatorias cuando la ley lo requiera.`,
       },
       {
         heading: '4. Seguridad de Datos',
-        body: `Implementamos medidas de seguridad estándar de la industria para proteger tu información personal, incluyendo comunicaciones encriptadas (HTTPS), autenticación segura y acceso limitado a datos personales. Sin embargo, ningún método de transmisión o almacenamiento electrónico es 100% seguro, y no podemos garantizar seguridad absoluta.`,
+        body: `Implementamos medidas de seguridad estandar de la industria para proteger tu informacion personal, incluyendo comunicaciones encriptadas (HTTPS), autenticacion segura y acceso limitado a datos personales. Sin embargo, ningun metodo de transmision o almacenamiento electronico es 100% seguro, y no podemos garantizar seguridad absoluta.`,
       },
       {
         heading: '5. Cookies',
-        body: `Nuestro sitio web utiliza cookies para:\n• Recordar tu preferencia de idioma.\n• Mantener tu sesión durante el proceso de reservación.\n• Analizar el tráfico del sitio (mediante Google Analytics, cuando esté habilitado).\n\nPuedes desactivar las cookies en tu navegador, pero algunas funciones del sitio pueden no funcionar correctamente.`,
+        body: `Nuestro sitio web utiliza cookies para:\n• Recordar tu preferencia de idioma.\n• Mantener tu sesion durante el proceso de reservacion.\n• Analizar el trafico del sitio (mediante Google Analytics, cuando este habilitado).\n\nPuedes desactivar las cookies en tu navegador, pero algunas funciones del sitio pueden no funcionar correctamente.`,
       },
       {
         heading: '6. Tus Derechos',
-        body: `Tienes derecho a:\n• Acceder a los datos personales que tenemos sobre ti.\n• Solicitar la corrección de datos inexactos.\n• Solicitar la eliminación de tus datos (sujeto a requisitos legales de retención).\n• Retirar el consentimiento para comunicaciones en cualquier momento.\n\nPara ejercer estos derechos, contáctanos a Armando@classviptransfers.com o por WhatsApp al +52 624 122 2174.`,
+        body: `Tienes derecho a:\n• Acceder a los datos personales que tenemos sobre ti.\n• Solicitar la correccion de datos inexactos.\n• Solicitar la eliminacion de tus datos (sujeto a requisitos legales de retencion).\n• Retirar el consentimiento para comunicaciones en cualquier momento.\n\nPara ejercer estos derechos, contactanos a armando@classviptransfers.com o por WhatsApp al +52 624 122 2174.`,
       },
       {
-        heading: '7. Retención de Datos',
-        body: `Conservamos los datos de reservaciones y clientes por hasta 3 años para fines operativos y legales. Después de este período, los datos personales se eliminan de forma segura. Puedes solicitar la eliminación anticipada contactándonos directamente.`,
+        heading: '7. Retencion de Datos',
+        body: `Conservamos los datos de reservaciones y clientes por hasta 3 anos para fines operativos y legales. Despues de este periodo, los datos personales se eliminan de forma segura. Puedes solicitar la eliminacion anticipada contactandonos directamente.`,
       },
       {
         heading: '8. Enlaces a Terceros',
-        body: `Nuestro sitio web puede contener enlaces a sitios de terceros (operadores de actividades, proveedores de pago, etc.). No somos responsables de las prácticas de privacidad de estos sitios externos. Te recomendamos revisar sus políticas de privacidad.`,
+        body: `Nuestro sitio web puede contener enlaces a sitios de terceros (operadores de actividades, proveedores de pago, etc.). No somos responsables de las practicas de privacidad de estos sitios externos. Te recomendamos revisar sus politicas de privacidad.`,
       },
       {
-        heading: '9. Cambios a Esta Política',
-        body: `Podemos actualizar esta política de privacidad periódicamente. Los cambios se publicarán en esta página con una fecha actualizada. El uso continuado de nuestros servicios después de los cambios constituye la aceptación de la política actualizada.`,
+        heading: '9. Cambios a Esta Politica',
+        body: `Podemos actualizar esta politica de privacidad periodicamente. Los cambios se publicaran en esta pagina con una fecha actualizada. El uso continuado de nuestros servicios despues de los cambios constituye la aceptacion de la politica actualizada.`,
       },
       {
         heading: '10. Contacto',
-        body: `Para preguntas o dudas sobre esta política de privacidad:\n• Email: Armando@classviptransfers.com\n• WhatsApp: +52 624 122 2174\n• Dirección: Los Cabos, Baja California Sur, México`,
+        body: `Para preguntas o dudas sobre esta politica de privacidad:\n• Email: armando@classviptransfers.com\n• WhatsApp: +52 624 122 2174\n• Direccion: Los Cabos, Baja California Sur, Mexico`,
       },
     ],
   },
-};
+} as const;
 
 export default function Privacy() {
   const { lang } = useLanguage();
   const c = content[lang];
 
   return (
-    <div className="pt-28 pb-20 px-4 min-h-screen bg-gradient-to-b from-background to-muted/30">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 px-4 pb-20 pt-28">
       <SEO
-        title={lang === 'es' ? 'Política de Privacidad' : 'Privacy Policy'}
-        description={lang === 'es' ? 'Cómo Class VIP Transfers recopila, usa y protege tu información personal. Política de privacidad completa.' : 'How Class VIP Transfers collects, uses and protects your personal information. Full privacy policy.'}
+        title={lang === 'es' ? 'Politica de Privacidad' : 'Privacy Policy'}
+        description={
+          lang === 'es'
+            ? 'Como Class VIP Transfers recopila, usa y protege tu informacion personal. Politica de privacidad completa.'
+            : 'How Class VIP Transfers collects, uses and protects your personal information. Full privacy policy.'
+        }
+        canonical="https://classviptransfers.com/privacy"
       />
       <div className="container mx-auto max-w-3xl">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-2">{c.title}</h1>
-          <p className="text-muted-foreground text-sm mb-10">{c.lastUpdated}: {new Date().toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US', { year: 'numeric', month: 'long' })}</p>
+          <h1 className="mb-2 font-display text-3xl font-bold text-foreground md:text-4xl">{c.title}</h1>
+          <p className="mb-10 text-sm text-muted-foreground">
+            {c.lastUpdated}:{' '}
+            {new Date().toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US', {
+              year: 'numeric',
+              month: 'long',
+            })}
+          </p>
         </motion.div>
 
         <div className="space-y-8">
-          {c.sections.map((s, i) => (
+          {c.sections.map((section, index) => (
             <motion.section
-              key={i}
+              key={index}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04, duration: 0.35 }}
+              transition={{ delay: index * 0.04, duration: 0.35 }}
             >
-              <h2 className="font-display text-lg font-semibold text-foreground mb-2">{s.heading}</h2>
-              <div className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{s.body}</div>
+              <h2 className="mb-2 font-display text-lg font-semibold text-foreground">{section.heading}</h2>
+              <div className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{section.body}</div>
             </motion.section>
           ))}
         </div>
 
-        <div className="mt-12 pt-8 border-t border-border text-center">
-          <p className="text-muted-foreground text-sm mb-4">
-            {lang === 'es' ? '¿Tienes preguntas sobre nuestra privacidad?' : 'Questions about our privacy practices?'}
+        <div className="mt-12 border-t border-border pt-8 text-center">
+          <p className="mb-4 text-sm text-muted-foreground">
+            {lang === 'es' ? 'Tienes preguntas sobre nuestra privacidad?' : 'Questions about our privacy practices?'}
           </p>
-          <Link to="/contact" className="text-gold font-medium text-sm hover:underline">
-            {lang === 'es' ? 'Contáctanos' : 'Contact Us'}
+          <Link to="/contact" className="text-sm font-medium text-gold hover:underline">
+            {lang === 'es' ? 'Contactanos' : 'Contact Us'}
           </Link>
         </div>
       </div>

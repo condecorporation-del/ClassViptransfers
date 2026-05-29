@@ -26,22 +26,45 @@ const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 interface GalleryImage {
   src: string;
   alt: string;
-  label: string;
 }
 
 const galleryImages: GalleryImage[] = [
-  { src: cloudinaryAssets.hero[1], alt: 'Los Cabos arrival view', label: 'Los Cabos arrivals' },
-  { src: cloudinaryAssets.activities.horseback, alt: 'Guests enjoying Los Cabos together', label: 'Guest moments' },
-  { src: cloudinaryAssets.activities.camel, alt: 'Premium vacation moment in Los Cabos', label: 'VIP comfort' },
-  { src: cloudinaryAssets.activities.skybikes, alt: 'Vacation memories in Los Cabos', label: 'Vacation memories' },
-  { src: cloudinaryAssets.activities.utv, alt: 'Friends exploring Los Cabos', label: 'Happy groups' },
-  { src: cloudinaryAssets.activities.atv, alt: 'Adventure day in Los Cabos', label: 'Group adventures' },
+  {
+    src: 'https://res.cloudinary.com/dt9iyiorn/image/upload/v1780035762/upscale-to-4k-resolution-professional-studio-quali_mh9tij.jpg',
+    alt: 'Private transfer guests arriving in Los Cabos',
+  },
+  {
+    src: 'https://res.cloudinary.com/dt9iyiorn/image/upload/v1780035761/upscale-to-8k-resolution-enhance-to-professional-s_iuni7q.jpg',
+    alt: 'Luxury private transportation in Los Cabos',
+  },
+  {
+    src: 'https://res.cloudinary.com/dt9iyiorn/image/upload/v1780035761/upscale-to-4k-resolution-professional-studio-quali_1_hpyisy.jpg',
+    alt: 'Class VIP Transfers guest service moment',
+  },
+  {
+    src: 'https://res.cloudinary.com/dt9iyiorn/image/upload/v1780035761/thank-you-for-using-our_t4zxdc.jpg',
+    alt: 'Thank you message from Class VIP Transfers',
+  },
+  {
+    src: 'https://res.cloudinary.com/dt9iyiorn/image/upload/v1780038776/Copilot_20260529_001219_nflanp.png',
+    alt: 'Private transportation guest experience in Los Cabos',
+  },
+  {
+    src: 'https://res.cloudinary.com/dt9iyiorn/image/upload/v1780038767/Copilot_20260529_000330_eunhhm.png',
+    alt: 'Premium Los Cabos transfer arrival moment',
+  },
+  {
+    src: 'https://res.cloudinary.com/dt9iyiorn/image/upload/v1780037525/Copilot_20260528_235108_qb5maf.png',
+    alt: 'Luxury transfer service detail in Los Cabos',
+  },
 ];
 
 const Transfers = () => {
   const { lang } = useLanguage();
   const isEs = lang === 'es';
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
+  const heroPrimaryImage = galleryImages[5];
+  const heroSecondaryImage = galleryImages[2];
 
   const highlights = useMemo(
     () => [
@@ -180,10 +203,18 @@ const Transfers = () => {
               className="grid gap-4 sm:grid-cols-2"
             >
               <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-[0_30px_80px_rgba(0,0,0,0.35)] sm:row-span-2">
-                <img src={galleryImages[0].src} alt={galleryImages[0].alt} className="h-full min-h-[420px] w-full object-cover" />
+                <img
+                  src={heroPrimaryImage.src}
+                  alt={heroPrimaryImage.alt}
+                  className="h-full min-h-[420px] w-full object-cover object-center"
+                />
               </div>
               <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
-                <img src={galleryImages[1].src} alt={galleryImages[1].alt} className="h-52 w-full object-cover" />
+                <img
+                  src={heroSecondaryImage.src}
+                  alt={heroSecondaryImage.alt}
+                  className="h-52 w-full object-cover object-center"
+                />
               </div>
               <div className="glass-card rounded-[2rem] border border-gold/20 p-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold">{isEs ? 'Experiencia' : 'Experience'}</p>
@@ -276,11 +307,6 @@ const Transfers = () => {
                   {isEs ? 'Momentos reales con nuestros clientes' : 'Real moments with our guests'}
                 </h2>
               </div>
-              <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
-                {isEs
-                  ? 'Una mezcla de llegadas, momentos con clientes y recuerdos de vacaciones para que la pagina se sienta viva, humana y premium.'
-                  : 'A mix of arrivals, guest moments, and vacation memories so the page feels alive, human, and premium.'}
-              </p>
             </div>
 
             <div className="columns-1 gap-4 space-y-4 sm:columns-2 lg:columns-3">
@@ -302,11 +328,6 @@ const Transfers = () => {
                     loading="lazy"
                     className="w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-navy/80 via-navy/30 to-transparent px-5 pb-5 pt-12">
-                    <span className="inline-flex rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-off-white backdrop-blur-sm">
-                      {image.label}
-                    </span>
-                  </div>
                 </motion.button>
               ))}
             </div>

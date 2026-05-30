@@ -24,7 +24,6 @@ export type BookingFormData = {
   zoneFrom: string;
   zoneTo: string;
   selectedHotel: HotelOption | null;
-  vehicleClass: 'SUV' | 'SPRINTER';
   arrivalDate: Date | null;
   departureDate: Date | null;
   flightNumber: string;
@@ -63,7 +62,6 @@ function createInitialBookingData(): BookingFormData {
     zoneFrom: '',
     zoneTo: '',
     selectedHotel: null,
-    vehicleClass: 'SPRINTER',
     arrivalDate: null,
     departureDate: null,
     flightNumber: '',

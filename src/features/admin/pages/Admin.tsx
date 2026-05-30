@@ -116,7 +116,11 @@ function calcPickupTime(depTime: string): string {
   return `${h12}:${String(m).padStart(2, '0')} ${suffix}`;
 }
 
-function QuickBookingTab({ onBookingCreated }: { onBookingCreated?: () => void }) {
+function QuickBookingTab({
+  onBookingCreated,
+}: {
+  onBookingCreated?: (created?: { bookingId: string; confirmationCode?: string }) => void;
+}) {
   const { getAuthHeaders } = useAdminAuth();
   const [form, setForm] = useState({
     customerName: '',
@@ -283,7 +287,10 @@ function QuickBookingTab({ onBookingCreated }: { onBookingCreated?: () => void }
         setShowDepartureInfo(false);
         setAttachedFile(null);
         setPaymentMethod('stripe');
-        onBookingCreated?.();
+        onBookingCreated?.({
+          bookingId: json.data.id,
+          confirmationCode: code,
+        });
       } else {
         setResult({ success: false, message: json.error || 'Failed to create booking.' });
       }
@@ -678,9 +685,14 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [mobileMenu, setMobileMenu] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
+  const [bookingSearchSeed, setBookingSearchSeed] = useState('');
 
-  const notifyAdminDataChanged = () => {
+  const notifyAdminDataChanged = (created?: { bookingId: string; confirmationCode?: string }) => {
     setRefreshToken((current) => current + 1);
+    if (created?.confirmationCode || created?.bookingId) {
+      setBookingSearchSeed(created.confirmationCode || created.bookingId);
+      setActiveTab('bookings');
+    }
   };
 
   const sidebarItems: Array<{ id: Tab; label: string; icon: React.ReactNode; mobileLabel?: string; group?: string }> = [
@@ -926,7 +938,7 @@ const Admin = () => {
                   <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">Bookings</h1>
                   <p className="text-sm text-muted-foreground mt-1">View, search and manage all reservations</p>
                 </div>
-                <AdminBookings onDataChanged={notifyAdminDataChanged} />
+                <AdminBookings onDataChanged={notifyAdminDataChanged} initialSearchQ={bookingSearchSeed} />
               </div>
             )}
 

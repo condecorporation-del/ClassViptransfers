@@ -40,7 +40,7 @@ export const createBookingSchema = z.object({
     z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid date format'),
   ]).optional(),
   passengers: z.number().int().min(1).default(1),
-  serviceType: z.enum(['private', 'shuttle']).optional(),
+  serviceType: z.literal('private').optional().default('private'),
   tripType: z.enum(['oneway', 'roundtrip']).optional(),
   areaId: z.string().cuid().optional(),
   route: z.string().optional(),
@@ -332,7 +332,7 @@ export const manualBookingSchema = z
     departureFlightNumber: z.string().optional(),
     departureTime: z.string().optional(),
     passengers: z.number().int().min(1).default(1),
-    serviceType: z.enum(['private', 'shuttle']).optional(),
+    serviceType: z.literal('private').optional().default('private'),
     tripType: z.enum(['oneway', 'roundtrip']).optional(),
     route: z.string().optional(),
     items: z

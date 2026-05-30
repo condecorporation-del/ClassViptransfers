@@ -104,7 +104,7 @@ const Index = () => {
       <SEO
         title="Los Cabos Airport Transfer | Luxury Transportation - 30 Years Experience"
         description="Premium private transportation from Los Cabos Airport (SJD) to any hotel. 30 years of experience. TripAdvisor Certificate of Excellence. Book direct - best rates guaranteed."
-        keywords="cabo airport transfer, los cabos airport shuttle, sjd airport transportation, cabo san lucas transfer, private transportation los cabos, Class VIP Transfers, luxury transfer cabo, SJD airport shuttle, cabo adventure tours"
+        keywords="cabo airport transfer, sjd airport transportation, cabo san lucas transfer, private transportation los cabos, Class VIP Transfers, luxury transfer cabo, cabo adventure tours"
         canonical="https://classviptransfers.com/"
         jsonLd={[localBusinessLd, faqLd]}
       />

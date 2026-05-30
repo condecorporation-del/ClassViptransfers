@@ -23,17 +23,6 @@ function splitTotalIncludingIva(finalTotalCents: number): { subtotalCents: numbe
   return { subtotalCents: sub, taxCents: tax, totalCents: total };
 }
 
-// Extras allowed only for shuttle (no personalized/kits)
-const SHUTTLE_ALLOWED_EXTRA_CODES = new Set([
-  'OVERSIZE_LUGGAGE', 'EXTRA_STOP', 'GROCERY_STOP', 'BABY_SEAT', 'BOOSTER',
-  'SPECIAL_ASSISTANCE', 'WAIT_TIME', 'EARLY_MORNING', 'LATE_NIGHT', 'INCLUDED_BASIC_KIT',
-]);
-// Personalized/kits — not allowed for shuttle
-const SHUTTLE_BLOCKED_EXTRA_CODES = new Set([
-  'BIRTHDAY_KIT', 'ROMANTIC_KIT', 'CHAMPAGNE', 'CHAMPAGNE_UPGRADE',
-  'DELUXE_ARRIVAL_KIT', 'LUXURY_WELCOME',
-]);
-
 export class BookingService {
   /**
    * Generate a short confirmation code like CLASS2026001
@@ -87,38 +76,15 @@ export class BookingService {
       }
     }
 
-    // --- Validation: shuttle extras + vehicle capacity (backend enforcement) ---
+    // --- Validation: capacity by vehicle class for legacy pricing flows ---
     if (input.type === 'TRANSPORTATION') {
-      if (input.serviceType === 'shuttle') {
-        const extraCodes = new Set<string>();
-        if (input.pricingData?.extras?.length) {
-          input.pricingData.extras.forEach((e) => extraCodes.add(e.code));
-        }
-        items.forEach((item) => {
-          if (item.type === 'ADDON' && item.metadata?.code) {
-            extraCodes.add(String(item.metadata.code));
-          }
-        });
-        for (const code of extraCodes) {
-          if (SHUTTLE_BLOCKED_EXTRA_CODES.has(code)) {
-            throw new Error('Shuttle does not allow personalized extras');
-          }
-        }
-      }
-
       const vehicleClass = (input.pricingData?.vehicleClass ?? (input.metadata as Record<string, unknown>)?.vehicleClass) as string | undefined;
       const vc = vehicleClass?.toUpperCase?.() || vehicleClass;
-      if (input.serviceType === 'private' && vc) {
-        if (vc === 'SUV') {
-          if (pax > 5) {
-            throw new Error('SUV allows 1-5 passengers. For 6 or more, please select Sprinter.');
-          }
-        }
-        if (vc === 'SPRINTER') {
-          if (pax < 6 || pax > 14) {
-            throw new Error('Sprinter allows 6-14 passengers.');
-          }
-        }
+      if (vc === 'SUV' && pax > 5) {
+        throw new Error('This rate supports up to 5 passengers. For 6 or more, use the 6+ rate.');
+      }
+      if (vc === 'SPRINTER' && (pax < 6 || pax > 14)) {
+        throw new Error('The 6+ rate supports 6 to 14 passengers.');
       }
     }
 
@@ -127,18 +93,17 @@ export class BookingService {
       try {
         const { totalCents: baseCents, area } = await pricingService.getTransportPriceByArea(
           input.areaId,
-          input.tripType
+          input.tripType,
+          pax,
         );
-        // Shuttle: price per passenger; private: flat rate
-        const totalCents = input.serviceType === 'shuttle'
-          ? Math.round(baseCents * pax)
-          : baseCents;
+        const totalCents = baseCents;
+        const passengerBand = pax >= 6 ? '6-14' : '1-5';
         totalAmount = totalCents;
         items = [
           {
             type: 'TRANSPORTATION' as const,
             name: `Transfer: ${area.name} (${input.tripType === 'roundtrip' ? 'Round trip' : 'One way'})`,
-            quantity: input.serviceType === 'shuttle' ? pax : 1,
+            quantity: 1,
             unitPrice: totalCents / 100,
             metadata: {
               areaId: area.id,
@@ -146,7 +111,9 @@ export class BookingService {
               tripType: input.tripType,
               oneWayPriceCents: area.oneWayPriceCents,
               roundTripPriceCents: area.roundTripPriceCents,
-              pricePerPax: input.serviceType === 'shuttle',
+              sprinterOneWayPriceCents: area.sprinterOneWayPriceCents,
+              sprinterRoundTripPriceCents: area.sprinterRoundTripPriceCents,
+              passengerBand,
             },
           },
         ];

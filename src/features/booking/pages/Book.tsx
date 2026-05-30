@@ -207,8 +207,7 @@ const Book = () => {
   };
 
   // Transport price from selected area + trip type
-  // 1-5 passengers → SUV price (oneWayPriceCents / roundTripPriceCents)
-  // 6+ passengers  → Sprinter price (sprinterOneWayPriceCents / sprinterRoundTripPriceCents)
+  // 1-5 passengers use the standard private rate; 6+ uses the larger-group rate.
   const transferPrice = useMemo(() => {
     if (!data.serviceType || !data.areaId || !data.tripType || !selectedArea) return 0;
     const isSprinter = data.passengers >= 6;
@@ -1727,7 +1726,7 @@ const Book = () => {
           name: 'Book a Private Airport Transfer — Los Cabos',
           provider: { '@type': 'LocalBusiness', name: 'Class VIP Transfers', url: 'https://classviptransfers.com' },
           areaServed: { '@type': 'Place', name: 'Los Cabos, Baja California Sur, Mexico' },
-          description: 'Book a private luxury SUV or Sprinter transfer from SJD Airport to your hotel in Los Cabos.',
+          description: 'Book a private luxury transfer from SJD Airport to your hotel in Los Cabos.',
           offers: { '@type': 'Offer', priceCurrency: 'USD', price: '90', priceValidUntil: '2027-12-31' },
         }}
       />

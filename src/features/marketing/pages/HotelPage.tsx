@@ -136,7 +136,7 @@ export default function HotelPage() {
       <SEO
         title={`Airport Transfer to ${hotel.name} | Class VIP Transfers`}
         description={`Premium private transportation from Los Cabos Airport (SJD) to ${hotel.name} in ${hotel.zone}. 30 years experience. Flight tracking included. From $${price} USD per vehicle.`}
-        keywords={`transfer to ${hotel.name}, ${hotel.name} airport shuttle, SJD to ${hotel.name}, ${hotel.zone} transportation, Los Cabos airport transfer`}
+        keywords={`transfer to ${hotel.name}, SJD to ${hotel.name}, ${hotel.zone} transportation, Los Cabos airport transfer`}
         canonical={`https://classviptransfers.com/hotels/${slug}`}
         jsonLd={[serviceLd, breadcrumbLd, faqLd]}
       />

@@ -177,7 +177,13 @@ function monthEnd() { return monthEndKey(); }
 
 // âââ Main Component âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
-export const AdminBookings = ({ onDataChanged }: { onDataChanged?: () => void }) => {
+export const AdminBookings = ({
+  onDataChanged,
+  initialSearchQ,
+}: {
+  onDataChanged?: () => void;
+  initialSearchQ?: string;
+}) => {
   const { getAuthHeaders } = useAdminAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -210,14 +216,17 @@ export const AdminBookings = ({ onDataChanged }: { onDataChanged?: () => void })
     setLoading(true);
     setLoadError(null);
     try {
-      const { dateFrom, dateTo } = getDateRange();
-      const sourceFrom = addDays(dateFrom, -120);
       const qs = new URLSearchParams({
-        dateFrom: sourceFrom,
-        dateTo,
         limit: searchQ.trim() ? '1000' : '800',
       });
-      if (searchQ.trim()) qs.set('q', searchQ.trim());
+      if (searchQ.trim()) {
+        qs.set('q', searchQ.trim());
+      } else {
+        const { dateFrom, dateTo } = getDateRange();
+        const sourceFrom = addDays(dateFrom, -120);
+        qs.set('dateFrom', sourceFrom);
+        qs.set('dateTo', dateTo);
+      }
       const res = await fetch(apiUrl(`/api/admin/bookings?${qs}`), {
         credentials: 'include', headers: getAuthHeaders(),
       });
@@ -244,6 +253,11 @@ export const AdminBookings = ({ onDataChanged }: { onDataChanged?: () => void })
     }, searchQ.trim() ? 250 : 0);
     return () => window.clearTimeout(timer);
   }, [fetchBookings, searchQ]);
+
+  useEffect(() => {
+    if (!initialSearchQ?.trim()) return;
+    setSearchQ(initialSearchQ.trim());
+  }, [initialSearchQ]);
 
   const fetchDetail = async (id: string) => {
     setDetailLoading(true);

@@ -895,6 +895,7 @@ Respond ONLY with this JSON:
       flightNumber: extracted.transportation?.flightNumber ?? undefined,
       arrivalTime: extracted.transportation?.arrivalTime ?? undefined,
       passengers,
+      serviceType: 'private',
       items: finalItems,
       pricingData: pricingData || undefined,
       notes: extracted.notes || undefined,
